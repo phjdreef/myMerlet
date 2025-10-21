@@ -12,13 +12,77 @@ interface ThemeModeContext {
   system: () => Promise<boolean>;
   current: () => Promise<"dark" | "light" | "system">;
 }
+
 interface ElectronWindow {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;
 }
 
+interface MagisterAPI {
+  authenticate: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  getTodayInfo: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  getUserInfo: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  logout: () => Promise<{ success: boolean; error?: string }>;
+  isAuthenticated: () => Promise<{
+    success: boolean;
+    data?: boolean;
+    error?: string;
+  }>;
+  testAPI: () => Promise<{ success: boolean; data?: unknown; error?: string }>;
+  getAllStudents: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  clearToken: () => Promise<{ success: boolean; error?: string }>;
+  fetchStudentPhoto: (
+    studentId: number,
+  ) => Promise<{ success: boolean; data?: string; error?: string }>;
+}
+
+interface StudentDBAPI {
+  saveStudents: (
+    students: unknown[],
+  ) => Promise<{ success: boolean; error?: string }>;
+  getAllStudents: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  searchStudents: (
+    query: string,
+  ) => Promise<{ success: boolean; data?: unknown; error?: string }>;
+  getMetadata: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  clearAllData: () => Promise<{ success: boolean; error?: string }>;
+  savePhoto: (
+    studentId: number,
+    photoData: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  getPhoto: (
+    studentId: number,
+  ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
+  magisterAPI: MagisterAPI;
+  studentDBAPI: StudentDBAPI;
 }

@@ -8,4 +8,5 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // No build configuration needed for JSON-based database
 });

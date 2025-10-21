@@ -99,3 +99,24 @@ out/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Local database files (contains student data)
+magister_students.json
+magister_photos.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

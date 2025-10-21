@@ -1,146 +1,249 @@
-# electron-shadcn
+# myMerlet - Classroom Seating Manager
 
-Electron in all its glory. Everything you will need to develop your beautiful desktop application.
+A modern desktop application for managing classroom seating arrangements with integration to the Magister school management system.
 
-![Demo GIF](https://github.com/LuanRoger/electron-shadcn/blob/main/images/demo.gif)
+![Classroom Seating App](images/demo.gif)
 
-## Libs and tools
+## Features 🎯
 
-To develop a Electron app, you probably will need some UI, test, formatter, style or other kind of library or framework, so let me install and configure some of them to you.
+- **Student Management**: Browse and search students from Magister API
+- **Classroom Layout**: Interactive drag-and-drop seating arrangement (8-column grid)
+- **Photo Integration**: Automatic student photo fetching and caching
+- **Class Filtering**: View and manage students by class
+- **Persistent Storage**: Local database for offline access and photo caching
+- **Multi-language Support**: Dutch (default), English, and Portuguese
+- **Drag & Drop**: Intuitive seat swapping and student placement
+- **Offline Mode**: Works with cached student data when offline
 
-### Core 🏍️
+## Tech Stack 🏍️
 
-- [Electron 38](https://www.electronjs.org)
-- [Vite 7](https://vitejs.dev)
+### Core
+- [Electron 38](https://www.electronjs.org) - Desktop application framework
+- [Vite 7](https://vitejs.dev) - Fast build tool
+- [TypeScript 5.9](https://www.typescriptlang.org) - Type safety
 
-### DX 🛠️
+### Frontend 🎨
+- [React 19](https://reactjs.org) - UI library
+- [Tailwind 4](https://tailwindcss.com) - CSS framework
+- [Shadcn UI](https://ui.shadcn.com) - Component library
+- [TanStack Router](https://tanstack.com/router) - File-based routing
+- [i18next](https://www.i18next.com) - Internationalization
+- [Lucide](https://lucide.dev) - Icons
 
-- [TypeScript 5.9](https://www.typescriptlang.org)
-- [Prettier](https://prettier.io)
-- [ESLint 9](https://eslint.org)
-- [Zod 4](https://zod.dev)
-- [React Query (TanStack)](https://react-query.tanstack.com)
+### Backend & Data
+- **Magister API Integration**: OAuth/OIDC authentication
+- **JSON File Storage**: Local student database and photo cache
+- **Custom Logger**: Production-ready logging utility
 
-### UI 🎨
+### Development Tools 🛠️
+- [ESLint 9](https://eslint.org) - Code linting
+- [Prettier](https://prettier.io) - Code formatting
+- [Vitest](https://vitest.dev) - Unit testing
+- [Playwright](https://playwright.dev) - E2E testing
 
-- [React 19](https://reactjs.org)
-- [Tailwind 4](https://tailwindcss.com)
-- [Shadcn UI](https://ui.shadcn.com)
-- [Geist](https://vercel.com/font) as default font
-- [i18next](https://www.i18next.com)
-- [TanStack Router](https://tanstack.com/router) (with file based routing)
-- [Lucide](https://lucide.dev)
-
-### Test 🧪
-
-- [Vitest](https://vitest.dev)
-- [Playwright](https://playwright.dev)
-- [React Testing Library](https://testing-library.com/docs/react-testing-library/intro)
-
-### Packing and distribution 📦
-
-- [Electron Forge](https://www.electronforge.io)
-
-### CI/CD 🚀
-
-- Pre-configured [GitHub Actions workflow](https://github.com/LuanRoger/electron-shadcn/blob/main/.github/workflows/playwright.yml), for test with Playwright
-
-### Project preferences 🎯
-
-- Use Context isolation
-- [React Compiler](https://react.dev/learn/react-compiler) is enabled by default.
-- `titleBarStyle`: hidden (Using custom title bar)
-- Geist as default font
-- Some default styles was applied, check the [`styles`](https://github.com/LuanRoger/electron-shadcn/tree/main/src/styles) directory
-- React DevTools are installed by default
-
-## Directory structure
+## Project Structure
 
 ```plaintext
 .
-└── ./src/
-    ├── ./src/assets/
-    │   └── ./src/assets/fonts/
-    ├── ./src/components/
-    │   ├── ./src/components/template
-    │   └── ./src/components/ui/
-    ├── ./src/helpers/
-    │   └── ./src/helpers/ipc/
-    ├── ./src/layout/
-    ├── ./src/lib/
-    ├── ./src/pages/
-    ├── ./src/style/
-    └── ./src/tests/
+└── src/
+    ├── assets/          # Fonts and static assets
+    ├── components/      # React components
+    │   ├── student-directory/  # Student list and classroom grid
+    │   ├── template/    # Base template components
+    │   └── ui/          # Shadcn UI components
+    ├── helpers/         # IPC communication helpers
+    │   └── ipc/         # Theme, window, magister, studentdb channels
+    ├── layouts/         # Page layouts
+    ├── localization/    # i18n configuration (nl, en, pt-BR)
+    ├── routes/          # TanStack Router pages
+    ├── services/        # Business logic
+    │   ├── magister-api.ts        # Magister API integration
+    │   ├── student-database.ts    # Renderer database interface
+    │   └── main-student-database.ts # Main process database
+    ├── styles/          # Global CSS
+    ├── tests/           # Unit and E2E tests
+    ├── types/           # TypeScript type definitions
+    └── utils/           # Utilities (logger, platform, etc.)
 ```
 
-- `src/`: Main directory
-  - `assets/`: Store assets like images, fonts, etc.
-  - `components/`: Store UI components
-    - `template/`: Store the all not important components used by the template. It doesn't include the `WindowRegion` or the theme toggler, if you want to start an empty project, you can safely delete this directory.
-    - `ui/`: Store Shadcn UI components (this is the default direcotry used by Shadcn UI)
-  - `helpers/`: Store IPC related functions to be called in the renderer process
-    - `ipc/`: Directory to store IPC context and listener functions
-      - Some implementations are already done, like `theme` and `window` for the custom title bar
-  - `layout/`: Directory to store layout components
-  - `lib/`: Store libraries and other utilities
-  - `pages/`: Store app's pages
-  - `style/`: Store global styles
-  - `tests/`: Store tests (from Vitest and Playwright)
+## Key Components
 
-## NPM script
+### MagisterDashboard
+Main dashboard with two tabs:
+- **Overview**: API connection, data refresh, photo downloads
+- **Students**: Student directory and classroom views
 
-To run any of those scripts:
+### StudentDirectory
+- List view: Searchable student cards
+- Classroom view: 8-column drag-and-drop grid
+- Class filtering sidebar
+- Persistent seating positions (localStorage)
 
-```bash
-npm run <script>
-```
+### ClassroomGrid
+- Dynamic 8-column layout
+- Drag & drop with three modes:
+  - Swap: Exchange two seated students
+  - Displacement: Move unseated student, unseat existing
+  - Simple: Place student in empty seat
 
-- `start`: Start the app in development mode
-- `package`: Package your application into a platform-specific executable bundle and put the result in a folder.
-- `make`: Generate platform-specific distributables (e.g. .exe, .dmg, etc) of your application for distribution.
-- `publish`: Electron Forge's way of taking the artifacts generated by the `make` command and sending them to a service somewhere for you to distribute or use as updates.
-- `lint`: Run ESLint to lint the code
-- `format`: Run Prettier to check the code (it doesn't change the code)
-- `format:write`: Run Prettier to format the code
-- `test`: Run the default unit-test script (Vitest)
-- `test:watch`: Run the default unit-test script in watch mode (Vitest)
-- `test:unit`: Run the Vitest tests
-- `test:e2e`: Run the Playwright tests
-- `test:all`: Run all tests (Vitest and Playwright)
+## Getting Started
 
-> The test scripts involving Playwright require the app be builded before running the tests. So, before run the tests, run the `package`, `make` or `publish` script.
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Magister school account (for API access)
 
-## How to use
+### Installation
 
 1. Clone this repository
-
 ```bash
-git clone https://github.com/LuanRoger/electron-shadcn.git
+git clone https://github.com/yourusername/myMerlet.git
+cd myMerlet
 ```
 
-Or use it as a template on GitHub
-
 2. Install dependencies
-
 ```bash
 npm install
 ```
 
 3. Run the app
-
 ```bash
-npm run start
+npm start
 ```
 
-## Used by
+## NPM Scripts
 
-- [yaste](https://github.com/LuanRoger/yaste) - yaste (Yet another super ₛᵢₘₚₗₑ text editor) is a text editor, that can be used as an alternative to the native text editor of your SO, maybe.
-- [eletric-drizzle](https://github.com/LuanRoger/electric-drizzle) - shadcn-ui and Drizzle ORM with Electron.
-- [Wordle Game](https://github.com/masonyekta/wordle-game) - A Wordle game which features interactive gameplay, cross-platform compatibility, and integration with a custom Wordle API for word validation and letter correctness.
-- [Mehr 🌟](https://github.com/xmannii/MehrLocalChat) - A modern, elegant local AI chatbot application using Electron, React, shadcn/ui, and Ollama.
+```bash
+npm run <script>
+```
 
-> Does you've used this template in your project? Add it here and open a PR.
+- `start` - Start development mode with hot reload
+- `package` - Package application for distribution
+- `make` - Create platform-specific installers
+- `publish` - Publish to distribution service
+- `lint` - Run ESLint
+- `format` - Check code formatting
+- `format:write` - Apply Prettier formatting
+- `test` - Run unit tests (Vitest)
+- `test:watch` - Run tests in watch mode
+- `test:e2e` - Run E2E tests (Playwright)
+- `test:all` - Run all tests
+
+> **Note**: E2E tests require the app to be packaged first (`npm run package`)
+
+## Configuration
+
+### Magister API
+The app authenticates with Magister using OAuth/OIDC flow. On first launch:
+1. Click "Vernieuwen vanuit API" in the Overview tab
+2. Log in with your Magister credentials
+3. Grant access permissions
+4. Students will be automatically fetched and cached
+
+### Database
+- Student data: `~/Library/Application Support/electron-shadcn/magister_students.json`
+- Photo cache: `~/Library/Application Support/electron-shadcn/magister_photos.json`
+- Seating positions: Browser localStorage
+
+### Languages
+Default language is Dutch (nl). Switch languages using the toggle in the app header.
+
+Available languages:
+- 🇳🇱 Nederlands (Dutch)
+- 🇬🇧 English
+- 🇧🇷 Português (Portuguese)
+
+## Features in Detail
+
+### Student Photo Management
+- Automatic fetching from Magister API
+- Base64 encoding for cross-process compatibility
+- Persistent disk cache
+- Graceful fallback to initials avatar
+- Request deduplication to prevent API spam
+
+### Seating Arrangements
+- Per-class seating layouts
+- Persistent across app restarts
+- Visual drag & drop feedback
+- Opacity effects during drag
+- Automatic position saving
+
+### Offline Support
+- Works with cached student data
+- Cached photos available offline
+- Local seating positions always accessible
+
+## Development
+
+### Adding New Features
+1. Services go in `src/services/`
+2. Components in `src/components/`
+3. IPC channels in `src/helpers/ipc/`
+4. Translations in `src/localization/i18n.ts`
+
+### Logging
+Use the logger utility instead of console:
+```typescript
+import { logger } from './utils/logger';
+
+logger.debug('Debug info'); // Development only
+logger.log('Info');         // Development only
+logger.warn('Warning');     // Development only
+logger.error('Error');      // Always logged
+```
+
+### IPC Communication
+Example of adding a new IPC channel:
+1. Create channel definition in `src/helpers/ipc/your-feature/your-feature-channels.ts`
+2. Add context exposer in `src/helpers/ipc/your-feature/your-feature-context.ts`
+3. Register listeners in `src/helpers/ipc/your-feature/your-feature-listeners.ts`
+4. Import in main IPC files
+
+## Troubleshooting
+
+### Authentication Issues
+- Clear stored tokens: Click "Logout" in Overview tab
+- Check Magister server status
+- Verify credentials
+
+### Photo Loading Issues
+- Check internet connection
+- Clear photo cache and re-download
+- Check Magister API permissions
+
+### Seating Not Saving
+- Check browser localStorage is enabled
+- Look for errors in console (Cmd+Option+I)
+- Verify class is selected
+
+## Building for Production
+
+```bash
+# Create distributable
+npm run make
+
+# Outputs will be in:
+# - macOS: out/make/zip/darwin/arm64/
+# - Windows: out/make/squirrel.windows/x64/
+# - Linux: out/make/deb/x64/
+```
+
+## Credits
+
+Built on the [electron-shadcn](https://github.com/LuanRoger/electron-shadcn) template by LuanRoger.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/LuanRoger/electron-shadcn/blob/main/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+For issues related to:
+- **Magister API**: Check Magister documentation
+- **App bugs**: Open an issue on GitHub
+- **Feature requests**: Open an issue with the "enhancement" label
+
+---
+
+**Note**: This application is designed for use with the Magister school management system. You need valid Magister credentials to use the API features.

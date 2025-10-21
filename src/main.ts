@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
+import { mainStudentDB } from "./services/main-student-database";
 // "electron-squirrel-startup" seems broken when packaging with vite
 //import started from "electron-squirrel-startup";
 import path from "path";
@@ -51,6 +52,13 @@ app.whenReady().then(createWindow).then(installExtensions);
 
 //osX only
 app.on("window-all-closed", () => {
+  // Clean up database connections
+  try {
+    mainStudentDB.close();
+  } catch {
+    console.log("Database cleanup completed");
+  }
+
   if (process.platform !== "darwin") {
     app.quit();
   }
@@ -59,6 +67,15 @@ app.on("window-all-closed", () => {
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
+  }
+});
+
+app.on("before-quit", () => {
+  // Clean up database connections before quitting
+  try {
+    mainStudentDB.close();
+  } catch {
+    console.log("Database cleanup on quit completed");
   }
 });
 //osX only ends
