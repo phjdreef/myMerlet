@@ -430,9 +430,9 @@ export default function StudentDirectory() {
                 <Tabs
                   value={selectedPlanTab}
                   onValueChange={setSelectedPlanTab}
-                  className="flex flex-col h-full"
+                  className="flex h-full flex-col"
                 >
-                  <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-2">
+                  <div className="sticky top-0 z-10 bg-white pb-2 dark:bg-gray-900">
                     <TabsList>
                       {classPlans.map((plan) => (
                         <TabsTrigger key={plan.id} value={plan.id}>
