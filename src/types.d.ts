@@ -72,12 +72,27 @@ interface StudentDBAPI {
   }>;
   clearAllData: () => Promise<{ success: boolean; error?: string }>;
   savePhoto: (
-    studentId: number,
+    externeId: string,
     photoData: string,
   ) => Promise<{ success: boolean; error?: string }>;
   getPhoto: (
-    studentId: number,
+    externeId: string,
   ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
+}
+
+interface CurriculumAPI {
+  getAllPlans: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  getPlanByClass: (className: string) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  savePlan: (plan: unknown) => Promise<{ success: boolean; error?: string }>;
+  deletePlan: (planId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 declare interface Window {
@@ -85,4 +100,5 @@ declare interface Window {
   electronWindow: ElectronWindow;
   magisterAPI: MagisterAPI;
   studentDBAPI: StudentDBAPI;
+  curriculumAPI: CurriculumAPI;
 }

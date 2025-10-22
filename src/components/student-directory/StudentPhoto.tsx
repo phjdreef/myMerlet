@@ -4,7 +4,7 @@ import { logger } from "../../utils/logger";
 
 // Simple cache to prevent duplicate photo requests
 const photoCache = new Map<
-  number,
+  string,
   Promise<{ success: boolean; data?: string; error?: string }>
 >();
 
@@ -31,22 +31,32 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
         setImageError(false);
         setImageSrc(null);
 
-        logger.debug(`🖼️ Loading photo for student ${student.id}`);
+        const externeId = student.externeId;
+        if (!externeId) {
+          logger.debug(
+            `⚠️ Student ${student.id} has no externeId, cannot load photo`,
+          );
+          setImageError(true);
+          setImageLoading(false);
+          return;
+        }
+
+        logger.debug(`🖼️ Loading photo for student ${externeId}`);
 
         // First, try to get from persistent cache
-        const cachedResponse = await window.studentDBAPI.getPhoto(student.id);
+        const cachedResponse = await window.studentDBAPI.getPhoto(externeId);
         if (cachedResponse.success && cachedResponse.data && mounted) {
-          logger.debug(`📦 Using cached photo for student ${student.id}`);
+          logger.debug(`📦 Using cached photo for student ${externeId}`);
           setImageSrc(cachedResponse.data);
           setImageLoading(false);
           return;
         }
 
         // If not in cache, fetch from API
-        let photoPromise = photoCache.get(student.id);
+        let photoPromise = photoCache.get(externeId);
         if (!photoPromise) {
           photoPromise = window.magisterAPI.fetchStudentPhoto(student.id);
-          photoCache.set(student.id, photoPromise);
+          photoCache.set(externeId, photoPromise);
         }
 
         const response = await photoPromise;
@@ -55,18 +65,21 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
           const dataUrl = response.data as string;
           setImageSrc(dataUrl);
 
-          // Save to persistent cache
-          await window.studentDBAPI.savePhoto(student.id, dataUrl);
-          logger.debug(`✅ Photo fetched and cached for student ${student.id}`);
+          // Save to persistent cache using externeId
+          await window.studentDBAPI.savePhoto(externeId, dataUrl);
+          logger.debug(`✅ Photo fetched and cached for student ${externeId}`);
         } else if (mounted) {
           logger.debug(
-            `❌ No photo data for student ${student.id}:`,
+            `❌ No photo data for student ${externeId}:`,
             response.error,
           );
           setImageError(true);
         }
       } catch (err) {
-        logger.debug(`💥 Failed to load photo for student ${student.id}:`, err);
+        logger.debug(
+          `💥 Failed to load photo for student ${student.externeId}:`,
+          err,
+        );
         if (mounted) {
           setImageError(true);
         }
@@ -82,7 +95,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
     return () => {
       mounted = false;
     };
-  }, [student.id]);
+  }, [student.id, student.externeId]);
 
   const sizeClasses =
     size === "small"
@@ -97,7 +110,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
     );
     return (
       <div
-        className={`border-muted flex ${sizeClasses} items-center justify-center rounded-full border-2 bg-gradient-to-br from-blue-400 to-purple-500 font-semibold text-white shadow-sm`}
+        className={`border-muted flex ${sizeClasses} items-center justify-center rounded-full border-2 bg-linear-to-br from-blue-400 to-purple-500 font-semibold text-white shadow-sm`}
       >
         {getInitials()}
       </div>

@@ -27,7 +27,7 @@ interface DatabaseData {
 }
 
 interface PhotoCache {
-  [studentId: number]: {
+  [externeId: string]: {
     data: string; // base64 data URL
     cachedAt: string;
   };
@@ -173,18 +173,40 @@ class MainStudentDatabase {
     try {
       logger.debug("Starting database save operation");
 
+      // Read existing data to merge with new students
+      const existingData = this.readDatabase();
+      const existingStudentsMap = new Map<string, Student>();
+
+      // Create a map of existing students by externeId
+      for (const student of existingData.students) {
+        if (student.externeId) {
+          existingStudentsMap.set(student.externeId, student);
+        }
+      }
+
+      // Merge new students with existing ones (update if externeId exists, add if new)
+      for (const student of students) {
+        if (student.externeId) {
+          existingStudentsMap.set(student.externeId, student);
+        }
+      }
+
+      // Convert map back to array
+      const mergedStudents = Array.from(existingStudentsMap.values());
+
       const data: DatabaseData = {
-        students: students,
+        students: mergedStudents,
         metadata: {
           lastSync: new Date().toISOString(),
-          totalCount: students.length,
-          created_at: new Date().toISOString(),
+          totalCount: mergedStudents.length,
+          created_at:
+            existingData.metadata?.created_at || new Date().toISOString(),
         },
       };
 
       this.writeDatabase(data);
       logger.debug(
-        `Successfully saved ${students.length} students to database`,
+        `Successfully saved ${mergedStudents.length} students to database (${students.length} new/updated)`,
       );
     } catch (error) {
       logger.error("Failed to save students:", error);
@@ -280,7 +302,7 @@ class MainStudentDatabase {
     }
   }
 
-  async savePhoto(studentId: number, photoData: string): Promise<void> {
+  async savePhoto(externeId: string, photoData: string): Promise<void> {
     if (!this.initialized) {
       await this.init();
     }
@@ -294,20 +316,20 @@ class MainStudentDatabase {
         photos = JSON.parse(data) as PhotoCache;
       }
 
-      photos[studentId] = {
+      photos[externeId] = {
         data: photoData,
         cachedAt: new Date().toISOString(),
       };
 
       fs.writeFileSync(photosPath, JSON.stringify(photos, null, 2));
-      logger.debug(`Saved photo for student ${studentId}`);
+      logger.debug(`Saved photo for student ${externeId}`);
     } catch (error) {
       logger.error("Failed to save photo:", error);
       throw new Error("Failed to save photo to cache");
     }
   }
 
-  async getPhoto(studentId: number): Promise<string | null> {
+  async getPhoto(externeId: string): Promise<string | null> {
     if (!this.initialized) {
       await this.init();
     }
@@ -322,9 +344,9 @@ class MainStudentDatabase {
       const data = fs.readFileSync(photosPath, "utf8");
       const photos = JSON.parse(data) as PhotoCache;
 
-      const photo = photos[studentId];
+      const photo = photos[externeId];
       if (photo) {
-        logger.debug(`Retrieved cached photo for student ${studentId}`);
+        logger.debug(`Retrieved cached photo for student ${externeId}`);
         return photo.data;
       }
 

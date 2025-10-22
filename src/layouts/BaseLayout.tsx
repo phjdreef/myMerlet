@@ -8,10 +8,10 @@ export default function BaseLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
-      <DragWindowRegion title="electron-shadcn" />
+    <div className="flex h-screen flex-col">
+      <DragWindowRegion title="myMerlet" />
       <NavigationMenu />
-      <main className="h-screen p-2 pb-20">{children}</main>
-    </>
+      <main className="flex-1 overflow-auto">{children}</main>
+    </div>
   );
 }

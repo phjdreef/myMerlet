@@ -150,6 +150,13 @@ export function ClassroomGrid({
           🏫 {t("classroomLayout")} - {selectedClass}
         </h3>
 
+        {/* Front of classroom indicator */}
+        <div className="mb-4 flex items-center justify-center">
+          <div className="border-primary bg-primary/10 rounded-lg border-2 px-6 py-2">
+            <span className="text-sm font-semibold">⬆️ Voorkant lokaal</span>
+          </div>
+        </div>
+
         <div className="mb-4 flex flex-wrap gap-4">
           {Array.from({ length: requiredRows }, (_, row) => (
             <div key={`row-${row}`} className="flex w-full gap-4">

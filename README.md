@@ -141,8 +141,8 @@ The app authenticates with Magister using OAuth/OIDC flow. On first launch:
 4. Students will be automatically fetched and cached
 
 ### Database
-- Student data: `~/Library/Application Support/electron-shadcn/magister_students.json`
-- Photo cache: `~/Library/Application Support/electron-shadcn/magister_photos.json`
+- Student data: `~/Library/Application Support/myMerlet/magister_students.json`
+- Photo cache: `~/Library/Application Support/myMerlet/magister_photos.json`
 - Seating positions: Browser localStorage
 
 ### Languages

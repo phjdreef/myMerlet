@@ -19,12 +19,12 @@ export function StudentCard({ student }: StudentCardProps) {
     <div className="bg-card rounded-lg border p-4">
       <div className="mb-3 flex gap-3">
         {/* Student Photo */}
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <StudentPhoto student={student} />
         </div>
 
         {/* Student Info */}
-        <div className="flex-grow">
+        <div className="grow">
           <div className="mb-1 flex items-start justify-between">
             <div>
               <h3 className="text-lg font-medium">{student.roepnaam}</h3>
@@ -56,6 +56,11 @@ export function StudentCard({ student }: StudentCardProps) {
         {student.studies && student.studies.length > 0 && (
           <p>
             <strong>Studies:</strong> {student.studies.join(", ")}
+          </p>
+        )}
+        {student.lesgroepen && student.lesgroepen.length > 0 && (
+          <p>
+            <strong>Groups:</strong> {student.lesgroepen.join(", ")}
           </p>
         )}
       </div>

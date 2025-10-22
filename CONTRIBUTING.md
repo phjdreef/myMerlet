@@ -21,9 +21,9 @@ Thank you for your interest in contributing to myMerlet! This document provides 
 - Use **TypeScript** for all new code
 - Use the **logger utility** instead of console.log:
   ```typescript
-  import { logger } from './utils/logger';
-  logger.debug('Debug info');  // Development only
-  logger.error('Error');        // Always logged
+  import { logger } from "./utils/logger";
+  logger.debug("Debug info"); // Development only
+  logger.error("Error"); // Always logged
   ```
 - Follow React best practices and hooks guidelines
 - Write descriptive commit messages
@@ -41,6 +41,7 @@ Thank you for your interest in contributing to myMerlet! This document provides 
 ### 1. IPC Communication
 
 If adding new Electron IPC channels:
+
 1. Create channel definitions in `src/helpers/ipc/your-feature/your-feature-channels.ts`
 2. Add context in `src/helpers/ipc/your-feature/your-feature-context.ts`
 3. Register listeners in `src/helpers/ipc/your-feature/your-feature-listeners.ts`
@@ -48,6 +49,7 @@ If adding new Electron IPC channels:
 ### 2. Translations
 
 Add translations for all UI text in `src/localization/i18n.ts`:
+
 ```typescript
 nl: { yourKey: "Dutch text" },
 en: { yourKey: "English text" },
@@ -79,6 +81,7 @@ en: { yourKey: "English text" },
 ## Commit Message Format
 
 Use conventional commits:
+
 - `feat:` - New feature
 - `fix:` - Bug fix
 - `docs:` - Documentation changes
@@ -88,6 +91,7 @@ Use conventional commits:
 - `chore:` - Maintenance tasks
 
 Examples:
+
 ```
 feat: add student search functionality
 fix: resolve drag and drop opacity issue

@@ -80,9 +80,9 @@ export function addStudentDBEventListeners() {
 
   ipcMain.handle(
     STUDENT_DB_CHANNELS.SAVE_PHOTO,
-    async (_, studentId: number, photoData: string) => {
+    async (_, externeId: string, photoData: string) => {
       try {
-        await mainStudentDB.savePhoto(studentId, photoData);
+        await mainStudentDB.savePhoto(externeId, photoData);
         return { success: true };
       } catch (error) {
         return {
@@ -96,9 +96,9 @@ export function addStudentDBEventListeners() {
 
   ipcMain.handle(
     STUDENT_DB_CHANNELS.GET_PHOTO,
-    async (_, studentId: number) => {
+    async (_, externeId: string) => {
       try {
-        const photo = await mainStudentDB.getPhoto(studentId);
+        const photo = await mainStudentDB.getPhoto(externeId);
         return { success: true, data: photo };
       } catch (error) {
         return {

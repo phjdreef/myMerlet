@@ -201,3 +201,66 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Input Placeholder Styles - Make them lighter */
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  @apply text-gray-400 dark:text-gray-500;
+  opacity: 0.6;
+}
+
+/* Tiptap Editor Styles */
+.ProseMirror {
+  @apply focus:outline-none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  @apply text-gray-400 dark:text-gray-500;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.ProseMirror h2 {
+  @apply mt-4 mb-2 text-xl font-bold;
+}
+
+.ProseMirror h3 {
+  @apply mt-3 mb-2 text-lg font-bold;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  @apply my-2 pl-6;
+}
+
+.ProseMirror ul {
+  @apply list-disc;
+}
+
+.ProseMirror ol {
+  @apply list-decimal;
+}
+
+.ProseMirror blockquote {
+  @apply my-2 border-l-4 border-gray-300 pl-4 italic;
+}
+
+.ProseMirror hr {
+  @apply my-4 border-gray-300;
+}
+
+.ProseMirror code {
+  @apply rounded bg-gray-100 px-1 py-0.5 text-sm dark:bg-gray-800;
+}
+
+.ProseMirror pre {
+  @apply my-2 rounded bg-gray-100 p-3 dark:bg-gray-800;
+}
+
+.ProseMirror pre code {
+  @apply bg-transparent p-0;
+}

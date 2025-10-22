@@ -20,8 +20,8 @@ export default function DragWindowRegion({ title }: DragWindowRegionProps) {
           </div>
         )}
         {isMacOS() && (
-          <div className="flex flex-1 p-2">
-            {/* Maintain the same height but do not display content */}
+          <div className="h-4">
+            {/* Minimal height for macOS traffic lights drag area */}
           </div>
         )}
       </div>

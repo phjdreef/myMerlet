@@ -80,28 +80,85 @@ export class MagisterAPI {
       // Load the Magister login page
       authWindow.loadURL(`${this.baseUrl}/op/#/vandaag`);
 
-      // Add a manual authentication button for testing (development only)
+      // Add manual authentication and cancel buttons
       authWindow.webContents.on("dom-ready", () => {
         authWindow.webContents.executeJavaScript(`
-          // Create a debug button
-          const debugButton = document.createElement('button');
-          debugButton.innerHTML = 'Extract Auth (Debug)';
-          debugButton.style.position = 'fixed';
-          debugButton.style.top = '10px';
-          debugButton.style.right = '10px';
-          debugButton.style.zIndex = '10000';
-          debugButton.style.padding = '10px';
-          debugButton.style.backgroundColor = '#007ACC';
-          debugButton.style.color = 'white';
-          debugButton.style.border = 'none';
-          debugButton.style.borderRadius = '5px';
-          debugButton.style.cursor = 'pointer';
-          
-          debugButton.onclick = () => {
-            window.postMessage({ type: 'EXTRACT_AUTH' }, '*');
-          };
-          
-          document.body.appendChild(debugButton);
+          (function() {
+            // Listen for cancel/extract auth messages
+            window.addEventListener('message', function(event) {
+              if (event.data.type === 'CANCEL_AUTH') {
+                // Signal cancellation by setting a flag
+                localStorage.setItem('__auth_cancelled__', 'true');
+                window.close();
+              } else if (event.data.type === 'EXTRACT_AUTH') {
+                // Signal manual extraction
+                localStorage.setItem('__manual_extract__', 'true');
+                console.log('Manual extraction triggered - checking for tokens...');
+              }
+            });
+            
+            // Create a cancel button
+            const cancelButton = document.createElement('button');
+            cancelButton.innerHTML = '✕ Cancel Login';
+            cancelButton.style.position = 'fixed';
+            cancelButton.style.top = '10px';
+            cancelButton.style.left = '10px';
+            cancelButton.style.zIndex = '10000';
+            cancelButton.style.padding = '10px 15px';
+            cancelButton.style.backgroundColor = '#dc2626';
+            cancelButton.style.color = 'white';
+            cancelButton.style.border = 'none';
+            cancelButton.style.borderRadius = '5px';
+            cancelButton.style.cursor = 'pointer';
+            cancelButton.style.fontSize = '14px';
+            cancelButton.style.fontWeight = 'bold';
+            
+            cancelButton.onclick = function() {
+              window.postMessage({ type: 'CANCEL_AUTH' }, '*');
+            };
+            
+            document.body.appendChild(cancelButton);
+            
+            // Create a debug button
+            const debugButton = document.createElement('button');
+            debugButton.innerHTML = 'Extract Auth (Debug)';
+            debugButton.style.position = 'fixed';
+            debugButton.style.top = '10px';
+            debugButton.style.right = '10px';
+            debugButton.style.zIndex = '10000';
+            debugButton.style.padding = '10px';
+            debugButton.style.backgroundColor = '#007ACC';
+            debugButton.style.color = 'white';
+            debugButton.style.border = 'none';
+            debugButton.style.borderRadius = '5px';
+            debugButton.style.cursor = 'pointer';
+            
+            debugButton.onclick = function() {
+              console.log('Extract Auth button clicked');
+              window.postMessage({ type: 'EXTRACT_AUTH' }, '*');
+              
+              // Give visual feedback
+              debugButton.innerHTML = 'Extracting...';
+              debugButton.style.backgroundColor = '#fbbf24';
+            };
+            
+            document.body.appendChild(debugButton);
+          })();
+        `);
+
+        // Check for manual extraction trigger
+        authWindow.webContents.executeJavaScript(`
+          (function() {
+            setInterval(function() {
+              const manualExtract = localStorage.getItem('__manual_extract__');
+              if (manualExtract === 'true') {
+                localStorage.removeItem('__manual_extract__');
+                console.log('Manual extraction flag detected');
+                // This will be picked up by the main process
+                document.title = 'EXTRACT_NOW';
+              }
+            }, 500);
+          })();
         `);
       });
 
@@ -152,10 +209,42 @@ export class MagisterAPI {
         }
       });
 
+      // Listen for manual extraction trigger (via page title change)
+      authWindow.webContents.on("page-title-updated", async (event, title) => {
+        if (title === "EXTRACT_NOW") {
+          logger.debug("Manual extraction triggered via title");
+          try {
+            const tokenData = await this.extractTokenFromBrowser(authWindow);
+            if (tokenData) {
+              this.authData = tokenData;
+              await this.storeAuth(tokenData);
+              resolveAuth(tokenData);
+            } else {
+              logger.error("No token found during manual extraction");
+            }
+          } catch (error) {
+            logger.error("Error during manual extraction:", error);
+          }
+        }
+      });
+
       // Handle window closed by user
-      authWindow.on("closed", () => {
+      authWindow.on("closed", async () => {
         if (!isResolved) {
-          rejectAuth(new Error("Authentication window was closed"));
+          // Check if it was cancelled by the user via the cancel button
+          try {
+            const wasCancelled = await authWindow.webContents
+              .executeJavaScript(`localStorage.getItem('__auth_cancelled__')`)
+              .catch(() => null);
+
+            if (wasCancelled === "true") {
+              rejectAuth(new Error("Login cancelled by user"));
+            } else {
+              rejectAuth(new Error("Authentication window was closed"));
+            }
+          } catch {
+            rejectAuth(new Error("Authentication window was closed"));
+          }
         }
       });
 
@@ -235,15 +324,6 @@ export class MagisterAPI {
           } catch (e) {
             // No global auth object available
           }
-          
-          return {
-            localStorage: localStorageToken,
-            sessionStorage: sessionStorageToken,
-            potentialTokens: potentialTokens,
-            allLocalStorageTokens: allLocalStorageTokens,
-            allSessionStorageTokens: allSessionStorageTokens,
-            authObject: authObject
-          });
           
           return {
             localStorage: localStorageToken,

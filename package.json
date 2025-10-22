@@ -1,8 +1,8 @@
 {
-  "name": "electron-shadcn",
-  "productName": "electron-shadcn Template",
+  "name": "my-merlet",
+  "productName": "myMerlet",
   "version": "1.0.0",
-  "description": "Electron Forge with shadcn-ui (Vite + Typescript)",
+  "description": "Classroom seating management app with Magister API integration",
   "main": ".vite/build/main.js",
   "private": true,
   "scripts": {
@@ -75,6 +75,9 @@
     "@tanstack/react-query": "^5.90.3",
     "@tanstack/react-router": "^1.132.47",
     "@tanstack/react-router-devtools": "^1.133.15",
+    "@tiptap/extension-placeholder": "^3.7.2",
+    "@tiptap/react": "^3.7.2",
+    "@tiptap/starter-kit": "^3.7.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electron-squirrel-startup": "^1.0.1",

@@ -16,11 +16,9 @@ export default function MagisterDashboard({
   const [data, setData] = useState<unknown | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [students, setStudents] = useState<
-    Array<{ id: number; [key: string]: unknown }>
-  >([]);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  const loadAllStudents = async () => {
+  const loadAllStudents = async (skipAuth = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -32,147 +30,122 @@ export default function MagisterDashboard({
           items?: Array<{ id: number; [key: string]: unknown }>;
         };
         const items = responseData.items || [];
-        setStudents(items);
+
+        // Save students to database
+        try {
+          await window.studentDBAPI.saveStudents(items);
+          logger.debug(`Saved ${items.length} students to database`);
+        } catch (err) {
+          logger.error("Failed to save students to database:", err);
+          setError("⚠️ Students loaded but failed to save to database");
+        }
+
         setData({
           message: "Students loaded successfully!",
           count: items.length,
         });
+
+        // Automatically download photos after loading students
+        if (items.length > 0) {
+          setError(t("downloadingPhotos"));
+          let successCount = 0;
+          let failCount = 0;
+
+          for (const student of items) {
+            try {
+              const photoResponse = await window.magisterAPI.fetchStudentPhoto(
+                student.id,
+              );
+              if (photoResponse.success && photoResponse.data) {
+                // Use externeId as the key for storing photos
+                const externeId = student.externeId as string;
+                if (externeId) {
+                  await window.studentDBAPI.savePhoto(
+                    externeId,
+                    photoResponse.data,
+                  );
+                  successCount++;
+                  setError(
+                    t("downloadedPhotos", {
+                      count: successCount,
+                      total: items.length,
+                    }),
+                  );
+                } else {
+                  logger.error(`Student ${student.id} has no externeId`);
+                  failCount++;
+                }
+              } else {
+                failCount++;
+              }
+            } catch (err) {
+              logger.error(
+                `Failed to download photo for student ${student.id}:`,
+                err,
+              );
+              failCount++;
+            }
+          }
+
+          setError(
+            t("photoDownloadComplete", {
+              success: successCount,
+              failed: failCount,
+            }),
+          );
+          setTimeout(() => setError(null), 5000);
+        }
+
+        setLoading(false);
       } else {
         const errorMsg = response.error || "Failed to load students";
-        setError(errorMsg);
 
-        // Auto-trigger login on auth error
+        // Auto-trigger login on auth error (but only if not already authenticating)
         if (
-          errorMsg.includes("Not authenticated") ||
-          errorMsg.includes("token expired")
+          !skipAuth &&
+          !isAuthenticating &&
+          (errorMsg.includes("Not authenticated") ||
+            errorMsg.includes("token expired"))
         ) {
+          setIsAuthenticating(true);
+          setError(errorMsg + " - Opening login window...");
           try {
             const authResult = await window.magisterAPI.authenticate();
             if (authResult.success) {
-              setError("✅ Authentication successful! Please try again.");
+              setError("✅ Authentication successful! Loading students...");
+              setIsAuthenticating(false);
+              // Wait a moment for token to be fully stored, then retry
+              setTimeout(() => {
+                loadAllStudents(true); // skipAuth = true to prevent infinite loop
+              }, 500);
+              return; // Exit early
+            } else {
+              setError(
+                `❌ Authentication failed: ${authResult.error || "Unknown error"}`,
+              );
+              setIsAuthenticating(false);
+              setLoading(false);
             }
-          } catch {
-            setError("❌ Authentication cancelled or failed.");
+          } catch (authErr) {
+            const authErrorMsg =
+              authErr instanceof Error ? authErr.message : "Unknown error";
+            if (authErrorMsg.includes("cancelled")) {
+              setError(
+                "❌ Login cancelled. Click 'Refresh From API' to try again.",
+              );
+            } else {
+              setError(`❌ Authentication failed: ${authErrorMsg}`);
+            }
+            setIsAuthenticating(false);
+            setLoading(false);
           }
+        } else {
+          setError(errorMsg);
+          setLoading(false);
         }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load students");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const downloadAllPhotos = async () => {
-    if (students.length === 0) {
-      setError(t("noStudentsLoaded"));
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(t("downloadingPhotos"));
-
-      let successCount = 0;
-      let failCount = 0;
-
-      for (const student of students) {
-        try {
-          const response = await window.magisterAPI.fetchStudentPhoto(
-            student.id,
-          );
-          if (response.success && response.data) {
-            await window.studentDBAPI.savePhoto(student.id, response.data);
-            successCount++;
-            setError(
-              t("downloadedPhotos", {
-                count: successCount,
-                total: students.length,
-              }),
-            );
-          } else {
-            failCount++;
-          }
-        } catch (err) {
-          logger.error(
-            `Failed to download photo for student ${student.id}:`,
-            err,
-          );
-          failCount++;
-        }
-      }
-
-      setError(
-        t("photoDownloadComplete", {
-          success: successCount,
-          failed: failCount,
-        }),
-      );
-      setTimeout(() => setError(null), 5000);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : t("failedToDownloadPhotos");
-
-      if (
-        errorMessage.includes("Not authenticated") ||
-        errorMessage.includes("token expired")
-      ) {
-        setError("⚠️ Not authenticated. Please log in first.");
-
-        try {
-          const authResult = await window.magisterAPI.authenticate();
-          if (authResult.success) {
-            setError(t("authSuccessRetrying"));
-            setTimeout(() => downloadAllPhotos(), 1000);
-          }
-        } catch {
-          setError("❌ Authentication cancelled or failed.");
-        }
-      } else {
-        setError(`❌ ${errorMessage}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // You can add your API calls here
-      logger.debug("Loading Magister data...");
-
-      // Placeholder for now
-      setData({ message: "Connected to Magister!" });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load data");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const testAPI = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      logger.debug("Testing Magister API...");
-
-      const response = await window.magisterAPI.testAPI();
-      logger.debug("API Test Response:", response);
-
-      if (response.success) {
-        setData(response.data as unknown);
-        logger.debug("API test successful!", response.data);
-      } else {
-        setError(response.error || "API test failed");
-      }
-    } catch (err) {
-      logger.error("API test error:", err);
-      setError(err instanceof Error ? err.message : "API test failed");
-    } finally {
       setLoading(false);
     }
   };
@@ -215,32 +188,14 @@ export default function MagisterDashboard({
         {/* Controls for Overview tab */}
         {activeTab === "overview" && (
           <div className="flex flex-wrap gap-2">
-            <Button onClick={loadData} disabled={loading} size="sm">
-              Refresh Data
-            </Button>
+            {/* Student API Controls */}
             <Button
-              onClick={testAPI}
+              onClick={() => loadAllStudents(false)}
               disabled={loading}
-              variant="outline"
               size="sm"
             >
-              Test API
+              {t("refreshFromAPI")}
             </Button>
-
-            {/* Student API Controls */}
-            <div className="flex gap-2 border-l pl-2">
-              <Button onClick={loadAllStudents} disabled={loading} size="sm">
-                {t("refreshFromAPI")}
-              </Button>
-              <Button
-                onClick={downloadAllPhotos}
-                disabled={loading || students.length === 0}
-                size="sm"
-                variant="outline"
-              >
-                {t("downloadAllPhotos")}
-              </Button>
-            </div>
 
             <Button
               onClick={handleLogout}

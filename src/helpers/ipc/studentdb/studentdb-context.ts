@@ -10,10 +10,10 @@ export const studentDBAPI = {
     ipcRenderer.invoke(STUDENT_DB_CHANNELS.SEARCH_STUDENTS, query),
   getMetadata: () => ipcRenderer.invoke(STUDENT_DB_CHANNELS.GET_METADATA),
   clearAllData: () => ipcRenderer.invoke(STUDENT_DB_CHANNELS.CLEAR_ALL_DATA),
-  savePhoto: (studentId: number, photoData: string) =>
-    ipcRenderer.invoke(STUDENT_DB_CHANNELS.SAVE_PHOTO, studentId, photoData),
-  getPhoto: (studentId: number) =>
-    ipcRenderer.invoke(STUDENT_DB_CHANNELS.GET_PHOTO, studentId),
+  savePhoto: (externeId: string, photoData: string) =>
+    ipcRenderer.invoke(STUDENT_DB_CHANNELS.SAVE_PHOTO, externeId, photoData),
+  getPhoto: (externeId: string) =>
+    ipcRenderer.invoke(STUDENT_DB_CHANNELS.GET_PHOTO, externeId),
 };
 
 contextBridge.exposeInMainWorld("studentDBAPI", studentDBAPI);

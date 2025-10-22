@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { studentDB, type Student } from "../services/student-database";
 import { ClassFilter } from "./student-directory/ClassFilter";
 import {
@@ -8,14 +8,15 @@ import {
   type SeatingPosition,
 } from "./student-directory/ClassroomGrid";
 import { StudentCard } from "./student-directory/StudentCard";
+import { CurriculumTimeline } from "./curriculum/CurriculumTimeline";
+import { getCurrentWeekNumber } from "../utils/week-utils";
 import { logger } from "../utils/logger";
+import type { CurriculumPlan } from "../services/curriculum-database";
 
 // View modes
-type ViewMode = "list" | "classroom";
+type ViewMode = "list" | "classroom" | "plans";
 
 export default function StudentDirectory() {
-  const { t } = useTranslation();
-
   // State
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
@@ -29,6 +30,10 @@ export default function StudentDirectory() {
     Map<string, SeatingPosition[]>
   >(new Map());
   const [draggedStudent, setDraggedStudent] = useState<Student | null>(null);
+  const [plans, setPlans] = useState<CurriculumPlan[]>([]);
+  const [classPlans, setClassPlans] = useState<CurriculumPlan[]>([]);
+  const [selectedPlanTab, setSelectedPlanTab] = useState<string>("");
+  const currentWeek = getCurrentWeekNumber();
 
   // Database functions
   const loadFromDatabase = async () => {
@@ -111,10 +116,26 @@ export default function StudentDirectory() {
     }
   };
 
+  /**
+   * Load curriculum plans from database
+   */
+  const loadPlans = async () => {
+    try {
+      const result = await window.curriculumAPI.getAllPlans();
+      if (result.success && result.data) {
+        const plansData = result.data as { plans: CurriculumPlan[] };
+        setPlans(plansData.plans || []);
+      }
+    } catch (error) {
+      logger.error("Failed to load plans:", error);
+    }
+  };
+
   // Effects
   useEffect(() => {
     loadFromDatabase();
     loadSeatingPositions();
+    loadPlans();
   }, []);
 
   useEffect(() => {
@@ -132,7 +153,20 @@ export default function StudentDirectory() {
       ? students.filter((student) => student.klassen?.includes(selectedClass))
       : students;
     setFilteredStudents(filtered);
-  }, [students, selectedClass]);
+
+    // Filter plans by selected class
+    const filteredPlans = selectedClass
+      ? plans.filter((plan) => plan.classNames.includes(selectedClass))
+      : [];
+    setClassPlans(filteredPlans);
+
+    // Set first plan as selected tab when plans change
+    if (filteredPlans.length > 0 && !selectedPlanTab) {
+      setSelectedPlanTab(filteredPlans[0].id);
+    } else if (filteredPlans.length === 0) {
+      setSelectedPlanTab("");
+    }
+  }, [students, selectedClass, plans, selectedPlanTab]);
 
   // Event handlers
   const handleClassFilter = (className: string | null) => {
@@ -305,7 +339,7 @@ export default function StudentDirectory() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="mb-2 text-2xl font-bold">
-            {t("studentDirectory")}
+            Klassen
             {selectedClass && (
               <span className="text-muted-foreground ml-2 text-lg font-normal">
                 - {selectedClass}
@@ -337,6 +371,14 @@ export default function StudentDirectory() {
                 size="sm"
               >
                 🏫 Classroom
+              </Button>
+              <Button
+                onClick={() => setViewMode("plans")}
+                disabled={loading || !selectedClass}
+                variant={viewMode === "plans" ? "default" : "outline"}
+                size="sm"
+              >
+                📚 Plans
               </Button>
             </div>
           </div>
@@ -382,6 +424,44 @@ export default function StudentDirectory() {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             />
+          ) : viewMode === "plans" ? (
+            <>
+              {classPlans.length > 0 ? (
+                <Tabs
+                  value={selectedPlanTab}
+                  onValueChange={setSelectedPlanTab}
+                  className="flex flex-col h-full"
+                >
+                  <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-2">
+                    <TabsList>
+                      {classPlans.map((plan) => (
+                        <TabsTrigger key={plan.id} value={plan.id}>
+                          {plan.subject} ({plan.schoolYear})
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </div>
+                  <div className="flex-1 overflow-auto">
+                    {classPlans.map((plan) => (
+                      <TabsContent key={plan.id} value={plan.id}>
+                        <CurriculumTimeline
+                          plan={plan}
+                          currentWeek={currentWeek}
+                        />
+                      </TabsContent>
+                    ))}
+                  </div>
+                </Tabs>
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-muted-foreground">
+                    {selectedClass
+                      ? `Geen plannen gevonden voor klas "${selectedClass}".`
+                      : "Selecteer een klas om plannen te zien."}
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <>
               {filteredStudents.length > 0 && (
