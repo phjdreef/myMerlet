@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 
 interface MagisterLoginProps {
@@ -12,34 +13,31 @@ export default function MagisterLogin({
 }: MagisterLoginProps) {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginStep, setLoginStep] = useState<string>("");
+  const { t } = useTranslation();
 
   const handleLogin = async () => {
     setIsLoggingIn(true);
-    setLoginStep("Opening authentication window...");
+    setLoginStep(t("magisterLoginOpening"));
 
     try {
       const result = await window.magisterAPI.authenticate();
 
       if (result.success) {
-        setLoginStep("Authentication successful!");
+        setLoginStep(t("magisterLoginSuccess"));
         onLoginSuccess();
       } else {
-        onLoginError(result.error || "Authentication failed");
+        onLoginError(result.error || t("magisterLoginFailed"));
       }
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Authentication failed";
+        error instanceof Error ? error.message : t("magisterLoginFailed");
       if (
         errorMessage.includes("cancelled") ||
         errorMessage.includes("closed")
       ) {
-        onLoginError(
-          "Login was cancelled. Please try again and complete the login process.",
-        );
+        onLoginError(t("magisterLoginCancelled"));
       } else if (errorMessage.includes("timeout")) {
-        onLoginError(
-          "Login timed out. Please try again and complete the login process within 5 minutes.",
-        );
+        onLoginError(t("magisterLoginTimedOut"));
       } else {
         onLoginError(errorMessage);
       }
@@ -52,9 +50,9 @@ export default function MagisterLogin({
   return (
     <div className="flex flex-col items-center justify-center gap-4 p-8">
       <div className="text-center">
-        <h2 className="mb-2 text-2xl font-bold">Magister Login</h2>
+        <h2 className="mb-2 text-2xl font-bold">{t("magisterLoginTitle")}</h2>
         <p className="text-muted-foreground mb-6">
-          Log in to your Magister account to view your schedule and information
+          {t("magisterLoginDescription")}
         </p>
       </div>
 
@@ -63,24 +61,21 @@ export default function MagisterLogin({
         disabled={isLoggingIn}
         className="min-w-[200px]"
       >
-        {isLoggingIn ? loginStep || "Logging in..." : "Login to Magister"}
+        {isLoggingIn
+          ? loginStep || t("magisterLoggingIn")
+          : t("magisterLoginButton")}
       </Button>
 
       <div className="text-muted-foreground max-w-md space-y-2 text-center text-sm">
-        <p>
-          This will open a secure browser window where you can log in to your
-          Magister account. Your credentials are not stored by this application.
-        </p>
+        <p>{t("magisterLoginInfo")}</p>
         {isLoggingIn && (
           <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-950/20">
-            <p className="font-medium">Instructions:</p>
+            <p className="font-medium">{t("magisterLoginInstructions")}</p>
             <ol className="mt-2 space-y-1 text-left">
-              <li>1. Complete the login process in the browser window</li>
-              <li>2. Wait for the dashboard to load completely</li>
-              <li>
-                3. You can click the "Extract Auth (Debug)" button if needed
-              </li>
-              <li>4. The window will close automatically when done</li>
+              <li>{t("magisterLoginStep1")}</li>
+              <li>{t("magisterLoginStep2")}</li>
+              <li>{t("magisterLoginStep3")}</li>
+              <li>{t("magisterLoginStep4")}</li>
             </ol>
           </div>
         )}

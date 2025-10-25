@@ -1,11 +1,11 @@
-import { Moon } from "lucide-react";
+import { MoonIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { toggleTheme } from "@/helpers/theme_helpers";
 
 export default function ToggleTheme() {
   return (
     <Button onClick={toggleTheme} size="icon">
-      <Moon size={16} />
+      <MoonIcon size={16} />
     </Button>
   );
 }

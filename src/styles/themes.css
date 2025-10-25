@@ -1,0 +1,39 @@
+/*
+  Add this to your global CSS (e.g., src/styles/global.css) to support theme switching.
+  These classes use CSS variables for background, foreground, etc.
+*/
+.theme-system {
+  /* No override, use system/default */
+}
+.theme-twitter {
+  --color-bg: #15202b;
+  --color-fg: #d9d9d9;
+  --color-primary: #1da1f2;
+  --color-secondary: #8899a6;
+  --color-accent: #1da1f2;
+  --color-border: #38444d;
+}
+.theme-graphite {
+  --color-bg: #23272f;
+  --color-fg: #e0e0e0;
+  --color-primary: #6c6f93;
+  --color-secondary: #a0a0a0;
+  --color-accent: #b8b8b8;
+  --color-border: #393e4f;
+}
+
+body,
+html {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-family, Geist, sans-serif);
+}
+
+/* Example usage for buttons, borders, etc. */
+.button-primary {
+  background: var(--color-primary);
+  color: var(--color-fg);
+}
+.border {
+  border-color: var(--color-border);
+}

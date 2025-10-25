@@ -95,10 +95,99 @@ interface CurriculumAPI {
   deletePlan: (planId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
+interface TestAPI {
+  getTestsForClassGroup: (classGroup: string) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  getTest: (testId: string) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  createTest: (test: unknown) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  updateTest: (
+    testId: string,
+    updates: unknown,
+  ) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  deleteTest: (testId: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  getGradesForTest: (testId: string) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  getGradesForStudent: (
+    studentId: number,
+    classGroup: string,
+  ) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  saveGrade: (
+    testId: string,
+    studentId: number,
+    pointsEarned: number,
+    manualOverride?: number,
+  ) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  saveCompositeGrade: (
+    testId: string,
+    studentId: number,
+    elementGrades: unknown[],
+    manualOverride?: number,
+  ) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  getTestStatistics: (testId: string) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
+  themeGlobal: {
+    get: () => Promise<
+      | "system"
+      | "twitter"
+      | "graphite"
+      | "nord"
+      | "dracula"
+      | "solarized"
+      | undefined
+    >;
+    set: (
+      theme:
+        | "system"
+        | "twitter"
+        | "graphite"
+        | "nord"
+        | "dracula"
+        | "solarized",
+    ) => Promise<boolean>;
+  };
   electronWindow: ElectronWindow;
   magisterAPI: MagisterAPI;
   studentDBAPI: StudentDBAPI;
   curriculumAPI: CurriculumAPI;
+  testAPI: TestAPI;
 }

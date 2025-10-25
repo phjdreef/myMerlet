@@ -215,13 +215,3 @@ class CurriculumDatabase {
 }
 
 export const curriculumDB = new CurriculumDatabase();
-
-// Initialize on module load
-(async () => {
-  try {
-    await curriculumDB.init();
-    logger.debug("Curriculum database initialized successfully");
-  } catch (error) {
-    logger.error("Curriculum database initialization failed:", error);
-  }
-})();

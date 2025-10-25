@@ -6,7 +6,11 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   navigationMenuTriggerStyle,
+  NavigationMenuTrigger,
+  NavigationMenuContent,
 } from "../ui/navigation-menu";
+
+import { ThemeSelector } from "../ui/ThemeSelector";
 import { cn } from "@/utils/tailwind";
 
 export default function NavigationMenu() {
@@ -17,63 +21,75 @@ export default function NavigationMenu() {
       className="text-muted-foreground h-auto min-h-0 flex-none px-2 py-0"
       viewport={false}
     >
-      <NavigationMenuList className="gap-0.5">
-        <NavigationMenuItem>
-          <NavigationMenuLink
-            asChild
-            className={cn(
-              navigationMenuTriggerStyle(),
-              "h-7 py-0.5 leading-none",
-            )}
-          >
-            <Link to="/">{t("titleHomePage")}</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink
-            asChild
-            className={cn(
-              navigationMenuTriggerStyle(),
-              "h-7 py-0.5 leading-none",
-            )}
-          >
-            <Link to="/second">{t("titleSecondPage")}</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink
-            asChild
-            className={cn(
-              navigationMenuTriggerStyle(),
-              "h-7 py-0.5 leading-none",
-            )}
-          >
-            <Link to="/magister">Magister</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink
-            asChild
-            className={cn(
-              navigationMenuTriggerStyle(),
-              "h-7 py-0.5 leading-none",
-            )}
-          >
-            <Link to="/students">Klassen</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink
-            asChild
-            className={cn(
-              navigationMenuTriggerStyle(),
-              "h-7 py-0.5 leading-none",
-            )}
-          >
-            <Link to="/planning">Planning</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-      </NavigationMenuList>
+      <div className="flex w-full items-center justify-between">
+        <NavigationMenuList className="gap-0.5">
+          <NavigationMenuItem>
+            <NavigationMenuLink
+              asChild
+              className={cn(
+                navigationMenuTriggerStyle(),
+                "h-7 py-0.5 leading-none",
+              )}
+            >
+              <Link to="/">{t("titleHomePage")}</Link>
+            </NavigationMenuLink>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <NavigationMenuLink
+              asChild
+              className={cn(
+                navigationMenuTriggerStyle(),
+                "h-7 py-0.5 leading-none",
+              )}
+            >
+              <Link to="/second">{t("titleSecondPage")}</Link>
+            </NavigationMenuLink>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <NavigationMenuLink
+              asChild
+              className={cn(
+                navigationMenuTriggerStyle(),
+                "h-7 py-0.5 leading-none",
+              )}
+            >
+              <Link to="/magister">{t("magister")}</Link>
+            </NavigationMenuLink>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <NavigationMenuLink
+              asChild
+              className={cn(
+                navigationMenuTriggerStyle(),
+                "h-7 py-0.5 leading-none",
+              )}
+            >
+              <Link to="/students">{t("classes")}</Link>
+            </NavigationMenuLink>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <NavigationMenuLink
+              asChild
+              className={cn(
+                navigationMenuTriggerStyle(),
+                "h-7 py-0.5 leading-none",
+              )}
+            >
+              <Link to="/planning">{t("planning")}</Link>
+            </NavigationMenuLink>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+        <NavigationMenuList className="ml-auto">
+          <NavigationMenuItem>
+            <NavigationMenuTrigger className="h-7 py-0.5 leading-none">
+              {t("theme")}
+            </NavigationMenuTrigger>
+            <NavigationMenuContent className="min-w-40 p-2">
+              <ThemeSelector />
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+      </div>
     </NavigationMenuBase>
   );
 }

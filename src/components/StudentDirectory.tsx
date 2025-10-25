@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
+import {
+  ListIcon,
+  ChalkboardTeacherIcon,
+  BooksIcon,
+  ExamIcon,
+} from "@phosphor-icons/react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { studentDB, type Student } from "../services/student-database";
 import { ClassFilter } from "./student-directory/ClassFilter";
@@ -12,11 +19,14 @@ import { CurriculumTimeline } from "./curriculum/CurriculumTimeline";
 import { getCurrentWeekNumber } from "../utils/week-utils";
 import { logger } from "../utils/logger";
 import type { CurriculumPlan } from "../services/curriculum-database";
+import { ClassGradesTab } from "./student-directory/ClassGradesTab";
 
 // View modes
-type ViewMode = "list" | "classroom" | "plans";
+type ViewMode = "list" | "classroom" | "plans" | "grades";
 
 export default function StudentDirectory() {
+  const { t } = useTranslation();
+
   // State
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
@@ -55,19 +65,18 @@ export default function StudentDirectory() {
           : "Unknown";
 
         setError(
-          `✅ Successfully loaded ${savedStudents.length} students from local database (saved: ${savedDate})`,
+          `✅ ${t("successfullyLoadedStudents", { count: savedStudents.length, date: savedDate })}`,
         );
         setTimeout(() => setError(null), 3000);
       } else {
-        setError(
-          "📂 No saved students found in local database - try loading from API first",
-        );
+        setError(`📂 ${t("noSavedStudentsFound")}`);
         setTimeout(() => setError(null), 3000);
       }
     } catch (err) {
       const errorMsg =
-        "Failed to load from database: " +
-        (err instanceof Error ? err.message : "Unknown error");
+        t("failedToLoadFromDatabase") +
+        ": " +
+        (err instanceof Error ? err.message : t("unknownError"));
       setError(errorMsg);
       logger.error("Database load error:", err);
     } finally {
@@ -136,6 +145,8 @@ export default function StudentDirectory() {
     loadFromDatabase();
     loadSeatingPositions();
     loadPlans();
+    // We only need to run this once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -339,7 +350,7 @@ export default function StudentDirectory() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="mb-2 text-2xl font-bold">
-            Klassen
+            {t("classes")}
             {selectedClass && (
               <span className="text-muted-foreground ml-2 text-lg font-normal">
                 - {selectedClass}
@@ -347,9 +358,9 @@ export default function StudentDirectory() {
             )}
           </h1>
           <p className="text-muted-foreground mb-4">
-            Total students: {totalCount} | Currently showing:{" "}
+            {t("totalStudents")}: {totalCount} | {t("currentlyShowing")}:{" "}
             {filteredStudents.length}
-            {selectedClass && ` | Filtered by: ${selectedClass}`}
+            {selectedClass && ` | ${t("filteredBy")}: ${selectedClass}`}
           </p>
 
           {/* Controls */}
@@ -362,7 +373,8 @@ export default function StudentDirectory() {
                 variant={viewMode === "list" ? "default" : "outline"}
                 size="sm"
               >
-                📋 List View
+                <ListIcon className="mr-2 h-4 w-4" weight="regular" />
+                {t("listView")}
               </Button>
               <Button
                 onClick={() => setViewMode("classroom")}
@@ -370,7 +382,11 @@ export default function StudentDirectory() {
                 variant={viewMode === "classroom" ? "default" : "outline"}
                 size="sm"
               >
-                🏫 Classroom
+                <ChalkboardTeacherIcon
+                  className="mr-2 h-4 w-4"
+                  weight="regular"
+                />
+                {t("floorPlan")}
               </Button>
               <Button
                 onClick={() => setViewMode("plans")}
@@ -378,7 +394,17 @@ export default function StudentDirectory() {
                 variant={viewMode === "plans" ? "default" : "outline"}
                 size="sm"
               >
-                📚 Plans
+                <BooksIcon className="mr-2 h-4 w-4" weight="regular" />
+                {t("planning")}
+              </Button>
+              <Button
+                onClick={() => setViewMode("grades")}
+                disabled={loading || !selectedClass}
+                variant={viewMode === "grades" ? "default" : "outline"}
+                size="sm"
+              >
+                <ExamIcon className="mr-2 h-4 w-4" weight="regular" />
+                {t("gradesView")}
               </Button>
             </div>
           </div>
@@ -407,7 +433,7 @@ export default function StudentDirectory() {
         {loading && (
           <div className="flex items-center justify-center py-8">
             <div className="border-primary mr-3 h-8 w-8 animate-spin rounded-full border-b-2"></div>
-            <p>Loading students...</p>
+            <p>{t("loadingStudents")}</p>
           </div>
         )}
 
@@ -456,18 +482,24 @@ export default function StudentDirectory() {
                 <div className="py-8 text-center">
                   <p className="text-muted-foreground">
                     {selectedClass
-                      ? `Geen plannen gevonden voor klas "${selectedClass}".`
-                      : "Selecteer een klas om plannen te zien."}
+                      ? `${t("noPlansFoundForClass")} "${selectedClass}".`
+                      : t("selectClassToViewPlans")}
                   </p>
                 </div>
               )}
             </>
+          ) : viewMode === "grades" ? (
+            <ClassGradesTab selectedClass={selectedClass} students={students} />
           ) : (
             <>
               {filteredStudents.length > 0 && (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {filteredStudents.map((student) => (
-                    <StudentCard key={student.id} student={student} />
+                    <StudentCard
+                      key={student.id}
+                      student={student}
+                      selectedClass={selectedClass}
+                    />
                   ))}
                 </div>
               )}
@@ -477,8 +509,7 @@ export default function StudentDirectory() {
                 students.length > 0 && (
                   <div className="py-8 text-center">
                     <p className="text-muted-foreground">
-                      No students found for the selected class "{selectedClass}
-                      ".
+                      {t("noStudentsFoundForClass")} "{selectedClass}".
                     </p>
                   </div>
                 )}
@@ -486,8 +517,7 @@ export default function StudentDirectory() {
               {!loading && students.length === 0 && (
                 <div className="py-8 text-center">
                   <p className="text-muted-foreground">
-                    No students loaded. Click "Auto Load" or "Fresh from API" to
-                    get started.
+                    {t("noStudentsLoadedClickToStart")}
                   </p>
                 </div>
               )}

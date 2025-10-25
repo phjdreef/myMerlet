@@ -1,5 +1,10 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  UsersThreeIcon,
+  ChalkboardTeacherIcon,
+  ArrowUpIcon,
+} from "@phosphor-icons/react";
 import type { Student } from "../../services/student-database";
 import { StudentPhoto } from "./StudentPhoto";
 
@@ -110,8 +115,11 @@ export function ClassroomGrid({
       {/* Unpositioned Students */}
       {unpositionedStudents.length > 0 && (
         <div className="border-border bg-card rounded-lg border p-4">
-          <h3 className="mb-4 text-lg font-semibold">
-            👥 {t("studentsNotSeated")} ({unpositionedStudents.length})
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+            <UsersThreeIcon className="h-5 w-5" weight="duotone" />
+            <span>
+              {t("studentsNotSeated")} ({unpositionedStudents.length})
+            </span>
           </h3>
           <div className="flex flex-wrap gap-3">
             {unpositionedStudents.map((student) => (
@@ -146,14 +154,20 @@ export function ClassroomGrid({
 
       {/* Classroom Grid */}
       <div className="border-border bg-card rounded-lg border p-4">
-        <h3 className="text-muted-foreground mb-4 text-center text-lg font-semibold">
-          🏫 {t("classroomLayout")} - {selectedClass}
+        <h3 className="text-muted-foreground mb-4 flex items-center justify-center gap-2 text-center text-lg font-semibold">
+          <ChalkboardTeacherIcon className="h-5 w-5" weight="duotone" />
+          <span>
+            {t("classroomLayout")} - {selectedClass}
+          </span>
         </h3>
 
         {/* Front of classroom indicator */}
         <div className="mb-4 flex items-center justify-center">
           <div className="border-primary bg-primary/10 rounded-lg border-2 px-6 py-2">
-            <span className="text-sm font-semibold">⬆️ Voorkant lokaal</span>
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <ArrowUpIcon className="h-4 w-4" weight="bold" />
+              {t("classroomFront")}
+            </span>
           </div>
         </div>
 

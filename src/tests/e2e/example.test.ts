@@ -47,5 +47,5 @@ test("renders page name", async () => {
   await page.waitForSelector("h1");
   const pageName = await page.getByTestId("pageTitle");
   const text = await pageName.textContent();
-  expect(text).toBe("Home Page");
+  expect(text).toBe("Startpagina");
 });

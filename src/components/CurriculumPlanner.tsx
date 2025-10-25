@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { logger } from "../utils/logger";
 import { getCurrentWeekNumber } from "../utils/week-utils";
 import { CurriculumTimeline } from "./curriculum/CurriculumTimeline";
@@ -7,6 +8,7 @@ import { Button } from "./ui/button";
 import type { CurriculumPlan } from "../services/curriculum-database";
 
 export function CurriculumPlanner() {
+  const { t } = useTranslation();
   const [plans, setPlans] = useState<CurriculumPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<CurriculumPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,7 +55,7 @@ export function CurriculumPlanner() {
   };
 
   const handleDeletePlan = async (planId: string) => {
-    if (!confirm("Weet je zeker dat je dit plan wilt verwijderen?")) {
+    if (!confirm(t("confirmDeletePlan"))) {
       return;
     }
 
@@ -97,7 +99,7 @@ export function CurriculumPlanner() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-lg">Planning laden...</div>
+        <div className="text-lg">{t("loadingPlanning")}</div>
       </div>
     );
   }
@@ -118,22 +120,22 @@ export function CurriculumPlanner() {
   return (
     <div className="container mx-auto flex h-full flex-col p-4">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Curriculum Planning</h1>
-        <Button onClick={handleCreateNew}>+ Nieuw Plan</Button>
+        <h1 className="text-3xl font-bold">{t("curriculumPlanning")}</h1>
+        <Button onClick={handleCreateNew}>+ {t("newPlan")}</Button>
       </div>
 
       {plans.length === 0 ? (
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
-            <p className="mb-4 text-lg">Geen plannen gevonden</p>
-            <Button onClick={handleCreateNew}>Maak je eerste plan</Button>
+            <p className="mb-4 text-lg">{t("noPlansFound")}</p>
+            <Button onClick={handleCreateNew}>{t("createFirstPlan")}</Button>
           </div>
         </div>
       ) : (
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="mb-4">
             <label className="mb-2 block text-sm font-medium">
-              Selecteer een plan:
+              {t("selectPlanLabel")}
             </label>
             <select
               className="w-full max-w-md rounded border p-2"
@@ -143,12 +145,12 @@ export function CurriculumPlanner() {
                 setSelectedPlan(plan || null);
               }}
             >
-              <option value="">-- Kies een plan --</option>
+              <option value="">{t("selectPlanPlaceholder")}</option>
               {plans.map((plan) => {
                 const displayName =
                   plan.classNames.length > 0
                     ? `${plan.classNames.join(", ")} - ${plan.subject}`
-                    : plan.subject || "Naamloos plan";
+                    : plan.subject || t("namelessPlan");
                 return (
                   <option key={plan.id} value={plan.id}>
                     {displayName} ({plan.schoolYear})
@@ -165,13 +167,13 @@ export function CurriculumPlanner() {
                   variant="outline"
                   onClick={() => handleEditPlan(selectedPlan)}
                 >
-                  Bewerken
+                  {t("edit")}
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => handleDeletePlan(selectedPlan.id)}
                 >
-                  Verwijderen
+                  {t("delete")}
                 </Button>
               </div>
               <CurriculumTimeline

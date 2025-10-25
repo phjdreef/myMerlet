@@ -4,33 +4,36 @@ import {
   minimizeWindow,
 } from "@/helpers/window_helpers";
 import { isMacOS } from "@/utils/platform";
-import { type ReactNode } from "react";
+import type { ReactNode, ReactElement } from "react";
 
 interface DragWindowRegionProps {
   title?: ReactNode;
 }
 
-export default function DragWindowRegion({ title }: DragWindowRegionProps) {
+export default function DragWindowRegion({
+  title,
+}: DragWindowRegionProps): ReactElement {
   return (
     <div className="flex w-screen items-stretch justify-between">
-      <div className="draglayer w-full">
+      <div className="draglayer flex w-full items-center">
         {title && !isMacOS() && (
           <div className="flex flex-1 p-2 text-xs whitespace-nowrap text-gray-400 select-none">
             {title}
           </div>
         )}
         {isMacOS() && (
-          <div className="h-4">
+          <div className="h-6">
             {/* Minimal height for macOS traffic lights drag area */}
           </div>
         )}
+        {/* ThemeSelector moved to NavigationMenu */}
       </div>
       {!isMacOS() && <WindowButtons />}
     </div>
   );
 }
 
-function WindowButtons() {
+function WindowButtons(): ReactElement {
   return (
     <div className="flex">
       <button

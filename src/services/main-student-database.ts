@@ -366,15 +366,4 @@ class MainStudentDatabase {
 // Export singleton instance
 export const mainStudentDB = new MainStudentDatabase();
 
-// Test database initialization on module load
-(async () => {
-  try {
-    logger.debug("Testing database initialization on startup...");
-    await mainStudentDB.init();
-    logger.debug("Database initialization test passed!");
-  } catch (error) {
-    logger.error("Database initialization test failed:", error);
-  }
-})();
-
 export type { Student };

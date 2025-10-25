@@ -18,7 +18,7 @@ export function ClassFilter({
 
   return (
     <div className="border-border bg-card w-64 border-r p-4">
-      <h2 className="mb-4 text-lg font-semibold">Classes</h2>
+      <h2 className="mb-4 text-lg font-semibold">{t("classes")}</h2>
 
       <div className="space-y-2">
         {/* All Students Option */}

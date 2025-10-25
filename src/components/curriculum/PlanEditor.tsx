@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { RichTextEditor } from "../ui/rich-text-editor";
 import { TimelineEditor } from "./TimelineEditor";
 import { logger } from "../../utils/logger";
+import { useTranslation } from "react-i18next";
 import type {
   CurriculumPlan,
   Topic,
@@ -16,6 +17,7 @@ interface PlanEditorProps {
 }
 
 export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
+  const { t } = useTranslation();
   const [editedPlan, setEditedPlan] = useState<CurriculumPlan>(plan);
   const [activeTab, setActiveTab] = useState<
     "info" | "topics" | "paragraphs" | "goals"
@@ -124,12 +126,12 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
   return (
     <div className="container mx-auto flex h-full flex-col p-4">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Plan Bewerken</h1>
+        <h1 className="text-3xl font-bold">{t("editPlan")}</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onCancel}>
-            Annuleren
+            {t("cancel")}
           </Button>
-          <Button onClick={handleSave}>Opslaan</Button>
+          <Button onClick={handleSave}>{t("save")}</Button>
         </div>
       </div>
 
@@ -145,11 +147,12 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
             }`}
             onClick={() => setActiveTab(tab as typeof activeTab)}
           >
-            {tab === "info" && "Plan Info"}
-            {tab === "topics" && `Onderwerpen (${editedPlan.topics.length})`}
+            {tab === "info" && t("planInfo")}
+            {tab === "topics" && `${t("topics")} (${editedPlan.topics.length})`}
             {tab === "paragraphs" &&
-              `Paragrafen (${editedPlan.paragraphs.length})`}
-            {tab === "goals" && `Leerdoelen (${editedPlan.studyGoals.length})`}
+              `${t("paragraphs")} (${editedPlan.paragraphs.length})`}
+            {tab === "goals" &&
+              `${t("studyGoals")} (${editedPlan.studyGoals.length})`}
           </button>
         ))}
       </div>
@@ -160,10 +163,12 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
           <div className="max-w-2xl space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium">
-                Klassen (optioneel, meerdere mogelijk)
+                {t("classesOptional")}
               </label>
               {isLoadingClasses ? (
-                <div className="text-sm text-gray-500">Klassen laden...</div>
+                <div className="text-sm text-gray-500">
+                  {t("classesLoading")}
+                </div>
               ) : (
                 <div className="space-y-3">
                   {/* Selected classes display */}
@@ -198,7 +203,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                   {availableClasses.length > 0 && (
                     <div>
                       <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
-                        Selecteer een klas:
+                        {t("selectClassLabel")}
                       </label>
                       <select
                         className="w-full rounded border p-2"
@@ -218,7 +223,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                           }
                         }}
                       >
-                        <option value="">-- Selecteer een klas --</option>
+                        <option value="">{t("selectClassPlaceholder")}</option>
                         {availableClasses
                           .filter((c) => !editedPlan.classNames.includes(c))
                           .map((className) => (
@@ -233,14 +238,14 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                   {/* Add custom class */}
                   <div>
                     <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
-                      Of voeg een aangepaste klasnaam toe:
+                      {t("addCustomClassName")}
                     </label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         id="custom-class-input"
                         className="flex-1 rounded border p-2"
-                        placeholder="bijv. Bijles groep, Extra lessen"
+                        placeholder={t("customClassPlaceholder")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             const input = e.currentTarget;
@@ -275,22 +280,23 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                           }
                         }}
                       >
-                        Toevoegen
+                        {t("add")}
                       </Button>
                     </div>
                   </div>
 
                   {availableClasses.length === 0 && (
                     <div className="text-sm text-gray-500">
-                      Geen klassen gevonden in de database. Zorg dat je eerst
-                      studenten hebt geladen via het Magister tabblad.
+                      {t("noClassesFound")}
                     </div>
                   )}
                 </div>
               )}
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Vak</label>
+              <label className="mb-1 block text-sm font-medium">
+                {t("subject")}
+              </label>
               <input
                 type="text"
                 className="w-full rounded border p-2"
@@ -298,12 +304,12 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                 onChange={(e) =>
                   setEditedPlan({ ...editedPlan, subject: e.target.value })
                 }
-                placeholder="bijv. Biologie, Wiskunde"
+                placeholder={t("subjectPlaceholder")}
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">
-                Schooljaar
+                {t("schoolYear")}
               </label>
               <input
                 type="text"
@@ -312,7 +318,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                 onChange={(e) =>
                   setEditedPlan({ ...editedPlan, schoolYear: e.target.value })
                 }
-                placeholder="bijv. 2024-2025"
+                placeholder={t("schoolYearPlaceholder")}
               />
             </div>
           </div>
@@ -320,7 +326,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
 
         {activeTab === "topics" && (
           <div className="space-y-4">
-            <Button onClick={addTopic}>+ Onderwerp Toevoegen</Button>
+            <Button onClick={addTopic}>+ {t("addTopic")}</Button>
             <div className="space-y-4">
               {editedPlan.topics.map((topic) => (
                 <div key={topic.id} className="space-y-3 rounded border p-4">
@@ -332,7 +338,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                       onChange={(e) =>
                         updateTopic(topic.id, { name: e.target.value })
                       }
-                      placeholder="Naam van het onderwerp"
+                      placeholder={t("topicName")}
                     />
                     <Button
                       variant="destructive"
@@ -344,22 +350,20 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium">
-                      Beschrijving (optioneel)
+                      {t("descriptionOptional")}
                     </label>
                     <RichTextEditor
                       content={topic.description || ""}
                       onChange={(content) =>
                         updateTopic(topic.id, { description: content })
                       }
-                      placeholder="Voeg een uitgebreide beschrijving toe voor dit onderwerp..."
+                      placeholder={t("addDetailedDescription")}
                     />
                   </div>
                 </div>
               ))}
               {editedPlan.topics.length === 0 && (
-                <p className="text-gray-500 italic">
-                  Nog geen onderwerpen toegevoegd
-                </p>
+                <p className="text-gray-500 italic">{t("noTopicsYet")}</p>
               )}
             </div>
           </div>
@@ -367,7 +371,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
 
         {activeTab === "paragraphs" && (
           <div className="space-y-4">
-            <Button onClick={addParagraph}>+ Paragraaf Toevoegen</Button>
+            <Button onClick={addParagraph}>+ {t("addParagraph")}</Button>
             <div className="space-y-2">
               {editedPlan.paragraphs.map((paragraph) => (
                 <div
@@ -385,7 +389,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                             number: e.target.value,
                           })
                         }
-                        placeholder="bijv. 3.2"
+                        placeholder={t("paragraphNumberPlaceholder")}
                       />
                       <input
                         type="text"
@@ -396,13 +400,13 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                             title: e.target.value,
                           })
                         }
-                        placeholder="Titel van de paragraaf"
+                        placeholder={t("paragraphTitle")}
                       />
                     </div>
                     {editedPlan.topics.length > 0 && (
                       <div>
                         <label className="mb-1 block text-xs text-gray-600">
-                          Koppel aan onderwerp (optioneel):
+                          {t("linkTopicOptional")}
                         </label>
                         <select
                           className="w-full rounded border p-2 text-sm"
@@ -413,7 +417,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                             })
                           }
                         >
-                          <option value="">-- Geen onderwerp --</option>
+                          <option value="">{t("noTopicOption")}</option>
                           {editedPlan.topics.map((topic) => (
                             <option key={topic.id} value={topic.id}>
                               {topic.name}
@@ -433,9 +437,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                 </div>
               ))}
               {editedPlan.paragraphs.length === 0 && (
-                <p className="text-gray-500 italic">
-                  Nog geen paragrafen toegevoegd
-                </p>
+                <p className="text-gray-500 italic">{t("noParagraphsYet")}</p>
               )}
             </div>
           </div>

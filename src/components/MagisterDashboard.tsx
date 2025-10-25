@@ -37,11 +37,11 @@ export default function MagisterDashboard({
           logger.debug(`Saved ${items.length} students to database`);
         } catch (err) {
           logger.error("Failed to save students to database:", err);
-          setError("⚠️ Students loaded but failed to save to database");
+          setError(t("magisterSaveStudentsFailed"));
         }
 
         setData({
-          message: "Students loaded successfully!",
+          message: t("magisterLoadSuccess"),
           count: items.length,
         });
 
@@ -108,11 +108,11 @@ export default function MagisterDashboard({
             errorMsg.includes("token expired"))
         ) {
           setIsAuthenticating(true);
-          setError(errorMsg + " - Opening login window...");
+          setError(`${errorMsg} - ${t("magisterOpeningLogin")}`);
           try {
             const authResult = await window.magisterAPI.authenticate();
             if (authResult.success) {
-              setError("✅ Authentication successful! Loading students...");
+              setError(t("magisterAuthSuccessLoading"));
               setIsAuthenticating(false);
               // Wait a moment for token to be fully stored, then retry
               setTimeout(() => {
@@ -121,20 +121,24 @@ export default function MagisterDashboard({
               return; // Exit early
             } else {
               setError(
-                `❌ Authentication failed: ${authResult.error || "Unknown error"}`,
+                t("magisterAuthFailed", {
+                  error: authResult.error || t("unknownError"),
+                }),
               );
               setIsAuthenticating(false);
               setLoading(false);
             }
           } catch (authErr) {
             const authErrorMsg =
-              authErr instanceof Error ? authErr.message : "Unknown error";
+              authErr instanceof Error ? authErr.message : t("unknownError");
             if (authErrorMsg.includes("cancelled")) {
-              setError(
-                "❌ Login cancelled. Click 'Refresh From API' to try again.",
-              );
+              setError(t("magisterLoginCancelledMessage"));
             } else {
-              setError(`❌ Authentication failed: ${authErrorMsg}`);
+              setError(
+                t("magisterAuthFailed", {
+                  error: authErrorMsg,
+                }),
+              );
             }
             setIsAuthenticating(false);
             setLoading(false);
@@ -145,7 +149,7 @@ export default function MagisterDashboard({
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load students");
+      setError(err instanceof Error ? err.message : t("magisterLoadFailed"));
       setLoading(false);
     }
   };
@@ -164,8 +168,12 @@ export default function MagisterDashboard({
   return (
     <div className="flex h-full flex-col p-4">
       <div className="mb-6">
-        <h1 className="mb-2 text-2xl font-bold">Magister Dashboard</h1>
-        <p className="text-muted-foreground mb-4">Connected to Magister API</p>
+        <h1 className="mb-2 text-2xl font-bold">
+          {t("magisterDashboardTitle")}
+        </h1>
+        <p className="text-muted-foreground mb-4">
+          {t("magisterDashboardSubtitle")}
+        </p>
 
         {/* Tab Navigation */}
         <div className="mb-4 flex gap-1">
@@ -174,14 +182,14 @@ export default function MagisterDashboard({
             variant={activeTab === "overview" ? "default" : "outline"}
             size="sm"
           >
-            Overview
+            {t("magisterOverviewTab")}
           </Button>
           <Button
             onClick={() => setActiveTab("students")}
             variant={activeTab === "students" ? "default" : "outline"}
             size="sm"
           >
-            Students
+            {t("magisterStudentsTab")}
           </Button>
         </div>
 
@@ -203,7 +211,7 @@ export default function MagisterDashboard({
               size="sm"
               className="ml-auto"
             >
-              Logout
+              {t("logout")}
             </Button>
           </div>
         )}
@@ -227,7 +235,7 @@ export default function MagisterDashboard({
                 error.startsWith("📸") ||
                 error.startsWith("⚠️")
                   ? error
-                  : `Error: ${error}`}
+                  : t("errorPrefix", { error })}
               </p>
             </div>
           )}
@@ -235,14 +243,14 @@ export default function MagisterDashboard({
           {loading && (
             <div className="flex items-center justify-center py-8">
               <div className="border-primary mr-3 h-8 w-8 animate-spin rounded-full border-b-2"></div>
-              <p>Loading...</p>
+              <p>{t("loading")}</p>
             </div>
           )}
 
           {data && (
             <div className="flex-1 overflow-auto">
               <div className="bg-card rounded-lg border p-4">
-                <h2 className="mb-3 text-lg font-semibold">API Data</h2>
+                <h2 className="mb-3 text-lg font-semibold">{t("apiData")}</h2>
                 <pre className="bg-muted overflow-auto rounded p-3 text-sm">
                   {JSON.stringify(data, null, 2)}
                 </pre>
