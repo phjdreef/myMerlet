@@ -122,7 +122,7 @@ export function StudentCard({ student, selectedClass }: StudentCardProps) {
               {grades
                 .filter(
                   (grade) =>
-                    grade.pointsEarned > 0 ||
+                    (grade.pointsEarned ?? 0) > 0 ||
                     grade.manualOverride !== undefined,
                 )
                 .map((grade) => {
@@ -137,7 +137,8 @@ export function StudentCard({ student, selectedClass }: StudentCardProps) {
                       <div className="flex-1">
                         <div className="font-medium">{test.name}</div>
                         <div className="text-muted-foreground">
-                          {grade.pointsEarned}/{test.maxPoints} {t("points")}
+                          {grade.pointsEarned ?? 0}/{test.maxPoints}{" "}
+                          {t("points")}
                           {grade.manualOverride && (
                             <span className="ml-1 text-blue-600">
                               ({t("manualOverride")})
@@ -159,11 +160,14 @@ export function StudentCard({ student, selectedClass }: StudentCardProps) {
                 })}
               {/* Weighted Grade Average */}
               {grades.filter(
-                (g) => g.pointsEarned > 0 || g.manualOverride !== undefined,
+                (g) =>
+                  (g.pointsEarned ?? 0) > 0 || g.manualOverride !== undefined,
               ).length > 1 &&
                 (() => {
                   const validGrades = grades.filter(
-                    (g) => g.pointsEarned > 0 || g.manualOverride !== undefined,
+                    (g) =>
+                      (g.pointsEarned ?? 0) > 0 ||
+                      g.manualOverride !== undefined,
                   );
 
                   // Calculate weighted average
