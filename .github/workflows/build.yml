@@ -1,0 +1,87 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: darwin
+            arch: x64
+            artifact_name: macOS-Intel
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+            artifact_name: macOS-AppleSilicon
+          - os: windows-latest
+            platform: win32
+            artifact_name: Windows
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and package
+        if: matrix.platform == 'darwin'
+        run: npm run make:${{ matrix.arch }}
+
+      - name: Build and package
+        if: matrix.platform == 'win32'
+        run: npm run make
+
+      - name: Upload macOS artifacts
+        if: matrix.platform == 'darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-${{ matrix.artifact_name }}
+          path: |
+            out/make/**/*.dmg
+            out/make/**/*.zip
+
+      - name: Upload Windows artifacts
+        if: matrix.platform == 'win32'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-${{ matrix.artifact_name }}
+          path: |
+            out/make/**/*.exe
+            out/make/**/*.msi
+
+  release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
