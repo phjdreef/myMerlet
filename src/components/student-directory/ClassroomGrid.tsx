@@ -181,7 +181,7 @@ export function ClassroomGrid({
                 return (
                   <div
                     key={`${row}-${col}`}
-                    className={`border-border flex aspect-square min-h-[140px] min-w-[140px] items-center justify-center rounded-lg border-2 p-2 text-center transition-all duration-200 ${
+                    className={`border-border flex size-[140px] shrink-0 items-center justify-center rounded-lg border-2 p-2 text-center transition-all duration-200 ${
                       student
                         ? "border-primary bg-primary/10 border-solid"
                         : "hover:border-primary/50 hover:bg-accent/50 border-dashed"
@@ -195,7 +195,7 @@ export function ClassroomGrid({
                   >
                     {student ? (
                       <div
-                        className={`flex h-full w-full cursor-grab flex-col items-center justify-between py-2 transition-opacity select-none active:cursor-grabbing ${
+                        className={`flex h-full w-full cursor-grab flex-col items-center justify-between overflow-hidden py-2 transition-opacity select-none active:cursor-grabbing ${
                           draggedStudentId === student.id
                             ? "opacity-50"
                             : "opacity-100"
@@ -220,7 +220,7 @@ export function ClassroomGrid({
                         <div className="pointer-events-none flex w-full flex-1 items-center justify-center">
                           <StudentPhoto student={student} size="large" />
                         </div>
-                        <span className="pointer-events-none mt-1 w-full truncate text-center text-xs font-medium">
+                        <span className="pointer-events-none mt-1 w-full truncate px-1 text-center text-xs font-medium">
                           {formatStudentName(student)}
                         </span>
                       </div>
