@@ -2,6 +2,13 @@ import { app } from "electron";
 import path from "path";
 import fs from "fs";
 import { logger } from "../utils/logger";
+import {
+  clampWeekNumber,
+  DEFAULT_WEEK_END,
+  DEFAULT_WEEK_START,
+  parseSchoolYear,
+  formatSchoolYearFromStart,
+} from "../utils/curriculum-week";
 
 export interface Topic {
   id: string;
@@ -34,11 +41,41 @@ export interface CurriculumPlan {
   classNames: string[]; // Changed from className to support multiple classes
   subject: string;
   schoolYear: string;
+  schoolYearStart?: number | null;
+  schoolYearEnd?: number | null;
+  weekRangeStart: number;
+  weekRangeEnd: number;
   topics: Topic[];
   paragraphs: Paragraph[];
   studyGoals: StudyGoal[];
   createdAt: string;
   updatedAt: string;
+}
+
+function withNormalizedWeekRange(plan: CurriculumPlan): CurriculumPlan {
+  const weekRangeStart = clampWeekNumber(
+    plan.weekRangeStart ?? DEFAULT_WEEK_START,
+  );
+  const weekRangeEnd = clampWeekNumber(plan.weekRangeEnd ?? DEFAULT_WEEK_END);
+  const { startYear, endYear } = parseSchoolYear(plan.schoolYear);
+
+  const schoolYearStart = startYear ?? plan.schoolYearStart ?? null;
+  const schoolYearEnd =
+    endYear ?? plan.schoolYearEnd ?? (startYear ? startYear + 1 : null);
+  const normalizedSchoolYear = plan.schoolYear?.trim()
+    ? plan.schoolYear
+    : schoolYearStart
+      ? formatSchoolYearFromStart(schoolYearStart)
+      : "";
+
+  return {
+    ...plan,
+    weekRangeStart,
+    weekRangeEnd,
+    schoolYear: normalizedSchoolYear,
+    schoolYearStart,
+    schoolYearEnd,
+  };
 }
 
 interface CurriculumData {
@@ -133,7 +170,7 @@ class CurriculumDatabase {
 
     try {
       const data = this.readDatabase();
-      return data.plans.sort((a, b) => {
+      return data.plans.map(withNormalizedWeekRange).sort((a, b) => {
         const aClass = a.classNames.join(", ");
         const bClass = b.classNames.join(", ");
         return aClass.localeCompare(bClass);
@@ -149,11 +186,23 @@ class CurriculumDatabase {
 
     try {
       const data = this.readDatabase();
-      return (
-        data.plans.find((plan) => plan.classNames.includes(className)) || null
-      );
+      const plan = data.plans.find((p) => p.classNames.includes(className));
+      return plan ? withNormalizedWeekRange(plan) : null;
     } catch (error) {
       logger.error("Failed to get plan by class:", error);
+      return null;
+    }
+  }
+
+  async getPlanById(planId: string): Promise<CurriculumPlan | null> {
+    if (!this.initialized) await this.init();
+
+    try {
+      const data = this.readDatabase();
+      const plan = data.plans.find((p) => p.id === planId);
+      return plan ? withNormalizedWeekRange(plan) : null;
+    } catch (error) {
+      logger.error("Failed to get plan by id:", error);
       return null;
     }
   }
@@ -163,15 +212,20 @@ class CurriculumDatabase {
 
     try {
       const data = this.readDatabase();
+      const planToSave = withNormalizedWeekRange({
+        ...plan,
+        updatedAt: new Date().toISOString(),
+      });
       const existingIndex = data.plans.findIndex((p) => p.id === plan.id);
 
-      plan.updatedAt = new Date().toISOString();
-
       if (existingIndex >= 0) {
-        data.plans[existingIndex] = plan;
+        data.plans[existingIndex] = planToSave;
       } else {
-        plan.createdAt = plan.createdAt || new Date().toISOString();
-        data.plans.push(plan);
+        const planWithCreatedAt = {
+          ...planToSave,
+          createdAt: plan.createdAt || new Date().toISOString(),
+        };
+        data.plans.push(planWithCreatedAt);
       }
 
       data.metadata = {

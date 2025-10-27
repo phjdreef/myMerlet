@@ -5,6 +5,7 @@ import { getCurrentWeekNumber } from "../utils/week-utils";
 import { CurriculumTimeline } from "./curriculum/CurriculumTimeline";
 import { PlanEditor } from "./curriculum/PlanEditor";
 import { Button } from "./ui/button";
+import { parseSchoolYear } from "../utils/curriculum-week";
 import type { CurriculumPlan } from "../services/curriculum-database";
 
 export function CurriculumPlanner() {
@@ -76,11 +77,16 @@ export function CurriculumPlanner() {
   };
 
   const handleCreateNew = () => {
+    const currentYearValue = new Date().getFullYear();
     const newPlan: CurriculumPlan = {
       id: crypto.randomUUID(),
       classNames: [],
       subject: "",
-      schoolYear: new Date().getFullYear().toString(),
+      schoolYear: `${currentYearValue}-${currentYearValue + 1}`,
+      schoolYearStart: currentYearValue,
+      schoolYearEnd: currentYearValue + 1,
+      weekRangeStart: 1,
+      weekRangeEnd: 52,
       topics: [],
       paragraphs: [],
       studyGoals: [],
@@ -94,6 +100,52 @@ export function CurriculumPlanner() {
   const handleEditPlan = (plan: CurriculumPlan) => {
     setSelectedPlan(plan);
     setIsEditing(true);
+  };
+
+  const handleUpdatePlan = async (updatedPlan: CurriculumPlan) => {
+    // Optimistically update local state so UI reflects changes immediately
+    setSelectedPlan(updatedPlan);
+    setPlans((prev) => {
+      const exists = prev.some((plan) => plan.id === updatedPlan.id);
+      return exists
+        ? prev.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan))
+        : [...prev, updatedPlan];
+    });
+
+    try {
+      const result = await window.curriculumAPI.savePlan(updatedPlan);
+      if (result.success) {
+        logger.log("Plan updated successfully");
+      } else {
+        logger.error("Failed to update plan:", result.error);
+      }
+    } catch (error) {
+      logger.error("Error updating plan:", error);
+    }
+  };
+
+  const handleExportPlan = async (plan: CurriculumPlan) => {
+    try {
+      const result = await window.curriculumAPI.exportPlanToDocx(plan.id);
+      if (result.success) {
+        const data = result.data as { filePath?: string } | undefined;
+        const filePath = data?.filePath;
+        if (filePath) {
+          alert(t("exportPlanSuccessWithPath", { filePath }));
+        } else {
+          alert(t("exportPlanSuccess"));
+        }
+        logger.log("Curriculum plan exported", filePath);
+      } else if (result.error !== "cancelled") {
+        const errorMessage = result.error || t("unknownError");
+        alert(t("exportPlanError", { error: errorMessage }));
+        logger.error("Failed to export plan:", result.error);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(t("exportPlanError", { error: message }));
+      logger.error("Error exporting plan:", error);
+    }
   };
 
   if (isLoading) {
@@ -162,7 +214,52 @@ export function CurriculumPlanner() {
 
           {selectedPlan && (
             <div className="flex flex-1 flex-col overflow-hidden">
+              <div className="mb-4 rounded-lg border bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/60">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold">
+                      {selectedPlan.subject?.trim() || t("namelessPlan")}
+                    </div>
+                    {selectedPlan.classNames.length > 0 && (
+                      <div className="text-sm text-gray-600 dark:text-gray-300">
+                        {selectedPlan.classNames.join(", ")}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    {selectedPlan.schoolYear && (
+                      <div>
+                        {t("schoolYear")}: {selectedPlan.schoolYear}
+                      </div>
+                    )}
+                    {(() => {
+                      const parsedYears = parseSchoolYear(
+                        selectedPlan.schoolYear,
+                      );
+                      const startYear =
+                        selectedPlan.schoolYearStart ?? parsedYears.startYear;
+                      const endYear =
+                        selectedPlan.schoolYearEnd ?? parsedYears.endYear;
+                      if (!startYear) {
+                        return null;
+                      }
+                      return (
+                        <div>
+                          {t("schoolYearStartLabel")}: {startYear}
+                          {endYear ? ` → ${endYear}` : ""}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
               <div className="mb-4 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleExportPlan(selectedPlan)}
+                >
+                  {t("exportPlan")}
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => handleEditPlan(selectedPlan)}
@@ -176,10 +273,13 @@ export function CurriculumPlanner() {
                   {t("delete")}
                 </Button>
               </div>
-              <CurriculumTimeline
-                plan={selectedPlan}
-                currentWeek={currentWeek}
-              />
+              <div className="flex-1 overflow-y-auto pr-2">
+                <CurriculumTimeline
+                  plan={selectedPlan}
+                  currentWeek={currentWeek}
+                  onUpdate={handleUpdatePlan}
+                />
+              </div>
             </div>
           )}
         </div>

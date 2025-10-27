@@ -151,6 +151,15 @@ export function registerTestListeners() {
     },
   );
 
+  ipcMain.handle(TEST_CHANNELS.GET_ALL_TESTS, async () => {
+    try {
+      const tests = readTests();
+      return { success: true, data: tests };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
   // Get a single test
   ipcMain.handle(TEST_CHANNELS.GET_TEST, async (_event, testId: string) => {
     try {
@@ -214,7 +223,21 @@ export function registerTestListeners() {
           id: testId,
           updatedAt: new Date().toISOString(),
         };
-        const updatedTest = normalizeTestRecord(mergedRecord);
+
+        const sanitizedGroups = sanitizeClassGroups(
+          updates.classGroups ?? mergedRecord.classGroups,
+          undefined,
+          undefined,
+        );
+
+        const updatedRecord: StoredTestRecord = {
+          ...mergedRecord,
+          classGroups: sanitizedGroups,
+          classNames: sanitizedGroups,
+          className: sanitizedGroups[0],
+        };
+
+        const updatedTest = normalizeTestRecord(updatedRecord);
         tests[testIndex] = updatedTest;
         writeTests(tests);
         return { success: true, data: updatedTest };

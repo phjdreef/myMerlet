@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import type { Student } from "../../services/student-database";
+import type { Student } from "@/services/student-database";
 import { StudentPhoto } from "./StudentPhoto";
-import type { StudentGrade, Test } from "../../services/test-database";
+import type { StudentGrade, Test } from "@/services/test-database";
+import { formatStudentName } from "@/helpers/student_helpers";
 
 interface StudentCardProps {
   student: Student;
@@ -52,15 +53,6 @@ export function StudentCard({ student, selectedClass }: StudentCardProps) {
       setLoading(false);
     }
   };
-  const formatName = (student: Student) => {
-    let name = `${student.voorletters} `;
-    if (student.tussenvoegsel) {
-      name += `${student.tussenvoegsel} `;
-    }
-    name += student.achternaam;
-    return name;
-  };
-
   return (
     <div className="bg-card rounded-lg border p-4">
       <div className="mb-3 flex gap-3">
@@ -75,7 +67,10 @@ export function StudentCard({ student, selectedClass }: StudentCardProps) {
             <div>
               <h3 className="text-lg font-medium">{student.roepnaam}</h3>
               <p className="text-muted-foreground text-sm">
-                {formatName(student)}
+                {formatStudentName(student, {
+                  preferVoorletters: true,
+                  includeRoepnaam: false,
+                })}
               </p>
             </div>
             <span className="bg-secondary rounded px-2 py-1 text-xs">
@@ -134,16 +129,19 @@ export function StudentCard({ student, selectedClass }: StudentCardProps) {
                       key={grade.id}
                       className="bg-muted/50 flex items-center justify-between rounded px-2 py-1.5 text-xs"
                     >
-                      <div className="flex-1">
-                        <div className="font-medium">{test.name}</div>
-                        <div className="text-muted-foreground">
-                          {grade.pointsEarned ?? 0}/{test.maxPoints}{" "}
-                          {t("points")}
-                          {grade.manualOverride && (
-                            <span className="ml-1 text-blue-600">
-                              ({t("manualOverride")})
-                            </span>
-                          )}
+                      <div className="flex flex-1 items-center gap-2">
+                        <StudentPhoto student={student} size="small" />
+                        <div className="flex-1">
+                          <div className="font-medium">{test.name}</div>
+                          <div className="text-muted-foreground">
+                            {grade.pointsEarned ?? 0}/{test.maxPoints}{" "}
+                            {t("points")}
+                            {grade.manualOverride && (
+                              <span className="ml-1 text-blue-600">
+                                ({t("manualOverride")})
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div

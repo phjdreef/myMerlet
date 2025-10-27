@@ -5,8 +5,9 @@ import {
   ChalkboardTeacherIcon,
   ArrowUpIcon,
 } from "@phosphor-icons/react";
-import type { Student } from "../../services/student-database";
+import type { Student } from "@/services/student-database";
 import { StudentPhoto } from "./StudentPhoto";
+import { formatStudentName } from "@/helpers/student_helpers";
 
 export interface SeatingPosition {
   studentId: number;
@@ -143,7 +144,7 @@ export function ClassroomGrid({
                 <div className="text-sm">
                   <div className="font-medium">{student.roepnaam}</div>
                   <div className="text-muted-foreground text-xs">
-                    {student.achternaam}
+                    {formatStudentName(student, { includeRoepnaam: false })}
                   </div>
                 </div>
               </div>
@@ -220,7 +221,7 @@ export function ClassroomGrid({
                           <StudentPhoto student={student} size="large" />
                         </div>
                         <span className="pointer-events-none mt-1 w-full truncate text-center text-xs font-medium">
-                          {student.roepnaam}
+                          {formatStudentName(student)}
                         </span>
                       </div>
                     ) : null}

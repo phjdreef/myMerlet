@@ -12,6 +12,11 @@ export interface TestAPI {
   getTestsForClassGroup: (
     classGroup: string,
   ) => Promise<{ success: boolean; data?: Test[]; error?: string }>;
+  getAllTests: () => Promise<{
+    success: boolean;
+    data?: Test[];
+    error?: string;
+  }>;
   getTest: (
     testId: string,
   ) => Promise<{ success: boolean; data?: Test; error?: string }>;
@@ -53,6 +58,7 @@ export function exposeTestAPI() {
   const testAPI: TestAPI = {
     getTestsForClassGroup: (classGroup: string) =>
       ipcRenderer.invoke(TEST_CHANNELS.GET_TESTS_FOR_CLASS, classGroup),
+    getAllTests: () => ipcRenderer.invoke(TEST_CHANNELS.GET_ALL_TESTS),
     getTest: (testId: string) =>
       ipcRenderer.invoke(TEST_CHANNELS.GET_TEST, testId),
     createTest: (test) => ipcRenderer.invoke(TEST_CHANNELS.CREATE_TEST, test),

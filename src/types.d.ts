@@ -4,6 +4,11 @@
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
+declare module "*.svg?raw" {
+  const content: string;
+  export default content;
+}
+
 // Preload types
 interface ThemeModeContext {
   toggle: () => Promise<boolean>;
@@ -93,9 +98,19 @@ interface CurriculumAPI {
   }>;
   savePlan: (plan: unknown) => Promise<{ success: boolean; error?: string }>;
   deletePlan: (planId: string) => Promise<{ success: boolean; error?: string }>;
+  exportPlanToDocx: (planId: string) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
 }
 
 interface TestAPI {
+  getAllTests: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
   getTestsForClassGroup: (classGroup: string) => Promise<{
     success: boolean;
     data?: unknown;

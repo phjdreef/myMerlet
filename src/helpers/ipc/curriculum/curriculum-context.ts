@@ -9,6 +9,8 @@ export const curriculumAPI = {
     ipcRenderer.invoke(CURRICULUM_CHANNELS.SAVE_PLAN, plan),
   deletePlan: (planId: string) =>
     ipcRenderer.invoke(CURRICULUM_CHANNELS.DELETE_PLAN, planId),
+  exportPlanToDocx: (planId: string) =>
+    ipcRenderer.invoke(CURRICULUM_CHANNELS.EXPORT_PLAN_DOCX, planId),
 };
 
 contextBridge.exposeInMainWorld("curriculumAPI", curriculumAPI);

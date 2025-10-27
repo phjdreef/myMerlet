@@ -46,9 +46,21 @@ export function getWeekDates(
  */
 export function formatWeekRange(weekNumber: number, year: number): string {
   const { start, end } = getWeekDates(weekNumber, year);
-  const formatter = new Intl.DateTimeFormat("nl-NL", {
+  const shortFormatter = new Intl.DateTimeFormat("nl-NL", {
     day: "numeric",
     month: "short",
   });
-  return `${formatter.format(start)} - ${formatter.format(end)}`;
+  const longFormatter = new Intl.DateTimeFormat("nl-NL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const startYear = start.getFullYear();
+  const endYear = end.getFullYear();
+
+  if (startYear === endYear) {
+    return `${shortFormatter.format(start)} - ${shortFormatter.format(end)} ${startYear}`;
+  }
+
+  return `${longFormatter.format(start)} - ${longFormatter.format(end)}`;
 }

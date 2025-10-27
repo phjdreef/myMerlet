@@ -24,6 +24,9 @@ export function ClassGradesTab({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
+  const [selectedTestMode, setSelectedTestMode] = useState<"view" | "edit">(
+    "view",
+  );
 
   const classStudents = useMemo(() => {
     if (!selectedClass) return [];
@@ -89,16 +92,19 @@ export function ClassGradesTab({
       setTests([]);
       setStatistics(new Map());
       setSelectedTest(null);
+      setSelectedTestMode("view");
       return;
     }
 
     setSelectedTest(null);
+    setSelectedTestMode("view");
     void loadTests(selectedClass);
   }, [selectedClass, loadTests]);
 
   const handleGradesSaved = () => {
     if (!selectedClass) return;
     setSelectedTest(null);
+    setSelectedTestMode("view");
     void loadTests(selectedClass);
   };
 
@@ -111,6 +117,7 @@ export function ClassGradesTab({
   }
 
   if (selectedTest) {
+    const isReadOnly = selectedTestMode === "view";
     return (
       <div className="flex h-full flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -121,16 +128,41 @@ export function ClassGradesTab({
               {(selectedTest.classGroups || []).slice().join(", ")}
             </p>
           </div>
-          <Button variant="outline" onClick={() => setSelectedTest(null)}>
-            {t("backToTests")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {isReadOnly ? (
+              <Button onClick={() => setSelectedTestMode("edit")}>
+                {t("enterGrades")}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => setSelectedTestMode("view")}
+              >
+                {t("viewResults")}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedTest(null);
+                setSelectedTestMode("view");
+              }}
+            >
+              {t("backToTests")}
+            </Button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           <GradeEntry
+            key={`${selectedTest.id}-${selectedTestMode}`}
             test={selectedTest}
             students={classStudents}
-            onClose={() => setSelectedTest(null)}
+            onClose={() => {
+              setSelectedTest(null);
+              setSelectedTestMode("view");
+            }}
             onSave={handleGradesSaved}
+            readOnly={isReadOnly}
           />
         </div>
       </div>
@@ -175,7 +207,20 @@ export function ClassGradesTab({
               return (
                 <div
                   key={test.id}
-                  className="hover:bg-accent/50 rounded-lg border p-4 transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  className="hover:bg-accent/50 cursor-pointer rounded-lg border p-4 transition-colors focus:ring focus:outline-none"
+                  onClick={() => {
+                    setSelectedTest(test);
+                    setSelectedTestMode("view");
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedTest(test);
+                      setSelectedTestMode("view");
+                    }
+                  }}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-2">
@@ -287,7 +332,11 @@ export function ClassGradesTab({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setSelectedTest(test)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedTest(test);
+                        setSelectedTestMode("edit");
+                      }}
                     >
                       {t("enterGrades")}
                     </Button>

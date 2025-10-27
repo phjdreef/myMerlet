@@ -4,6 +4,7 @@
 
 export const TEST_CHANNELS = {
   // Test operations
+  GET_ALL_TESTS: "test:get-all",
   GET_TESTS_FOR_CLASS: "test:get-for-class",
   GET_TEST: "test:get",
   CREATE_TEST: "test:create",

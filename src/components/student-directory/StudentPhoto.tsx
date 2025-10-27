@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
-import type { Student } from "../../services/student-database";
-import { logger } from "../../utils/logger";
+import type { Student } from "@/services/student-database";
+import { logger } from "@/utils/logger";
+import {
+  formatStudentInitials,
+  formatStudentName,
+} from "@/helpers/student_helpers";
 
 // Simple cache to prevent duplicate photo requests
 const photoCache = new Map<
@@ -18,9 +22,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
 
-  const getInitials = () => {
-    return student.voorletters || student.roepnaam.charAt(0).toUpperCase();
-  };
+  const getInitials = () => formatStudentInitials(student);
 
   useEffect(() => {
     let mounted = true;
@@ -138,7 +140,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
       )}
       <img
         src={imageSrc}
-        alt={`${student.roepnaam} ${student.achternaam}`}
+        alt={formatStudentName(student)}
         className={`border-muted ${sizeClasses} rounded-full border-2 object-cover shadow-sm transition-opacity ${imageLoading ? "opacity-0" : "opacity-100"}`}
         onLoad={() => {
           logger.debug(

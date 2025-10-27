@@ -1,10 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Button } from "../ui/button";
-import { getCurrentWeekNumber } from "../../utils/week-utils";
+import { getCurrentWeekNumber, formatWeekRange } from "../../utils/week-utils";
 import type {
   CurriculumPlan,
   StudyGoal,
 } from "../../services/curriculum-database";
+import {
+  generateWeekSequence,
+  goalCoversWeek,
+  parseSchoolYear,
+  getYearForWeek,
+} from "../../utils/curriculum-week";
 
 interface TimelineEditorProps {
   plan: CurriculumPlan;
@@ -16,6 +22,16 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
   const currentYear = new Date().getFullYear();
   const currentWeek = getCurrentWeekNumber();
   const currentWeekRef = useRef<HTMLDivElement>(null);
+  const schoolYears = useMemo(
+    () => parseSchoolYear(plan.schoolYear),
+    [plan.schoolYear],
+  );
+  const weekSequence = useMemo(
+    () => generateWeekSequence(plan.weekRangeStart, plan.weekRangeEnd),
+    [plan.weekRangeStart, plan.weekRangeEnd],
+  );
+  const weekSet = useMemo(() => new Set(weekSequence), [weekSequence]);
+  const isCurrentWeekInRange = weekSet.has(currentWeek);
 
   // Auto-scroll to current week on mount
   useEffect(() => {
@@ -27,15 +43,13 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
     }
   }, []);
 
-  // Generate all 52 weeks
-  const allWeeks = Array.from({ length: 52 }, (_, i) => i + 1);
-
   // Get study goals for a specific week
-  const getGoalsForWeek = (weekNumber: number): StudyGoal[] => {
-    return plan.studyGoals.filter(
-      (goal) => weekNumber >= goal.weekStart && weekNumber <= goal.weekEnd,
-    );
-  };
+  const getGoalsForWeek = useCallback(
+    (weekNumber: number): StudyGoal[] => {
+      return plan.studyGoals.filter((goal) => goalCoversWeek(goal, weekNumber));
+    },
+    [plan.studyGoals],
+  );
 
   // Toggle week expansion
   const toggleWeek = (weekNumber: number) => {
@@ -113,25 +127,25 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
     updateGoal(goalId, { paragraphIds });
   };
 
-  // Format week range
-  const formatWeekRange = (weekNumber: number): string => {
-    const date = new Date(currentYear, 0, 1 + (weekNumber - 1) * 7);
-    const endDate = new Date(date);
-    endDate.setDate(endDate.getDate() + 6);
-    const formatter = new Intl.DateTimeFormat("nl-NL", {
-      day: "numeric",
-      month: "short",
-    });
-    return `${formatter.format(date)} - ${formatter.format(endDate)}`;
+  const formatDisplayRange = (weekNumber: number): string => {
+    const yearForWeek = getYearForWeek(
+      weekNumber,
+      plan.weekRangeStart,
+      plan.weekRangeEnd,
+      schoolYears,
+      currentYear,
+    );
+    return formatWeekRange(weekNumber, yearForWeek);
   };
 
   return (
     <div className="space-y-2">
-      {allWeeks.map((weekNumber) => {
+      {weekSequence.map((weekNumber) => {
         const goals = getGoalsForWeek(weekNumber);
         const isExpanded = expandedWeeks.has(weekNumber);
         const hasGoals = goals.length > 0;
-        const isCurrentWeek = weekNumber === currentWeek;
+        const isCurrentWeek =
+          isCurrentWeekInRange && weekNumber === currentWeek;
 
         return (
           <div
@@ -154,7 +168,7 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
                 <div className="w-24 shrink-0">
                   <div className="text-sm font-semibold">Week {weekNumber}</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatWeekRange(weekNumber)}
+                    {formatDisplayRange(weekNumber)}
                   </div>
                 </div>
                 {hasGoals && (

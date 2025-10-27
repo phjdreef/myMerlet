@@ -3,7 +3,11 @@ import { useTranslation } from "react-i18next";
 import { TestsManager } from "../tests/TestsManager";
 import { studentDB, type Student } from "../../services/student-database";
 
-export function PlanningTestsTab() {
+interface PlanningTestsTabProps {
+  showHeader?: boolean;
+}
+
+export function PlanningTestsTab({ showHeader = true }: PlanningTestsTabProps) {
   const { t } = useTranslation();
   const [students, setStudents] = useState<Student[]>([]);
   const [availableClassGroups, setAvailableClassGroups] = useState<string[]>(
@@ -54,14 +58,16 @@ export function PlanningTestsTab() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold">{t("tests")}</h2>
-          <p className="text-muted-foreground text-sm">
-            {t("testsTabDescription")}
-          </p>
+      {showHeader && (
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold">{t("tests")}</h2>
+            <p className="text-muted-foreground text-sm">
+              {t("testsTabDescription")}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="border-primary/20 bg-primary/5 text-primary rounded-md border-l-4 px-4 py-3 text-sm">
         {t("gradeEntryMovedInfo")}

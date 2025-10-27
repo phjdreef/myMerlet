@@ -53,7 +53,6 @@ Add translations for all UI text in `src/localization/i18n.ts`:
 ```typescript
 nl: { yourKey: "Dutch text" },
 en: { yourKey: "English text" },
-"pt-BR": { yourKey: "Portuguese text" }
 ```
 
 ### 3. Components

@@ -9,15 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TestsRouteImport } from './routes/tests'
 import { Route as StudentsRouteImport } from './routes/students'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SecondRouteImport } from './routes/second'
 import { Route as PlanningRouteImport } from './routes/planning'
 import { Route as MagisterRouteImport } from './routes/magister'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TestsRoute = TestsRouteImport.update({
+  id: '/tests',
+  path: '/tests',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudentsRoute = StudentsRouteImport.update({
   id: '/students',
   path: '/students',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SecondRoute = SecondRouteImport.update({
@@ -46,14 +58,18 @@ export interface FileRoutesByFullPath {
   '/magister': typeof MagisterRoute
   '/planning': typeof PlanningRoute
   '/second': typeof SecondRoute
+  '/settings': typeof SettingsRoute
   '/students': typeof StudentsRoute
+  '/tests': typeof TestsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/magister': typeof MagisterRoute
   '/planning': typeof PlanningRoute
   '/second': typeof SecondRoute
+  '/settings': typeof SettingsRoute
   '/students': typeof StudentsRoute
+  '/tests': typeof TestsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,14 +77,38 @@ export interface FileRoutesById {
   '/magister': typeof MagisterRoute
   '/planning': typeof PlanningRoute
   '/second': typeof SecondRoute
+  '/settings': typeof SettingsRoute
   '/students': typeof StudentsRoute
+  '/tests': typeof TestsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/magister' | '/planning' | '/second' | '/students'
+  fullPaths:
+    | '/'
+    | '/magister'
+    | '/planning'
+    | '/second'
+    | '/settings'
+    | '/students'
+    | '/tests'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/magister' | '/planning' | '/second' | '/students'
-  id: '__root__' | '/' | '/magister' | '/planning' | '/second' | '/students'
+  to:
+    | '/'
+    | '/magister'
+    | '/planning'
+    | '/second'
+    | '/settings'
+    | '/students'
+    | '/tests'
+  id:
+    | '__root__'
+    | '/'
+    | '/magister'
+    | '/planning'
+    | '/second'
+    | '/settings'
+    | '/students'
+    | '/tests'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,16 +116,32 @@ export interface RootRouteChildren {
   MagisterRoute: typeof MagisterRoute
   PlanningRoute: typeof PlanningRoute
   SecondRoute: typeof SecondRoute
+  SettingsRoute: typeof SettingsRoute
   StudentsRoute: typeof StudentsRoute
+  TestsRoute: typeof TestsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tests': {
+      id: '/tests'
+      path: '/tests'
+      fullPath: '/tests'
+      preLoaderRoute: typeof TestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/students': {
       id: '/students'
       path: '/students'
       fullPath: '/students'
       preLoaderRoute: typeof StudentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/second': {
@@ -124,7 +180,9 @@ const rootRouteChildren: RootRouteChildren = {
   MagisterRoute: MagisterRoute,
   PlanningRoute: PlanningRoute,
   SecondRoute: SecondRoute,
+  SettingsRoute: SettingsRoute,
   StudentsRoute: StudentsRoute,
+  TestsRoute: TestsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

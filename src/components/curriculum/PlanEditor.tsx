@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { RichTextEditor } from "../ui/rich-text-editor";
-import { TimelineEditor } from "./TimelineEditor";
+import { CurriculumTimeline } from "./CurriculumTimeline";
+import { getCurrentWeekNumber } from "../../utils/week-utils";
 import { logger } from "../../utils/logger";
 import { useTranslation } from "react-i18next";
 import type {
@@ -9,6 +10,14 @@ import type {
   Topic,
   Paragraph,
 } from "../../services/curriculum-database";
+import {
+  clampWeekNumber,
+  DEFAULT_WEEK_END,
+  DEFAULT_WEEK_START,
+  maskSchoolYearInput,
+  parseSchoolYear,
+  formatSchoolYearFromStart,
+} from "../../utils/curriculum-week";
 
 interface PlanEditorProps {
   plan: CurriculumPlan;
@@ -121,6 +130,62 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
       ...editedPlan,
       paragraphs: editedPlan.paragraphs.filter((p) => p.id !== id),
     });
+  };
+
+  const handleWeekRangeChange = (
+    field: "weekRangeStart" | "weekRangeEnd",
+    value: string,
+  ) => {
+    const parsed = Number.parseInt(value, 10);
+    const fallback =
+      field === "weekRangeStart" ? DEFAULT_WEEK_START : DEFAULT_WEEK_END;
+    const normalized = Number.isNaN(parsed)
+      ? fallback
+      : clampWeekNumber(parsed);
+
+    setEditedPlan((prev) => ({
+      ...prev,
+      [field]: normalized,
+    }));
+  };
+
+  const handleSchoolYearChange = (value: string) => {
+    const masked = maskSchoolYearInput(value);
+    const { startYear, endYear } = parseSchoolYear(masked);
+    setEditedPlan((prev) => ({
+      ...prev,
+      schoolYear: masked,
+      schoolYearStart: startYear ?? null,
+      schoolYearEnd:
+        endYear ?? (startYear ? startYear + 1 : (prev.schoolYearEnd ?? null)),
+    }));
+  };
+
+  const handleSchoolYearStartChange = (value: string) => {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      setEditedPlan((prev) => ({
+        ...prev,
+        schoolYearStart: null,
+        schoolYearEnd: null,
+        schoolYear: "",
+      }));
+      return;
+    }
+
+    const parsed = Number.parseInt(trimmed, 10);
+    if (Number.isNaN(parsed)) {
+      return;
+    }
+
+    const normalizedYear = Math.min(Math.max(parsed, 1900), 2500);
+    const formatted = formatSchoolYearFromStart(normalizedYear);
+    setEditedPlan((prev) => ({
+      ...prev,
+      schoolYearStart: normalizedYear,
+      schoolYearEnd: normalizedYear + 1,
+      schoolYear: formatted,
+    }));
   };
 
   return (
@@ -308,18 +373,85 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
               />
             </div>
             <div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    {t("schoolYear")}
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className="w-full rounded border p-2"
+                    value={editedPlan.schoolYear}
+                    onChange={(e) => handleSchoolYearChange(e.target.value)}
+                    placeholder={t("schoolYearPlaceholder")}
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {t("schoolYearMaskHint")}
+                  </p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    {t("schoolYearStartLabel")}
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full rounded border p-2"
+                    value={editedPlan.schoolYearStart ?? ""}
+                    onChange={(e) =>
+                      handleSchoolYearStartChange(e.target.value)
+                    }
+                    placeholder={t("schoolYearStartPlaceholder")}
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {editedPlan.schoolYearEnd
+                      ? t("schoolYearEndSummary", {
+                          year: editedPlan.schoolYearEnd,
+                        })
+                      : t("schoolYearEndPending")}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div>
               <label className="mb-1 block text-sm font-medium">
-                {t("schoolYear")}
+                {t("schoolYearWeekRange")}
               </label>
-              <input
-                type="text"
-                className="w-full rounded border p-2"
-                value={editedPlan.schoolYear}
-                onChange={(e) =>
-                  setEditedPlan({ ...editedPlan, schoolYear: e.target.value })
-                }
-                placeholder={t("schoolYearPlaceholder")}
-              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
+                    {t("schoolYearStartWeek")}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={53}
+                    className="w-full rounded border p-2"
+                    value={editedPlan.weekRangeStart}
+                    onChange={(e) =>
+                      handleWeekRangeChange("weekRangeStart", e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
+                    {t("schoolYearEndWeek")}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={53}
+                    className="w-full rounded border p-2"
+                    value={editedPlan.weekRangeEnd}
+                    onChange={(e) =>
+                      handleWeekRangeChange("weekRangeEnd", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {t("schoolYearWeekRangeHint")}
+              </p>
             </div>
           </div>
         )}
@@ -444,8 +576,9 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
         )}
 
         {activeTab === "goals" && (
-          <TimelineEditor
+          <CurriculumTimeline
             plan={editedPlan}
+            currentWeek={getCurrentWeekNumber()}
             onUpdate={(updatedPlan) => setEditedPlan(updatedPlan)}
           />
         )}
