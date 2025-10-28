@@ -178,6 +178,10 @@ i18n.use(initReactI18next).init({
         formulaPlaceholder: "Bijv. (Netheid + Originaliteit) / 20",
         formulaDescription:
           "Laat leeg voor automatische gewogen berekening. Gebruik onderdeelnamen exact zoals hierboven.",
+        weightTooltip:
+          "Gewicht wordt alleen gebruikt als er geen aangepaste formule is ingesteld. Bij een formule wordt dit veld genegeerd.",
+        clickToInsert: "Klik om dit element in de formule in te voegen",
+        nameElementFirst: "Geef eerst een naam aan dit element",
         backToTests: "Terug naar toetsen",
         selectClassLabel: "Kies een klas",
         studentsInClass: "{{count}} leerlingen in deze klas",
@@ -422,6 +426,10 @@ i18n.use(initReactI18next).init({
         formulaPlaceholder: "e.g. (Cleanliness + Originality) / 20",
         formulaDescription:
           "Leave empty for automatic weighted calculation. Use element names exactly as shown above.",
+        weightTooltip:
+          "Weight is only used when no custom formula is set. With a formula, this field is ignored.",
+        clickToInsert: "Click to insert this element into the formula",
+        nameElementFirst: "Name this element first",
         backToTests: "Back to tests",
         selectClassLabel: "Select class",
         studentsInClass: "{{count}} students in this class",

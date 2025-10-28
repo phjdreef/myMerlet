@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { PlusIcon, XIcon } from "@phosphor-icons/react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useRef } from "react";
 import type { CompositeElement, TestType } from "@/services/test-database";
 import { Button } from "../ui/button";
 import type { TestFormState } from "./types";
@@ -27,6 +28,7 @@ export function TestForm({
   isEditing,
 }: TestFormProps) {
   const { t } = useTranslation();
+  const formulaInputRef = useRef<HTMLInputElement>(null);
 
   const updateField = <Key extends keyof TestFormState>(
     key: Key,
@@ -69,6 +71,30 @@ export function TestForm({
       ...previous,
       elements: [...previous.elements, newElement],
     }));
+  };
+
+  const insertElementIntoFormula = (elementName: string) => {
+    const input = formulaInputRef.current;
+    if (!input) return;
+
+    const start = input.selectionStart ?? formData.customFormula.length;
+    const end = input.selectionEnd ?? formData.customFormula.length;
+    const currentFormula = formData.customFormula;
+
+    // Insert element name at cursor position
+    const newFormula =
+      currentFormula.substring(0, start) +
+      elementName +
+      currentFormula.substring(end);
+
+    updateField("customFormula", newFormula);
+
+    // Set cursor position after inserted text
+    setTimeout(() => {
+      input.focus();
+      const newCursorPos = start + elementName.length;
+      input.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
   };
 
   return (
@@ -259,6 +285,33 @@ export function TestForm({
               </div>
             ) : (
               <div className="space-y-2">
+                {/* Column headers */}
+                <div className="grid grid-cols-12 gap-2 px-2">
+                  <div className="col-span-4">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      {t("elementName")}
+                    </span>
+                  </div>
+                  <div className="col-span-3">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      {t("maxPoints")}
+                    </span>
+                  </div>
+                  <div className="col-span-4">
+                    <span className="text-muted-foreground flex items-center gap-1 text-xs font-medium">
+                      {t("weight")}
+                      <span
+                        className="cursor-help"
+                        title={t("weightTooltip")}
+                      >
+                        ⓘ
+                      </span>
+                    </span>
+                  </div>
+                  <div className="col-span-1" />
+                </div>
+
+                {/* Element rows */}
                 {formData.elements.map((element, index) => (
                   <div
                     key={element.id}
@@ -305,6 +358,7 @@ export function TestForm({
                         }
                         className="w-full rounded border px-2 py-1 text-sm"
                         required
+                        title={t("weightTooltip")}
                       />
                     </div>
                     <div className="col-span-1 flex items-center">
@@ -333,12 +387,20 @@ export function TestForm({
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {formData.elements.map((el) => (
-                      <code
+                      <button
                         key={el.id}
-                        className="bg-primary/10 rounded px-1.5 py-0.5"
+                        type="button"
+                        onClick={() => insertElementIntoFormula(el.name)}
+                        disabled={!el.name || el.name.trim() === ""}
+                        className="bg-primary/10 hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed rounded px-1.5 py-0.5 font-mono transition-colors cursor-pointer"
+                        title={
+                          el.name && el.name.trim() !== ""
+                            ? t("clickToInsert")
+                            : t("nameElementFirst")
+                        }
                       >
                         {el.name || t("unnamed")}
-                      </code>
+                      </button>
                     ))}
                   </div>
                   <div className="mt-2">
@@ -347,6 +409,7 @@ export function TestForm({
                   </div>
                 </div>
                 <input
+                  ref={formulaInputRef}
                   type="text"
                   placeholder={t("formulaPlaceholder")}
                   value={formData.customFormula}

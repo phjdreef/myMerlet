@@ -129,6 +129,17 @@ function roundGrade(grade: number): number {
   return Math.round(grade * 10) / 10; // Round to nearest 0.1
 }
 
+const toNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+};
+
 // Generate unique ID
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -240,6 +251,83 @@ export function registerTestListeners() {
         const updatedTest = normalizeTestRecord(updatedRecord);
         tests[testIndex] = updatedTest;
         writeTests(tests);
+
+        // Recalculate all grades linked to this test so the final grade aligns
+        // with the updated settings (n-term, weights, etc.).
+        const grades = readJSONFile<StudentGrade[]>(getGradesFilePath(), []);
+        let hasGradeUpdates = false;
+        const now = new Date().toISOString();
+
+        const recalculatedGrades = grades.map((grade) => {
+          if (grade.testId !== testId) {
+            return grade;
+          }
+
+          const nextGrade: StudentGrade = {
+            ...grade,
+            updatedAt: now,
+          };
+
+          if (updatedTest.testType === "cvte") {
+            const maxPoints = toNumber(updatedTest.maxPoints) ?? 0;
+            const nTerm = toNumber(updatedTest.nTerm) ?? 0;
+            const rTerm = toNumber(updatedTest.rTerm) ?? 9;
+            const pointsEarned = toNumber(grade.pointsEarned) ?? 0;
+
+            const calculatedRaw =
+              maxPoints > 0 && pointsEarned > 0
+                ? calculateCvTEGrade(pointsEarned, maxPoints, nTerm, rTerm)
+                : 0;
+            const calculated = Number.isFinite(calculatedRaw)
+              ? calculatedRaw
+              : 0;
+            const manualOverride = toNumber(nextGrade.manualOverride);
+
+            nextGrade.pointsEarned = pointsEarned;
+            delete nextGrade.elementGrades;
+            nextGrade.calculatedGrade = calculated;
+
+            if (manualOverride !== undefined) {
+              nextGrade.manualOverride = manualOverride;
+              nextGrade.finalGrade = manualOverride;
+            } else {
+              delete nextGrade.manualOverride;
+              nextGrade.finalGrade = roundGrade(calculated);
+            }
+          } else if (updatedTest.testType === "composite") {
+            const elementGrades = grade.elementGrades ?? [];
+            const elements = updatedTest.elements ?? [];
+            const calculatedRaw = calculateCompositeGrade(
+              elementGrades,
+              elements,
+              updatedTest.customFormula,
+            );
+            const calculated = Number.isFinite(calculatedRaw)
+              ? calculatedRaw
+              : 0;
+            const manualOverride = toNumber(nextGrade.manualOverride);
+
+            nextGrade.elementGrades = elementGrades;
+            delete nextGrade.pointsEarned;
+            nextGrade.calculatedGrade = calculated;
+
+            if (manualOverride !== undefined) {
+              nextGrade.manualOverride = manualOverride;
+              nextGrade.finalGrade = manualOverride;
+            } else {
+              delete nextGrade.manualOverride;
+              nextGrade.finalGrade = roundGrade(calculated);
+            }
+          }
+
+          hasGradeUpdates = true;
+          return nextGrade;
+        });
+
+        if (hasGradeUpdates) {
+          writeJSONFile(getGradesFilePath(), recalculatedGrades);
+        }
+
         return { success: true, data: updatedTest };
       } catch (error) {
         return { success: false, error: (error as Error).message };
