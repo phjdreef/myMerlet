@@ -300,10 +300,7 @@ export function TestForm({
                   <div className="col-span-4">
                     <span className="text-muted-foreground flex items-center gap-1 text-xs font-medium">
                       {t("weight")}
-                      <span
-                        className="cursor-help"
-                        title={t("weightTooltip")}
-                      >
+                      <span className="cursor-help" title={t("weightTooltip")}>
                         ⓘ
                       </span>
                     </span>
@@ -392,7 +389,7 @@ export function TestForm({
                         type="button"
                         onClick={() => insertElementIntoFormula(el.name)}
                         disabled={!el.name || el.name.trim() === ""}
-                        className="bg-primary/10 hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed rounded px-1.5 py-0.5 font-mono transition-colors cursor-pointer"
+                        className="bg-primary/10 hover:bg-primary/20 cursor-pointer rounded px-1.5 py-0.5 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                         title={
                           el.name && el.name.trim() !== ""
                             ? t("clickToInsert")
