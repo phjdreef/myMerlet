@@ -2,9 +2,11 @@ import { app } from "electron";
 import path from "path";
 import fs from "fs";
 import { logger } from "../utils/logger";
+import { getCurrentSchoolYear, type SchoolYear } from "../utils/school-year";
 
 export type GlobalSettings = {
   theme?: "system" | "twitter" | "graphite" | "nord" | "dracula" | "solarized";
+  currentSchoolYear?: SchoolYear;
 };
 
 class GlobalSettingsManager {
@@ -94,6 +96,20 @@ class GlobalSettingsManager {
     if (!this.initialized) await this.init();
     const settings = this.readSettings();
     settings.theme = theme;
+    this.writeSettings(settings);
+  }
+
+  async getCurrentSchoolYear(): Promise<SchoolYear> {
+    if (!this.initialized) await this.init();
+    const settings = this.readSettings();
+    // Return stored school year or default to current
+    return settings.currentSchoolYear || getCurrentSchoolYear();
+  }
+
+  async setCurrentSchoolYear(schoolYear: SchoolYear): Promise<void> {
+    if (!this.initialized) await this.init();
+    const settings = this.readSettings();
+    settings.currentSchoolYear = schoolYear;
     this.writeSettings(settings);
   }
 }

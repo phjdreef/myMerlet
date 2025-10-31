@@ -6,22 +6,24 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { ClassFilter } from "./ClassFilter";
-import { ClassroomView } from "./views/ClassroomView";
-import { StudentListView } from "./views/StudentListView";
-import { PlansView } from "./views/PlansView";
-import { GradesView } from "./views/GradesView";
-import { DirectoryHeader, type ViewMode } from "./DirectoryHeader";
-import { useStudentDirectoryData } from "./hooks/useStudentDirectoryData";
-import type { Student } from "@/services/student-database";
-import type { SeatingPosition } from "./ClassroomGrid";
+import { useSchoolYear } from "../../contexts/SchoolYearContext";
 import { getCurrentWeekNumber } from "@/utils/week-utils";
 import { logger } from "@/utils/logger";
+import type { Student } from "@/services/student-database";
+import type { SeatingPosition } from "./ClassroomGrid";
+import { ClassFilter } from "./ClassFilter";
+import { ClassroomView } from "./views/ClassroomView";
+import { DirectoryHeader, type ViewMode } from "./DirectoryHeader";
+import { GradesView } from "./views/GradesView";
+import { useStudentDirectoryData } from "./hooks/useStudentDirectoryData";
+import { PlansView } from "./views/PlansView";
+import { StudentListView } from "./views/StudentListView";
 
 const DEFAULT_VIEW_MODE: ViewMode = "list";
 
 export function StudentDirectoryContainer() {
   const { t } = useTranslation();
+  const { currentSchoolYear } = useSchoolYear();
   const {
     students,
     filteredStudents,
@@ -49,23 +51,55 @@ export function StudentDirectoryContainer() {
     const loadSeatingPositions = () => {
       try {
         const saved = localStorage.getItem("classroom_seating_positions");
-        if (saved) {
-          const positionsData = JSON.parse(saved) as Record<
-            string,
-            SeatingPosition[]
-          >;
-          const positionsMap = new Map<string, SeatingPosition[]>(
-            Object.entries(positionsData),
-          );
-          setSeatingPositions(positionsMap);
+        if (!saved) {
+          return;
         }
+
+        const positionsData = JSON.parse(saved) as Record<
+          string,
+          SeatingPosition[]
+        >;
+
+        // Migrate old data without schoolYear field
+        let migrated = 0;
+        for (const positions of Object.values(positionsData)) {
+          for (const position of positions) {
+            if (!position.schoolYear) {
+              position.schoolYear = currentSchoolYear;
+              migrated++;
+            }
+          }
+        }
+
+        if (migrated > 0) {
+          localStorage.setItem(
+            "classroom_seating_positions",
+            JSON.stringify(positionsData),
+          );
+          logger.log(
+            `Migrated ${migrated} seating positions to have schoolYear field`,
+          );
+        }
+
+        // Filter positions by current school year
+        const filteredPositionsData: Record<string, SeatingPosition[]> = {};
+        for (const [className, positions] of Object.entries(positionsData)) {
+          filteredPositionsData[className] = positions.filter(
+            (pos) => pos.schoolYear === currentSchoolYear,
+          );
+        }
+
+        const positionsMap = new Map<string, SeatingPosition[]>(
+          Object.entries(filteredPositionsData),
+        );
+        setSeatingPositions(positionsMap);
       } catch (err) {
         logger.error("Failed to load seating positions:", err);
       }
     };
 
     loadSeatingPositions();
-  }, []);
+  }, [currentSchoolYear]);
 
   const saveSeatingPositions = (positions: Map<string, SeatingPosition[]>) => {
     try {
@@ -97,7 +131,13 @@ export function StudentDirectoryContainer() {
     classPositions = classPositions.filter(
       (pos) => pos.studentId !== studentId,
     );
-    classPositions.push({ studentId, row, col, className });
+    classPositions.push({
+      studentId,
+      row,
+      col,
+      className,
+      schoolYear: currentSchoolYear,
+    });
 
     updatedPositions.set(className, classPositions);
     setSeatingPositions(updatedPositions);
@@ -168,12 +208,14 @@ export function StudentDirectoryContainer() {
           row,
           col,
           className: selectedClass,
+          schoolYear: currentSchoolYear,
         });
         positions.push({
           studentId: existingStudent.id,
           row: draggedOldRow,
           col: draggedOldCol,
           className: selectedClass,
+          schoolYear: currentSchoolYear,
         });
 
         updatedPositions.set(selectedClass, positions);

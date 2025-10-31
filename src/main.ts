@@ -3,6 +3,7 @@ import type { NativeImage } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
 import { mainStudentDB } from "./services/main-student-database";
 import { curriculumDB } from "./services/curriculum-database";
+import { runMigrations } from "./services/migrations";
 // "electron-squirrel-startup" seems broken when packaging with vite
 //import started from "electron-squirrel-startup";
 import path from "path";
@@ -105,6 +106,9 @@ app.whenReady().then(async () => {
     await mainStudentDB.init();
     await curriculumDB.init();
     console.log("Databases initialized successfully");
+
+    // Run migrations
+    await runMigrations();
   } catch (error) {
     console.error("Database initialization failed:", error);
   }

@@ -24,6 +24,11 @@ interface ElectronWindow {
   close: () => Promise<void>;
 }
 
+interface SettingsAPI {
+  getCurrentSchoolYear: () => Promise<string>;
+  setCurrentSchoolYear: (schoolYear: string) => Promise<void>;
+}
+
 interface MagisterAPI {
   authenticate: () => Promise<{
     success: boolean;
@@ -201,6 +206,7 @@ declare interface Window {
     ) => Promise<boolean>;
   };
   electronWindow: ElectronWindow;
+  settingsAPI: SettingsAPI;
   magisterAPI: MagisterAPI;
   studentDBAPI: StudentDBAPI;
   curriculumAPI: CurriculumAPI;

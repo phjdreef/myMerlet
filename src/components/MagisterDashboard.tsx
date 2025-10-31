@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "./ui/button";
-import StudentDirectory from "./StudentDirectory";
+import { useSchoolYear } from "../contexts/SchoolYearContext";
 import { logger } from "../utils/logger";
+import StudentDirectory from "./StudentDirectory";
+import { Button } from "./ui/button";
 
 export default function MagisterDashboard({
   onLogout,
@@ -10,6 +11,7 @@ export default function MagisterDashboard({
   onLogout?: () => void;
 } = {}) {
   const { t } = useTranslation();
+  const { currentSchoolYear } = useSchoolYear();
   const [activeTab, setActiveTab] = useState<"overview" | "students">(
     "overview",
   );
@@ -31,9 +33,15 @@ export default function MagisterDashboard({
         };
         const items = responseData.items || [];
 
+        // Add current school year to all students
+        const studentsWithSchoolYear = items.map((student) => ({
+          ...student,
+          schoolYear: currentSchoolYear,
+        }));
+
         // Save students to database
         try {
-          await window.studentDBAPI.saveStudents(items);
+          await window.studentDBAPI.saveStudents(studentsWithSchoolYear);
           logger.debug(`Saved ${items.length} students to database`);
         } catch (err) {
           logger.error("Failed to save students to database:", err);

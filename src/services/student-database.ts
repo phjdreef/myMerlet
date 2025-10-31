@@ -11,6 +11,7 @@ interface Student {
   lesgroepen: string[];
   studies: string[];
   externeId: string;
+  schoolYear: string; // e.g., "2024-2025"
 }
 
 class StudentDatabase {

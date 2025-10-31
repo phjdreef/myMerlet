@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { updateAppLanguage } from "./helpers/language_helpers";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./utils/routes";
+import { SchoolYearProvider } from "./contexts/SchoolYearContext";
 import "./localization/i18n";
 
 export default function App() {
@@ -15,7 +16,11 @@ export default function App() {
     updateAppLanguage(i18n);
   }, [i18n]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <SchoolYearProvider>
+      <RouterProvider router={router} />
+    </SchoolYearProvider>
+  );
 }
 
 const root = createRoot(document.getElementById("app")!);

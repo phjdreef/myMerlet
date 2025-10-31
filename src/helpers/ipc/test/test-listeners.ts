@@ -8,6 +8,7 @@ import type {
   CompositeElementGrade,
 } from "../../../services/test-database";
 import { calculateCompositeGrade } from "../../../services/test-database";
+import { globalSettings } from "../../../services/global-settings";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -152,8 +153,11 @@ export function registerTestListeners() {
     async (_event, classGroup: string) => {
       try {
         const tests = readTests();
-        const classTests = tests.filter((test) =>
-          test.classGroups.includes(classGroup),
+        const currentSchoolYear = await globalSettings.getCurrentSchoolYear();
+        const classTests = tests.filter(
+          (test) =>
+            test.classGroups.includes(classGroup) &&
+            test.schoolYear === currentSchoolYear,
         );
         return { success: true, data: classTests };
       } catch (error) {
@@ -165,7 +169,11 @@ export function registerTestListeners() {
   ipcMain.handle(TEST_CHANNELS.GET_ALL_TESTS, async () => {
     try {
       const tests = readTests();
-      return { success: true, data: tests };
+      const currentSchoolYear = await globalSettings.getCurrentSchoolYear();
+      const filteredTests = tests.filter(
+        (test) => test.schoolYear === currentSchoolYear,
+      );
+      return { success: true, data: filteredTests };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -362,7 +370,11 @@ export function registerTestListeners() {
     async (_event, testId: string) => {
       try {
         const grades = readJSONFile<StudentGrade[]>(getGradesFilePath(), []);
-        const testGrades = grades.filter((grade) => grade.testId === testId);
+        const currentSchoolYear = await globalSettings.getCurrentSchoolYear();
+        const testGrades = grades.filter(
+          (grade) =>
+            grade.testId === testId && grade.schoolYear === currentSchoolYear,
+        );
         return { success: true, data: testGrades };
       } catch (error) {
         return { success: false, error: (error as Error).message };
@@ -376,14 +388,20 @@ export function registerTestListeners() {
     async (_event, studentId: number, classGroup: string) => {
       try {
         const tests = readTests();
-        const classTests = tests.filter((t) =>
-          t.classGroups.includes(classGroup),
+        const currentSchoolYear = await globalSettings.getCurrentSchoolYear();
+        const classTests = tests.filter(
+          (t) =>
+            t.classGroups.includes(classGroup) &&
+            t.schoolYear === currentSchoolYear,
         );
         const testIds = classTests.map((t) => t.id);
 
         const grades = readJSONFile<StudentGrade[]>(getGradesFilePath(), []);
         const studentGrades = grades.filter(
-          (g) => g.studentId === studentId && testIds.includes(g.testId),
+          (g) =>
+            g.studentId === studentId &&
+            testIds.includes(g.testId) &&
+            g.schoolYear === currentSchoolYear,
         );
         return { success: true, data: studentGrades };
       } catch (error) {
@@ -447,6 +465,7 @@ export function registerTestListeners() {
               : generateId(),
           testId,
           studentId,
+          schoolYear: test.schoolYear,
           pointsEarned: test.testType === "cvte" ? pointsEarned : undefined,
           calculatedGrade,
           manualOverride,
@@ -517,6 +536,7 @@ export function registerTestListeners() {
               : generateId(),
           testId,
           studentId,
+          schoolYear: test.schoolYear,
           elementGrades,
           calculatedGrade,
           manualOverride,

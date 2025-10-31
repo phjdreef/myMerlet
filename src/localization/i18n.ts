@@ -10,6 +10,10 @@ i18n.use(initReactI18next).init({
         appName: "myMerlet",
         settings: "Instellingen",
         settingsDescription: "Beheer taal-, thema- en interfacevoorkeuren.",
+        schoolYear: "Schooljaar",
+        schoolYearDescription:
+          "Selecteer het actieve schooljaar. Alle gegevens (leerlingen, toetsen, cijfers) worden gefilterd op dit jaar.",
+        currentSchoolYear: "Huidig Schooljaar",
         language: "Taal",
         languageDescription: "Kies welke taal de interface gebruikt.",
         themeDescription:
@@ -96,7 +100,6 @@ i18n.use(initReactI18next).init({
         noClassesFound:
           "Geen klassen gevonden in de database. Zorg dat je eerst leerlingen hebt geladen via de Magister API.",
         subject: "Vak",
-        schoolYear: "Schooljaar",
         subjectPlaceholder: "bijv. Biologie, Wiskunde",
         schoolYearPlaceholder: "bijv. 2024-2025",
         schoolYearMaskHint:
@@ -264,6 +267,10 @@ i18n.use(initReactI18next).init({
         settings: "Settings",
         settingsDescription:
           "Manage language, theme, and interface preferences.",
+        schoolYear: "School Year",
+        schoolYearDescription:
+          "Select the active school year. All data (students, tests, grades) will be filtered by this year.",
+        currentSchoolYear: "Current School Year",
         language: "Language",
         languageDescription: "Choose the language used by the interface.",
         themeDescription:
@@ -347,7 +354,6 @@ i18n.use(initReactI18next).init({
         noClassesFound:
           "No classes found in database. Make sure you have loaded students via the Magister API first.",
         subject: "Subject",
-        schoolYear: "School Year",
         subjectPlaceholder: "e.g. Biology, Mathematics",
         schoolYearPlaceholder: "e.g. 2024-2025",
         schoolYearMaskHint:

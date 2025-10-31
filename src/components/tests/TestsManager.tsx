@@ -7,6 +7,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
+import { useSchoolYear } from "../../contexts/SchoolYearContext";
 import { normalizeTestRecord } from "../../helpers/tests/normalize-test";
 import type {
   Test,
@@ -37,6 +38,7 @@ export function TestsManager({
   enableClassFilter = false,
 }: TestsManagerProps) {
   const { t } = useTranslation();
+  const { currentSchoolYear } = useSchoolYear();
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTest, setEditingTest] = useState<Test | null>(null);
@@ -143,6 +145,7 @@ export function TestsManager({
       const payload = {
         ...formData,
         classGroups: sanitizedClassGroups,
+        schoolYear: currentSchoolYear,
       };
 
       if (editingTest) {

@@ -1,6 +1,7 @@
 import { app } from "electron";
 import path from "path";
 import fs from "fs";
+import { globalSettings } from "./global-settings";
 import { logger } from "../utils/logger";
 
 interface Student {
@@ -15,6 +16,7 @@ interface Student {
   lesgroepen: string[];
   studies: string[];
   externeId: string;
+  schoolYear: string;
 }
 
 interface DatabaseData {
@@ -221,8 +223,17 @@ class MainStudentDatabase {
 
     try {
       const data = this.readDatabase();
+      const currentSchoolYear = await globalSettings.getCurrentSchoolYear();
+
+      // Filter by current school year
+      const filteredStudents = data.students.filter(
+        (student) => student.schoolYear === currentSchoolYear,
+      );
+
       // Sort by roepnaam
-      return data.students.sort((a, b) => a.roepnaam.localeCompare(b.roepnaam));
+      return filteredStudents.sort((a, b) =>
+        a.roepnaam.localeCompare(b.roepnaam),
+      );
     } catch (error) {
       logger.error("Failed to get students:", error);
       throw new Error("Failed to retrieve students from database");
@@ -236,16 +247,18 @@ class MainStudentDatabase {
 
     try {
       const data = this.readDatabase();
+      const currentSchoolYear = await globalSettings.getCurrentSchoolYear();
       const lowerQuery = query.toLowerCase();
 
       const filteredStudents = data.students.filter(
         (student) =>
-          student.roepnaam.toLowerCase().includes(lowerQuery) ||
-          student.achternaam.toLowerCase().includes(lowerQuery) ||
-          student.emailadres.toLowerCase().includes(lowerQuery) ||
-          student.code.toLowerCase().includes(lowerQuery) ||
-          (student.tussenvoegsel &&
-            student.tussenvoegsel.toLowerCase().includes(lowerQuery)),
+          student.schoolYear === currentSchoolYear &&
+          (student.roepnaam.toLowerCase().includes(lowerQuery) ||
+            student.achternaam.toLowerCase().includes(lowerQuery) ||
+            student.emailadres.toLowerCase().includes(lowerQuery) ||
+            student.code.toLowerCase().includes(lowerQuery) ||
+            (student.tussenvoegsel &&
+              student.tussenvoegsel.toLowerCase().includes(lowerQuery))),
       );
 
       // Sort by roepnaam

@@ -22,6 +22,7 @@ export interface Test {
   description: string;
   weight: number; // Weight of the test (e.g., 1, 2, 3 for single, double, triple weight)
   testType: TestType; // Type of test: "cvte" or "composite"
+  schoolYear: string; // e.g., "2024-2025"
 
   // CvTE test properties (only for testType === "cvte")
   nTerm?: number; // The n-term for CvTE formula (normering)
@@ -45,6 +46,7 @@ export interface StudentGrade {
   id: string;
   testId: string;
   studentId: number; // Links to student from student database
+  schoolYear: string; // e.g., "2024-2025"
 
   // For CvTE tests
   pointsEarned?: number; // Points the student earned (for CvTE tests)
@@ -291,6 +293,7 @@ class TestDatabase {
       id: "",
       testId,
       studentId,
+      schoolYear: "", // Will be set by IPC handler
       pointsEarned,
       manualOverride,
       calculatedGrade: 0,

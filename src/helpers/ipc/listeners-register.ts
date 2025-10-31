@@ -6,6 +6,7 @@ import { addMagisterEventListeners } from "./magister/magister-listeners";
 import { addStudentDBEventListeners } from "./studentdb/studentdb-listeners";
 import { registerCurriculumListeners } from "./curriculum/curriculum-listeners";
 import { registerTestListeners } from "./test/test-listeners";
+import { registerSettingsListeners } from "./settings/settings-listeners";
 
 export default function registerListeners(mainWindow: BrowserWindow) {
   addWindowEventListeners(mainWindow);
@@ -15,4 +16,5 @@ export default function registerListeners(mainWindow: BrowserWindow) {
   addStudentDBEventListeners();
   registerCurriculumListeners();
   registerTestListeners();
+  registerSettingsListeners();
 }

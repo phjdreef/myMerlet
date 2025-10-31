@@ -14,6 +14,7 @@ export interface SeatingPosition {
   row: number;
   col: number;
   className: string;
+  schoolYear: string;
 }
 
 interface ClassroomGridProps {

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import LangToggle from "@/components/LangToggle";
 import ToggleTheme from "@/components/ToggleTheme";
 import { ThemeSelector } from "@/components/ui/ThemeSelector";
+import { SchoolYearSelector } from "@/components/settings/SchoolYearSelector";
 
 function SettingsPage() {
   const { t } = useTranslation();
@@ -19,6 +20,16 @@ function SettingsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
+        <section className="border-border/60 bg-card/80 flex flex-col gap-4 rounded-2xl border p-6 shadow-sm backdrop-blur">
+          <div>
+            <h2 className="text-xl font-semibold">{t("currentSchoolYear")}</h2>
+            <p className="text-muted-foreground text-sm">
+              {t("schoolYearDescription")}
+            </p>
+          </div>
+          <SchoolYearSelector />
+        </section>
+
         <section className="border-border/60 bg-card/80 flex flex-col gap-4 rounded-2xl border p-6 shadow-sm backdrop-blur">
           <div>
             <h2 className="text-xl font-semibold">{t("language")}</h2>
