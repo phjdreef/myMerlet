@@ -72,6 +72,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.4",
     "@icons-pack/react-simple-icons": "^13.8.0",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-navigation-menu": "^1.2.14",
@@ -85,12 +86,14 @@
     "@tiptap/extension-placeholder": "^3.7.2",
     "@tiptap/react": "^3.7.2",
     "@tiptap/starter-kit": "^3.7.2",
-    "@floating-ui/dom": "^1.7.4",
+    "axios": "^1.13.1",
+    "chromium-bidi": "^10.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "docx": "^9.1.0",
     "electron-squirrel-startup": "^1.0.1",
     "i18next": "^25.6.0",
+    "jsonrepair": "^3.13.1",
     "lucide-react": "^0.545.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

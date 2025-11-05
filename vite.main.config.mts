@@ -8,5 +8,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      external: ["playwright", "playwright-core", "chromium-bidi"],
+    },
+  },
   // No build configuration needed for JSON-based database
 });

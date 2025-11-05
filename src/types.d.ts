@@ -103,7 +103,10 @@ interface CurriculumAPI {
   }>;
   savePlan: (plan: unknown) => Promise<{ success: boolean; error?: string }>;
   deletePlan: (planId: string) => Promise<{ success: boolean; error?: string }>;
-  exportPlanToDocx: (planId: string) => Promise<{
+  exportPlanToDocx: (
+    planId: string,
+    language: "nl" | "en",
+  ) => Promise<{
     success: boolean;
     data?: unknown;
     error?: string;
@@ -183,6 +186,41 @@ interface TestAPI {
   }>;
 }
 
+interface ExamnetAPI {
+  login: (
+    username: string,
+    password: string,
+  ) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  logout: () => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  getTests: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  getTestResults: (testId: string) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  getStudents: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+  syncData: () => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   themeGlobal: {
@@ -211,4 +249,5 @@ declare interface Window {
   studentDBAPI: StudentDBAPI;
   curriculumAPI: CurriculumAPI;
   testAPI: TestAPI;
+  examnetAPI: ExamnetAPI;
 }

@@ -1,7 +1,10 @@
 import { dialog, ipcMain } from "electron";
 import { promises as fs } from "fs";
+import path from "path";
 import {
   Document,
+  Header,
+  Footer,
   HeadingLevel,
   Packer,
   Paragraph as DocParagraph,
@@ -10,6 +13,9 @@ import {
   TableRow,
   TextRun,
   WidthType,
+  AlignmentType,
+  ImageRun,
+  PageNumber,
 } from "docx";
 import { CURRICULUM_CHANNELS } from "./curriculum-channels";
 import {
@@ -19,12 +25,12 @@ import {
 } from "../../../services/curriculum-database";
 import { logger } from "../../../utils/logger";
 import {
-  clampWeekNumber,
   generateWeekSequence,
   goalCoversWeek,
   parseSchoolYear,
   getYearForWeek,
 } from "../../../utils/curriculum-week";
+import { curriculumExportTranslations } from "../../../localization/curriculum-export-translations";
 
 const CANCELLED_ERROR_CODE = "cancelled";
 
@@ -40,32 +46,109 @@ function stripHtml(input: string): string {
     .trim();
 }
 
+function formatDateShort(date: Date, language: "nl" | "en"): string {
+  const day = date.getDate();
+  const month = date
+    .toLocaleDateString(language === "nl" ? "nl-NL" : "en-US", {
+      month: "short",
+    })
+    .toLowerCase();
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
 function createBoldParagraph(text: string): DocParagraph {
   return new DocParagraph({
-    children: [new TextRun({ text, bold: true })],
+    children: [
+      new TextRun({
+        text,
+        bold: true,
+        font: "Arial",
+        size: 20, // 10pt in half-points
+      }),
+    ],
   });
 }
 
-function buildPlanDocument(plan: CurriculumPlan): Document {
+function createNormalParagraph(text: string): DocParagraph {
+  return new DocParagraph({
+    children: [
+      new TextRun({
+        text,
+        font: "Arial",
+        size: 20, // 10pt in half-points
+      }),
+    ],
+  });
+}
+
+async function loadMerletIcon(): Promise<Buffer> {
+  // Try multiple possible paths for the Merlet icon
+  const possiblePaths = [
+    path.join(__dirname, "../../../../resources/icons/merlet.png"),
+    path.join(__dirname, "../../../resources/icons/merlet.png"),
+    path.join(__dirname, "../../resources/icons/merlet.png"),
+    path.join(process.resourcesPath || "", "icons/merlet.png"),
+    path.join(process.cwd(), "resources/icons/merlet.png"),
+  ];
+
+  for (const iconPath of possiblePaths) {
+    try {
+      const buffer = await fs.readFile(iconPath);
+      logger.log("Merlet icon loaded from:", iconPath);
+      return buffer;
+    } catch {
+      // Continue to next path
+    }
+  }
+
+  logger.error("Failed to load Merlet icon from any path");
+  return Buffer.from("");
+}
+
+async function buildPlanDocument(
+  plan: CurriculumPlan,
+  language: "nl" | "en" = "nl",
+): Promise<Document> {
+  const t = curriculumExportTranslations[language];
   const parsedYears = parseSchoolYear(plan.schoolYear);
   const startYear = plan.schoolYearStart ?? parsedYears.startYear ?? undefined;
   const endYear = plan.schoolYearEnd ?? parsedYears.endYear ?? undefined;
   const headerParagraphs: DocParagraph[] = [
     new DocParagraph({
-      text: plan.subject?.trim()
-        ? `${plan.subject.trim()} – Curriculum Overview`
-        : "Curriculum Overview",
+      children: [
+        new TextRun({
+          text: plan.subject?.trim()
+            ? `${plan.subject.trim()} – ${t.curriculumOverview}`
+            : t.curriculumOverview,
+          font: "Arial",
+          size: 28, // 14pt in half-points
+          bold: true,
+        }),
+      ],
       heading: HeadingLevel.TITLE,
     }),
     new DocParagraph({
-      text: `School year: ${plan.schoolYear || "n/a"}`,
+      children: [
+        new TextRun({
+          text: `${t.schoolYear}: ${plan.schoolYear || "n/a"}`,
+          font: "Arial",
+          size: 20, // 10pt in half-points
+        }),
+      ],
     }),
   ];
 
   if (plan.classNames.length > 0) {
     headerParagraphs.push(
       new DocParagraph({
-        text: `Classes: ${plan.classNames.join(", ")}`,
+        children: [
+          new TextRun({
+            text: `${t.classes}: ${plan.classNames.join(", ")}`,
+            font: "Arial",
+            size: 20,
+          }),
+        ],
       }),
     );
   }
@@ -73,9 +156,15 @@ function buildPlanDocument(plan: CurriculumPlan): Document {
   if (startYear) {
     headerParagraphs.push(
       new DocParagraph({
-        text: endYear
-          ? `Start year: ${startYear} → ${endYear}`
-          : `Start year: ${startYear}`,
+        children: [
+          new TextRun({
+            text: endYear
+              ? `${t.startYear}: ${startYear} → ${endYear}`
+              : `${t.startYear}: ${startYear}`,
+            font: "Arial",
+            size: 20,
+          }),
+        ],
       }),
     );
   }
@@ -83,13 +172,25 @@ function buildPlanDocument(plan: CurriculumPlan): Document {
   const wrapsYear = plan.weekRangeStart > plan.weekRangeEnd;
   headerParagraphs.push(
     new DocParagraph({
-      text: `Weeks covered: ${plan.weekRangeStart} – ${plan.weekRangeEnd}${wrapsYear ? " (wraps over New Year)" : ""}`,
+      children: [
+        new TextRun({
+          text: `${t.weeksCovered}: ${plan.weekRangeStart} – ${plan.weekRangeEnd}${wrapsYear ? ` ${t.wrapsOverNewYear}` : ""}`,
+          font: "Arial",
+          size: 20,
+        }),
+      ],
     }),
   );
 
   headerParagraphs.push(
     new DocParagraph({
-      text: `Generated on ${new Date().toLocaleDateString()}`,
+      children: [
+        new TextRun({
+          text: `${t.generatedOn} ${formatDateShort(new Date(), language)}`,
+          font: "Arial",
+          size: 20,
+        }),
+      ],
     }),
   );
 
@@ -106,15 +207,22 @@ function buildPlanDocument(plan: CurriculumPlan): Document {
     new TableRow({
       tableHeader: true,
       children: [
-        new TableCell({ children: [createBoldParagraph("Week")] }),
-        new TableCell({ children: [createBoldParagraph("Subject")] }),
-        new TableCell({ children: [createBoldParagraph("Goals")] }),
-        new TableCell({ children: [createBoldParagraph("Paragraphs")] }),
+        new TableCell({ children: [createBoldParagraph(t.week)] }),
+        new TableCell({
+          children: [createBoldParagraph(t.goalParagraphSubject)],
+        }),
+        new TableCell({ children: [createBoldParagraph(t.experiment)] }),
+        new TableCell({ children: [createBoldParagraph(t.skills)] }),
+        new TableCell({ children: [createBoldParagraph(t.details)] }),
       ],
     }),
   ];
 
-  const subjectText = plan.subject?.trim() || "—";
+  const topicMap = new Map<string, string>();
+  plan.topics.forEach((topic) => {
+    topicMap.set(topic.id, topic.name?.trim() || "Topic");
+  });
+
   weekSequence.forEach((weekNumber) => {
     const goals = plan.studyGoals.filter((goal) =>
       goalCoversWeek(goal, weekNumber),
@@ -127,57 +235,127 @@ function buildPlanDocument(plan: CurriculumPlan): Document {
       startYear ?? new Date().getFullYear(),
     );
 
-    const goalParagraphs = goals.length
-      ? goals.flatMap((goal) => {
-          const goalTitle = goal.title?.trim() || "Study goal";
-          const startWeek = clampWeekNumber(goal.weekStart);
-          const endWeek = clampWeekNumber(goal.weekEnd);
-          const rangeLabel =
-            startWeek === endWeek ? "" : ` (weeks ${startWeek}-${endWeek})`;
-          const paragraphs: DocParagraph[] = [
-            new DocParagraph({
-              children: [new TextRun({ text: `${goalTitle}${rangeLabel}` })],
-              bullet: { level: 0 },
-            }),
-          ];
+    // Build combined cell content: Goal, Paragraphs, and Subject
+    const combinedContentParagraphs: DocParagraph[] = [];
 
-          if (goal.description) {
-            const description = stripHtml(goal.description);
-            if (description) {
-              paragraphs.push(
+    if (goals.length === 0) {
+      combinedContentParagraphs.push(createNormalParagraph(t.noGoalsPlanned));
+    } else {
+      goals.forEach((goal, goalIndex) => {
+        // Goal title
+        const goalTitle = goal.title?.trim() || "Study goal";
+
+        combinedContentParagraphs.push(
+          new DocParagraph({
+            children: [
+              new TextRun({
+                text: `${goalTitle}}`,
+                bold: true,
+                font: "Arial",
+                size: 20,
+              }),
+            ],
+          }),
+        );
+
+        // Description
+        if (goal.description) {
+          const description = stripHtml(goal.description);
+          if (description) {
+            combinedContentParagraphs.push(
+              new DocParagraph({
+                children: [
+                  new TextRun({
+                    text: description,
+                    font: "Arial",
+                    size: 20,
+                  }),
+                ],
+              }),
+            );
+          }
+        }
+
+        // Paragraphs
+        if (goal.paragraphIds && goal.paragraphIds.length > 0) {
+          goal.paragraphIds.forEach((paragraphId) => {
+            const paragraph = paragraphMap.get(paragraphId);
+            if (paragraph) {
+              const number = paragraph.number ? `§${paragraph.number}` : "§?";
+              const title = paragraph.title?.trim() || "Paragraph";
+              combinedContentParagraphs.push(
                 new DocParagraph({
-                  children: [new TextRun({ text: description })],
-                  bullet: { level: 1 },
+                  children: [
+                    new TextRun({
+                      text: `${number} ${title}`,
+                      font: "Arial",
+                      size: 20,
+                    }),
+                  ],
                 }),
               );
             }
-          }
+          });
+        }
 
-          return paragraphs;
-        })
-      : [new DocParagraph({ text: "No goals planned" })];
+        // Subject (topics)
+        if (goal.topicIds && goal.topicIds.length > 0) {
+          goal.topicIds.forEach((topicId) => {
+            const topicName = topicMap.get(topicId);
+            if (topicName) {
+              combinedContentParagraphs.push(
+                new DocParagraph({
+                  children: [
+                    new TextRun({
+                      text: topicName,
+                      font: "Arial",
+                      size: 20,
+                    }),
+                  ],
+                }),
+              );
+            }
+          });
+        }
 
-    const paragraphSummaries = new Map<string, string>();
-    goals.forEach((goal) => {
-      goal.paragraphIds.forEach((id) => {
-        const paragraph = paragraphMap.get(id);
-        if (paragraph) {
-          const number = paragraph.number ? `§${paragraph.number}` : "§?";
-          const title = paragraph.title?.trim() || "Paragraph";
-          paragraphSummaries.set(paragraph.id, `${number} ${title}`);
+        // Add spacing between goals
+        if (goalIndex < goals.length - 1) {
+          combinedContentParagraphs.push(new DocParagraph({ text: "" }));
         }
       });
+    }
+
+    // Collect experiment, skills, and details from all goals for this week
+    const experiments: string[] = [];
+    const skills: string[] = [];
+    const details: string[] = [];
+
+    goals.forEach((goal) => {
+      if (goal.experiment?.trim()) {
+        experiments.push(goal.experiment.trim());
+      }
+      if (goal.skills?.trim()) {
+        skills.push(goal.skills.trim());
+      }
+      if (goal.details?.trim()) {
+        details.push(goal.details.trim());
+      }
     });
 
-    const paragraphParagraphs = paragraphSummaries.size
-      ? Array.from(paragraphSummaries.values()).map(
-          (summary) =>
-            new DocParagraph({
-              children: [new TextRun({ text: summary })],
-              bullet: { level: 0 },
-            }),
-        )
-      : [new DocParagraph({ text: "—" })];
+    const experimentParagraphs =
+      experiments.length > 0
+        ? experiments.map((exp) => createNormalParagraph(exp))
+        : [createNormalParagraph("—")];
+
+    const skillsParagraphs =
+      skills.length > 0
+        ? skills.map((skill) => createNormalParagraph(skill))
+        : [createNormalParagraph("—")];
+
+    const detailsParagraphs =
+      details.length > 0
+        ? details.map((detail) => createNormalParagraph(detail))
+        : [createNormalParagraph("—")];
 
     tableRows.push(
       new TableRow({
@@ -185,15 +363,20 @@ function buildPlanDocument(plan: CurriculumPlan): Document {
           new TableCell({
             children: [
               new DocParagraph({
-                text: `Week ${weekNumber} (${yearForWeek})`,
+                children: [
+                  new TextRun({
+                    text: `Week ${weekNumber} (${yearForWeek})`,
+                    font: "Arial",
+                    size: 20,
+                  }),
+                ],
               }),
             ],
           }),
-          new TableCell({
-            children: [new DocParagraph({ text: subjectText })],
-          }),
-          new TableCell({ children: goalParagraphs }),
-          new TableCell({ children: paragraphParagraphs }),
+          new TableCell({ children: combinedContentParagraphs }),
+          new TableCell({ children: experimentParagraphs }),
+          new TableCell({ children: skillsParagraphs }),
+          new TableCell({ children: detailsParagraphs }),
         ],
       }),
     );
@@ -204,9 +387,65 @@ function buildPlanDocument(plan: CurriculumPlan): Document {
     rows: tableRows,
   });
 
+  // Load Merlet icon for header
+  const iconBuffer = await loadMerletIcon();
+
+  // Create header with Merlet icon in the right corner
+  const header = new Header({
+    children: [
+      new DocParagraph({
+        alignment: AlignmentType.RIGHT,
+        children:
+          iconBuffer.length > 0
+            ? [
+                new ImageRun({
+                  data: iconBuffer,
+                  transformation: {
+                    width: 60,
+                    height: 60,
+                  },
+                  type: "png",
+                }),
+              ]
+            : [],
+      }),
+      new DocParagraph({ text: "" }), // Empty line for spacing
+    ],
+  });
+
+  // Create footer with page numbers
+  const footer = new Footer({
+    children: [
+      new DocParagraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            children: [
+              t.page,
+              " ",
+              PageNumber.CURRENT,
+              " ",
+              t.of,
+              " ",
+              PageNumber.TOTAL_PAGES,
+            ],
+            font: "Arial",
+            size: 20,
+          }),
+        ],
+      }),
+    ],
+  });
+
   return new Document({
     sections: [
       {
+        headers: {
+          default: header,
+        },
+        footers: {
+          default: footer,
+        },
         children: [...headerParagraphs, new DocParagraph({ text: "" }), table],
       },
     ],
@@ -270,14 +509,14 @@ export function registerCurriculumListeners() {
 
   ipcMain.handle(
     CURRICULUM_CHANNELS.EXPORT_PLAN_DOCX,
-    async (_, planId: string) => {
+    async (_, planId: string, language: "nl" | "en" = "nl") => {
       try {
         const plan = await curriculumDB.getPlanById(planId);
         if (!plan) {
           return { success: false, error: "Plan not found" };
         }
 
-        const document = buildPlanDocument(plan);
+        const document = await buildPlanDocument(plan, language);
         const buffer = await Packer.toBuffer(document);
         const defaultName = `${sanitizeFileName(
           `${plan.subject || "curriculum-plan"}-${plan.schoolYear || "plan"}`,

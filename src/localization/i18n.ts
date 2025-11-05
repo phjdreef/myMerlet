@@ -4,6 +4,9 @@ import { initReactI18next } from "react-i18next";
 i18n.use(initReactI18next).init({
   fallbackLng: "nl",
   lng: "nl",
+  interpolation: {
+    escapeValue: false, // React already escapes values
+  },
   resources: {
     nl: {
       translation: {
@@ -45,6 +48,7 @@ i18n.use(initReactI18next).init({
         floorPlan: "Plattegrond",
         planning: "Planning",
         magister: "Magister",
+        koppelingen: "Koppelingen",
         theme: "Thema",
         gradesView: "Cijfers",
         planningTabDescription:
@@ -131,6 +135,12 @@ i18n.use(initReactI18next).init({
         studyGoalTitlePlaceholder: "Titel van het leerdoel",
         studyGoalDescriptionPlaceholder:
           "Beschrijving van het leerdoel (optioneel)",
+        experiment: "Experiment",
+        experimentPlaceholder: "Experiment (optioneel)",
+        skills: "Vaardigheden",
+        skillsPlaceholder: "Vaardigheden (optioneel)",
+        details: "Details",
+        detailsPlaceholder: "Details (optioneel)",
         week: "Week",
         from: "Van",
         to: "Tot",
@@ -141,6 +151,16 @@ i18n.use(initReactI18next).init({
         namelessStudyGoal: "Naamloze leerdoel",
         noGoalsForThisWeek: "Nog geen leerdoelen voor deze week.",
         clickToAdd: 'Klik op "+ Leerdoel" om er een toe te voegen.',
+        // Word Export - see curriculum-export-translations.ts for shared translations
+        goalParagraphSubject: "Doel, Paragraaf en Onderwerp",
+        noGoalsPlanned: "Geen doelen gepland",
+        curriculumOverview: "Curriculum Overzicht",
+        startYear: "Startjaar",
+        generatedOn: "Gegenereerd op",
+        weeksCovered: "Bestreken weken",
+        wrapsOverNewYear: "(loopt over Nieuwjaar)",
+        page: "Pagina",
+        of: "van",
         // StudentCard
         code: "Code",
         email: "Email",
@@ -301,6 +321,7 @@ i18n.use(initReactI18next).init({
         floorPlan: "Floor Plan",
         planning: "Planning",
         magister: "Magister",
+        koppelingen: "Connections",
         theme: "Theme",
         gradesView: "Grades",
         planningTabDescription:
@@ -382,6 +403,12 @@ i18n.use(initReactI18next).init({
         studyGoalTitle: "Study goal title",
         studyGoalTitlePlaceholder: "Study goal title",
         studyGoalDescriptionPlaceholder: "Study goal description (optional)",
+        experiment: "Experiment",
+        experimentPlaceholder: "Experiment (optional)",
+        skills: "Skills",
+        skillsPlaceholder: "Skills (optional)",
+        details: "Details",
+        detailsPlaceholder: "Details (optional)",
         week: "Week",
         from: "From",
         to: "To",
@@ -392,6 +419,16 @@ i18n.use(initReactI18next).init({
         namelessStudyGoal: "Nameless study goal",
         noGoalsForThisWeek: "No study goals yet for this week.",
         clickToAdd: 'Click "+ Study Goal" to add one.',
+        // Word Export - see curriculum-export-translations.ts for shared translations
+        goalParagraphSubject: "Goal, Paragraph and Subject",
+        noGoalsPlanned: "No goals planned",
+        curriculumOverview: "Curriculum Overview",
+        startYear: "Start year",
+        generatedOn: "Generated on",
+        weeksCovered: "Weeks covered",
+        wrapsOverNewYear: "(wraps over New Year)",
+        page: "Page",
+        of: "of",
         // StudentCard
         code: "Code",
         email: "Email",

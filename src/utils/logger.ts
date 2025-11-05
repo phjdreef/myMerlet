@@ -40,3 +40,6 @@ export const logger = {
     }
   },
 };
+
+// Default export for convenience
+export default logger;

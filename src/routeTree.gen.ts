@@ -15,6 +15,8 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SecondRouteImport } from './routes/second'
 import { Route as PlanningRouteImport } from './routes/planning'
 import { Route as MagisterRouteImport } from './routes/magister'
+import { Route as KoppelingenRouteImport } from './routes/koppelingen'
+import { Route as ExamnetRouteImport } from './routes/examnet'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TestsRoute = TestsRouteImport.update({
@@ -47,6 +49,16 @@ const MagisterRoute = MagisterRouteImport.update({
   path: '/magister',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KoppelingenRoute = KoppelingenRouteImport.update({
+  id: '/koppelingen',
+  path: '/koppelingen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExamnetRoute = ExamnetRouteImport.update({
+  id: '/examnet',
+  path: '/examnet',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -55,6 +67,8 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/examnet': typeof ExamnetRoute
+  '/koppelingen': typeof KoppelingenRoute
   '/magister': typeof MagisterRoute
   '/planning': typeof PlanningRoute
   '/second': typeof SecondRoute
@@ -64,6 +78,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/examnet': typeof ExamnetRoute
+  '/koppelingen': typeof KoppelingenRoute
   '/magister': typeof MagisterRoute
   '/planning': typeof PlanningRoute
   '/second': typeof SecondRoute
@@ -74,6 +90,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/examnet': typeof ExamnetRoute
+  '/koppelingen': typeof KoppelingenRoute
   '/magister': typeof MagisterRoute
   '/planning': typeof PlanningRoute
   '/second': typeof SecondRoute
@@ -85,6 +103,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/examnet'
+    | '/koppelingen'
     | '/magister'
     | '/planning'
     | '/second'
@@ -94,6 +114,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/examnet'
+    | '/koppelingen'
     | '/magister'
     | '/planning'
     | '/second'
@@ -103,6 +125,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/examnet'
+    | '/koppelingen'
     | '/magister'
     | '/planning'
     | '/second'
@@ -113,6 +137,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ExamnetRoute: typeof ExamnetRoute
+  KoppelingenRoute: typeof KoppelingenRoute
   MagisterRoute: typeof MagisterRoute
   PlanningRoute: typeof PlanningRoute
   SecondRoute: typeof SecondRoute
@@ -165,6 +191,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MagisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/koppelingen': {
+      id: '/koppelingen'
+      path: '/koppelingen'
+      fullPath: '/koppelingen'
+      preLoaderRoute: typeof KoppelingenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/examnet': {
+      id: '/examnet'
+      path: '/examnet'
+      fullPath: '/examnet'
+      preLoaderRoute: typeof ExamnetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -177,6 +217,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ExamnetRoute: ExamnetRoute,
+  KoppelingenRoute: KoppelingenRoute,
   MagisterRoute: MagisterRoute,
   PlanningRoute: PlanningRoute,
   SecondRoute: SecondRoute,

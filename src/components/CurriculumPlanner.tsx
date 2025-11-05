@@ -9,7 +9,7 @@ import { parseSchoolYear } from "../utils/curriculum-week";
 import type { CurriculumPlan } from "../services/curriculum-database";
 
 export function CurriculumPlanner() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [plans, setPlans] = useState<CurriculumPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<CurriculumPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,7 +126,10 @@ export function CurriculumPlanner() {
 
   const handleExportPlan = async (plan: CurriculumPlan) => {
     try {
-      const result = await window.curriculumAPI.exportPlanToDocx(plan.id);
+      const result = await window.curriculumAPI.exportPlanToDocx(
+        plan.id,
+        i18n.language as "nl" | "en",
+      );
       if (result.success) {
         const data = result.data as { filePath?: string } | undefined;
         const filePath = data?.filePath;

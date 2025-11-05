@@ -38,7 +38,7 @@ export default function NavigationMenu() {
                 "h-7 py-0.5 leading-none",
               )}
             >
-              <Link to="/magister">{t("magister")}</Link>
+              <Link to="/koppelingen">{t("koppelingen")}</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>

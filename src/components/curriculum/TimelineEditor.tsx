@@ -221,7 +221,7 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
                       <div className="flex gap-2">
                         <input
                           type="text"
-                          className="flex-1 rounded border p-2 text-sm font-medium"
+                          className="flex-1 rounded border p-2 text-sm font-medium dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                           value={goal.title}
                           onChange={(e) =>
                             updateGoal(goal.id, { title: e.target.value })
@@ -239,7 +239,7 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
 
                       {/* Description */}
                       <textarea
-                        className="w-full rounded border p-2 text-sm"
+                        className="w-full rounded border p-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                         rows={2}
                         value={goal.description}
                         onChange={(e) =>
@@ -258,7 +258,7 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
                             type="number"
                             min="1"
                             max="52"
-                            className="w-full rounded border p-1 text-sm"
+                            className="w-full rounded border p-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                             value={goal.weekStart}
                             onChange={(e) =>
                               updateGoal(goal.id, {
@@ -275,7 +275,7 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
                             type="number"
                             min="1"
                             max="52"
-                            className="w-full rounded border p-1 text-sm"
+                            className="w-full rounded border p-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                             value={goal.weekEnd}
                             onChange={(e) =>
                               updateGoal(goal.id, {
@@ -300,7 +300,7 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
                                 className={`rounded border px-2 py-1 text-xs ${
                                   goal.topicIds.includes(topic.id)
                                     ? "border-blue-600 bg-blue-500 text-white"
-                                    : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800"
+                                    : "border-gray-300 bg-gray-100 text-gray-200 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100"
                                 }`}
                                 onClick={() =>
                                   toggleTopicInGoal(goal.id, topic.id)
@@ -327,7 +327,7 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
                                 className={`rounded border px-2 py-1 text-xs ${
                                   goal.paragraphIds.includes(paragraph.id)
                                     ? "border-green-600 bg-green-500 text-white"
-                                    : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800"
+                                    : "border-gray-300 bg-gray-100 text-gray-700 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100"
                                 }`}
                                 onClick={() =>
                                   toggleParagraphInGoal(goal.id, paragraph.id)

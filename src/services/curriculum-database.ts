@@ -34,6 +34,9 @@ export interface StudyGoal {
   topicIds: string[]; // Can be 0 to multiple topics
   paragraphIds: string[]; // Can be 0 to multiple paragraphs
   order: number; // order within the curriculum
+  experiment?: string; // Experiment details
+  skills?: string; // Skills to be learned
+  details?: string; // Additional details
 }
 
 export interface CurriculumPlan {
