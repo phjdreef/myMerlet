@@ -90,6 +90,7 @@ export function CurriculumPlanner() {
       topics: [],
       paragraphs: [],
       studyGoals: [],
+      blockedWeeks: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

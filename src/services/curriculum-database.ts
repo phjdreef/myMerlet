@@ -39,6 +39,15 @@ export interface StudyGoal {
   details?: string; // Additional details
 }
 
+export interface BlockedWeek {
+  id: string;
+  weekNumber: number;
+  reason: string; // e.g., "Christmas Holiday", "Exam Week", "School Trip"
+  type: "holiday" | "exam" | "event" | "other"; // Category for visual styling
+  isGeneral: boolean; // If true, applies to all classes; if false, only specific classes
+  classNames: string[]; // Only used if isGeneral is false
+}
+
 export interface CurriculumPlan {
   id: string;
   classNames: string[]; // Changed from className to support multiple classes
@@ -51,6 +60,7 @@ export interface CurriculumPlan {
   topics: Topic[];
   paragraphs: Paragraph[];
   studyGoals: StudyGoal[];
+  blockedWeeks: BlockedWeek[]; // Weeks that are holidays, exams, etc.
   createdAt: string;
   updatedAt: string;
 }
@@ -143,19 +153,20 @@ class CurriculumDatabase {
   }
 
   private readDatabase(): CurriculumData {
-    const dbPath = this.getDbPath();
-
-    if (!fs.existsSync(dbPath)) {
+    if (!fs.existsSync(this.dbPath)) {
       return { plans: [], metadata: null };
     }
 
-    try {
-      const data = fs.readFileSync(dbPath, "utf8");
-      return JSON.parse(data) as CurriculumData;
-    } catch (error) {
-      logger.error("Failed to read curriculum database:", error);
-      return { plans: [], metadata: null };
-    }
+    const fileContent = fs.readFileSync(this.dbPath, "utf-8");
+    const data = JSON.parse(fileContent) as CurriculumData;
+
+    // Migration: Add blockedWeeks to existing plans if missing
+    data.plans = data.plans.map((plan) => ({
+      ...plan,
+      blockedWeeks: plan.blockedWeeks || [],
+    }));
+
+    return data;
   }
 
   private writeDatabase(data: CurriculumData): void {

@@ -3,6 +3,7 @@ import { TrashIcon } from "@phosphor-icons/react";
 import type {
   CurriculumPlan,
   StudyGoal,
+  BlockedWeek,
 } from "../../services/curriculum-database";
 import { Button } from "../ui/button";
 
@@ -11,6 +12,7 @@ interface CurriculumTimelineEditModeProps {
   weekNumber: number;
   goals: StudyGoal[];
   isCurrentWeek: boolean;
+  blockedWeekInfo?: BlockedWeek;
   formatDisplayRange: (weekNumber: number) => string;
   currentWeekRef?: React.RefObject<HTMLDivElement | null>;
   onUpdateGoal: (goalId: string, updates: Partial<StudyGoal>) => void;
@@ -25,6 +27,7 @@ export function CurriculumTimelineEditMode({
   weekNumber,
   goals,
   isCurrentWeek,
+  blockedWeekInfo,
   formatDisplayRange,
   currentWeekRef,
   onUpdateGoal,
@@ -37,14 +40,42 @@ export function CurriculumTimelineEditMode({
 
   const hasGoals = goals.length > 0;
 
+  const getBlockedWeekColors = (type: string) => {
+    switch (type) {
+      case "holiday":
+        return "border-blue-300 bg-blue-50/70 dark:border-blue-800 dark:bg-blue-900/30";
+      case "exam":
+        return "border-red-300 bg-red-50/70 dark:border-red-800 dark:bg-red-900/30";
+      case "event":
+        return "border-purple-300 bg-purple-50/70 dark:border-purple-800 dark:bg-purple-900/30";
+      default:
+        return "border-gray-300 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-800/30";
+    }
+  };
+
+  const getBadgeColors = (type: string) => {
+    switch (type) {
+      case "holiday":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "exam":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "event":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+    }
+  };
+
   return (
     <div
       className={`flex gap-4 rounded-xl border p-4 shadow-sm transition-colors ${
-        isCurrentWeek
-          ? "border-2 border-blue-500 bg-blue-50/50 ring-2 ring-blue-400/30 dark:border-blue-400 dark:bg-blue-900/40 dark:ring-blue-500/40"
-          : hasGoals
-            ? "border border-gray-200 bg-white/80 dark:border-gray-700 dark:bg-gray-900/50"
-            : "border border-dashed border-gray-200 bg-white/80 dark:bg-gray-900/50"
+        blockedWeekInfo
+          ? getBlockedWeekColors(blockedWeekInfo.type)
+          : isCurrentWeek
+            ? "border-2 border-blue-500 bg-blue-50/50 ring-2 ring-blue-400/30 dark:border-blue-400 dark:bg-blue-900/40 dark:ring-blue-500/40"
+            : hasGoals
+              ? "border border-gray-200 bg-white/80 dark:border-gray-700 dark:bg-gray-900/50"
+              : "border border-dashed border-gray-200 bg-white/80 dark:bg-gray-900/50"
       }`}
       ref={currentWeekRef}
     >
@@ -63,9 +94,32 @@ export function CurriculumTimelineEditMode({
         <div className="text-xs text-gray-500 dark:text-gray-400">
           {formatDisplayRange(weekNumber)}
         </div>
+        {blockedWeekInfo && (
+          <div className="mt-2">
+            <span
+              className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${getBadgeColors(
+                blockedWeekInfo.type,
+              )}`}
+            >
+              {t(blockedWeekInfo.type)}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 space-y-3">
+        {blockedWeekInfo && (
+          <div className="rounded-lg border border-dashed bg-white/50 p-3 text-sm dark:bg-gray-900/30">
+            <div className="mb-1 font-medium text-orange-700 dark:text-orange-400">
+              ⚠️ {blockedWeekInfo.reason}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">
+              {blockedWeekInfo.isGeneral
+                ? t("general")
+                : `${t("classSpecific")}: ${blockedWeekInfo.classNames.join(", ")}`}
+            </div>
+          </div>
+        )}
         {goals.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50/80 p-4 text-sm text-gray-500 italic dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-400">
             <span>{t("emptyWeek", "Geen planning")}</span>

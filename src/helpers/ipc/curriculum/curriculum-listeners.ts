@@ -30,9 +30,20 @@ import {
   parseSchoolYear,
   getYearForWeek,
 } from "../../../utils/curriculum-week";
+import { formatWeekRange } from "../../../utils/week-utils";
 import { curriculumExportTranslations } from "../../../localization/curriculum-export-translations";
 
 const CANCELLED_ERROR_CODE = "cancelled";
+
+// Font styles for Word document
+const FONT_STYLES = {
+  normal: { font: "Arial", size: 20 } as const, // 10pt
+  bold: { font: "Arial", size: 20, bold: true } as const, // 10pt bold
+  title: { font: "Arial", size: 28, bold: true } as const, // 14pt bold
+  small: { font: "Arial", size: 18 } as const, // 9pt
+  weekNumber: { font: "Arial", size: 28, bold: true } as const, // 14pt bold
+  weekDate: { font: "Arial", size: 18, color: "808080" } as const, // 9pt gray
+};
 
 function sanitizeFileName(input: string): string {
   const cleaned = input.replace(/[\\/:*?"<>|]/g, "_").trim();
@@ -42,7 +53,7 @@ function sanitizeFileName(input: string): string {
 function stripHtml(input: string): string {
   return input
     .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
+    .replace(/[ \t]+/g, " ") // Only collapse spaces and tabs, preserve newlines
     .trim();
 }
 
@@ -62,9 +73,7 @@ function createBoldParagraph(text: string): DocParagraph {
     children: [
       new TextRun({
         text,
-        bold: true,
-        font: "Arial",
-        size: 20, // 10pt in half-points
+        ...FONT_STYLES.bold,
       }),
     ],
   });
@@ -75,8 +84,7 @@ function createNormalParagraph(text: string): DocParagraph {
     children: [
       new TextRun({
         text,
-        font: "Arial",
-        size: 20, // 10pt in half-points
+        ...FONT_STYLES.normal,
       }),
     ],
   });
@@ -121,9 +129,7 @@ async function buildPlanDocument(
           text: plan.subject?.trim()
             ? `${plan.subject.trim()} – ${t.curriculumOverview}`
             : t.curriculumOverview,
-          font: "Arial",
-          size: 28, // 14pt in half-points
-          bold: true,
+          ...FONT_STYLES.title,
         }),
       ],
       heading: HeadingLevel.TITLE,
@@ -132,8 +138,7 @@ async function buildPlanDocument(
       children: [
         new TextRun({
           text: `${t.schoolYear}: ${plan.schoolYear || "n/a"}`,
-          font: "Arial",
-          size: 20, // 10pt in half-points
+          ...FONT_STYLES.normal,
         }),
       ],
     }),
@@ -145,8 +150,7 @@ async function buildPlanDocument(
         children: [
           new TextRun({
             text: `${t.classes}: ${plan.classNames.join(", ")}`,
-            font: "Arial",
-            size: 20,
+            ...FONT_STYLES.normal,
           }),
         ],
       }),
@@ -161,8 +165,7 @@ async function buildPlanDocument(
             text: endYear
               ? `${t.startYear}: ${startYear} → ${endYear}`
               : `${t.startYear}: ${startYear}`,
-            font: "Arial",
-            size: 20,
+            ...FONT_STYLES.normal,
           }),
         ],
       }),
@@ -175,8 +178,7 @@ async function buildPlanDocument(
       children: [
         new TextRun({
           text: `${t.weeksCovered}: ${plan.weekRangeStart} – ${plan.weekRangeEnd}${wrapsYear ? ` ${t.wrapsOverNewYear}` : ""}`,
-          font: "Arial",
-          size: 20,
+          ...FONT_STYLES.normal,
         }),
       ],
     }),
@@ -187,8 +189,7 @@ async function buildPlanDocument(
       children: [
         new TextRun({
           text: `${t.generatedOn} ${formatDateShort(new Date(), language)}`,
-          font: "Arial",
-          size: 20,
+          ...FONT_STYLES.normal,
         }),
       ],
     }),
@@ -249,10 +250,8 @@ async function buildPlanDocument(
           new DocParagraph({
             children: [
               new TextRun({
-                text: `${goalTitle}}`,
-                bold: true,
-                font: "Arial",
-                size: 20,
+                text: `${goalTitle}`,
+                ...FONT_STYLES.bold,
               }),
             ],
           }),
@@ -262,17 +261,21 @@ async function buildPlanDocument(
         if (goal.description) {
           const description = stripHtml(goal.description);
           if (description) {
-            combinedContentParagraphs.push(
-              new DocParagraph({
-                children: [
-                  new TextRun({
-                    text: description,
-                    font: "Arial",
-                    size: 20,
-                  }),
-                ],
-              }),
-            );
+            // Split by newlines and create separate paragraphs for each line
+            const lines = description.split("\n");
+            lines.forEach((line) => {
+              // Create paragraph even for empty lines to preserve spacing
+              combinedContentParagraphs.push(
+                new DocParagraph({
+                  children: [
+                    new TextRun({
+                      text: line || " ", // Use space for empty lines
+                      ...FONT_STYLES.normal,
+                    }),
+                  ],
+                }),
+              );
+            });
           }
         }
 
@@ -288,8 +291,7 @@ async function buildPlanDocument(
                   children: [
                     new TextRun({
                       text: `${number} ${title}`,
-                      font: "Arial",
-                      size: 20,
+                      ...FONT_STYLES.normal,
                     }),
                   ],
                 }),
@@ -308,8 +310,7 @@ async function buildPlanDocument(
                   children: [
                     new TextRun({
                       text: topicName,
-                      font: "Arial",
-                      size: 20,
+                      ...FONT_STYLES.normal,
                     }),
                   ],
                 }),
@@ -332,30 +333,39 @@ async function buildPlanDocument(
 
     goals.forEach((goal) => {
       if (goal.experiment?.trim()) {
-        experiments.push(goal.experiment.trim());
+        // Split by newlines to preserve line breaks
+        const lines = goal.experiment.trim().split("\n");
+        // Filter out completely empty lines but keep lines with spaces
+        experiments.push(...lines.filter((line) => line !== ""));
       }
       if (goal.skills?.trim()) {
-        skills.push(goal.skills.trim());
+        // Split by newlines to preserve line breaks
+        const lines = goal.skills.trim().split("\n");
+        // Filter out completely empty lines but keep lines with spaces
+        skills.push(...lines.filter((line) => line !== ""));
       }
       if (goal.details?.trim()) {
-        details.push(goal.details.trim());
+        // Split by newlines to preserve line breaks
+        const lines = goal.details.trim().split("\n");
+        // Filter out completely empty lines but keep lines with spaces
+        details.push(...lines.filter((line) => line !== ""));
       }
     });
 
     const experimentParagraphs =
       experiments.length > 0
         ? experiments.map((exp) => createNormalParagraph(exp))
-        : [createNormalParagraph("—")];
+        : [createNormalParagraph("")];
 
     const skillsParagraphs =
       skills.length > 0
         ? skills.map((skill) => createNormalParagraph(skill))
-        : [createNormalParagraph("—")];
+        : [createNormalParagraph("")];
 
     const detailsParagraphs =
       details.length > 0
         ? details.map((detail) => createNormalParagraph(detail))
-        : [createNormalParagraph("—")];
+        : [createNormalParagraph("")];
 
     tableRows.push(
       new TableRow({
@@ -365,9 +375,16 @@ async function buildPlanDocument(
               new DocParagraph({
                 children: [
                   new TextRun({
-                    text: `Week ${weekNumber} (${yearForWeek})`,
-                    font: "Arial",
-                    size: 20,
+                    text: `${weekNumber}`,
+                    ...FONT_STYLES.weekNumber,
+                  }),
+                ],
+              }),
+              new DocParagraph({
+                children: [
+                  new TextRun({
+                    text: formatWeekRange(weekNumber, yearForWeek),
+                    ...FONT_STYLES.weekDate,
                   }),
                 ],
               }),
@@ -429,8 +446,7 @@ async function buildPlanDocument(
               " ",
               PageNumber.TOTAL_PAGES,
             ],
-            font: "Arial",
-            size: 20,
+            ...FONT_STYLES.normal,
           }),
         ],
       }),

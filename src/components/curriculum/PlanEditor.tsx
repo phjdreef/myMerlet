@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { RichTextEditor } from "../ui/rich-text-editor";
 import { CurriculumTimeline } from "./CurriculumTimeline";
+import { BlockedWeeksManager } from "./BlockedWeeksManager";
 import { getCurrentWeekNumber } from "../../utils/week-utils";
 import { logger } from "../../utils/logger";
 import { useTranslation } from "react-i18next";
@@ -29,7 +30,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
   const { t } = useTranslation();
   const [editedPlan, setEditedPlan] = useState<CurriculumPlan>(plan);
   const [activeTab, setActiveTab] = useState<
-    "info" | "topics" | "paragraphs" | "goals"
+    "info" | "topics" | "paragraphs" | "goals" | "blocked-weeks"
   >("info");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
@@ -202,24 +203,29 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
 
       {/* Tabs */}
       <div className="mb-4 flex gap-2 border-b">
-        {["info", "topics", "paragraphs", "goals"].map((tab) => (
-          <button
-            key={tab}
-            className={`border-b-2 px-4 py-2 transition-colors ${
-              activeTab === tab
-                ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                : "border-transparent hover:border-gray-300"
-            }`}
-            onClick={() => setActiveTab(tab as typeof activeTab)}
-          >
-            {tab === "info" && t("planInfo")}
-            {tab === "topics" && `${t("topics")} (${editedPlan.topics.length})`}
-            {tab === "paragraphs" &&
-              `${t("paragraphs")} (${editedPlan.paragraphs.length})`}
-            {tab === "goals" &&
-              `${t("studyGoals")} (${editedPlan.studyGoals.length})`}
-          </button>
-        ))}
+        {["info", "topics", "paragraphs", "goals", "blocked-weeks"].map(
+          (tab) => (
+            <button
+              key={tab}
+              className={`border-b-2 px-4 py-2 transition-colors ${
+                activeTab === tab
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent hover:border-gray-300"
+              }`}
+              onClick={() => setActiveTab(tab as typeof activeTab)}
+            >
+              {tab === "info" && t("planInfo")}
+              {tab === "topics" &&
+                `${t("topics")} (${editedPlan.topics.length})`}
+              {tab === "paragraphs" &&
+                `${t("paragraphs")} (${editedPlan.paragraphs.length})`}
+              {tab === "goals" &&
+                `${t("studyGoals")} (${editedPlan.studyGoals.length})`}
+              {tab === "blocked-weeks" &&
+                `${t("blockedWeeks")} (${editedPlan.blockedWeeks.length})`}
+            </button>
+          ),
+        )}
       </div>
 
       {/* Content */}
@@ -580,6 +586,16 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
             plan={editedPlan}
             currentWeek={getCurrentWeekNumber()}
             onUpdate={(updatedPlan) => setEditedPlan(updatedPlan)}
+          />
+        )}
+
+        {activeTab === "blocked-weeks" && (
+          <BlockedWeeksManager
+            blockedWeeks={editedPlan.blockedWeeks}
+            availableClasses={availableClasses}
+            onChange={(blockedWeeks) =>
+              setEditedPlan({ ...editedPlan, blockedWeeks })
+            }
           />
         )}
       </div>

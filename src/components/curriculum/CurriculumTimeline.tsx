@@ -102,6 +102,13 @@ export function CurriculumTimeline({
     return map;
   }, [sortedGoals, weekSequence]);
 
+  const getBlockedWeekInfo = useCallback(
+    (weekNumber: number) => {
+      return plan.blockedWeeks.find((bw) => bw.weekNumber === weekNumber);
+    },
+    [plan.blockedWeeks],
+  );
+
   const getGoalsForWeek = useCallback(
     (weekNumber: number) => goalsByWeek.get(weekNumber) ?? [],
     [goalsByWeek],
@@ -380,6 +387,7 @@ export function CurriculumTimeline({
           const displayGoals = isEditing ? mergedGoals : goals;
           const isCurrentWeek =
             isCurrentWeekInRange && weekNumber === currentWeek;
+          const blockedWeekInfo = getBlockedWeekInfo(weekNumber);
 
           const handleDoneEditing = () => {
             const shouldDeletePending =
@@ -411,6 +419,7 @@ export function CurriculumTimeline({
               weekNumber={weekNumber}
               goals={displayGoals}
               isCurrentWeek={isCurrentWeek}
+              blockedWeekInfo={blockedWeekInfo}
               formatDisplayRange={formatDisplayRange}
               currentWeekRef={isCurrentWeek ? currentWeekRef : undefined}
               onUpdateGoal={updateGoal}
@@ -426,6 +435,7 @@ export function CurriculumTimeline({
               weekNumber={weekNumber}
               goals={goals}
               isCurrentWeek={isCurrentWeek}
+              blockedWeekInfo={blockedWeekInfo}
               formatDisplayRange={formatDisplayRange}
               currentWeekRef={isCurrentWeek ? currentWeekRef : undefined}
               onEdit={onUpdate ? () => setEditingWeek(weekNumber) : undefined}
