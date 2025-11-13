@@ -29,7 +29,13 @@ export function useStudentDirectoryData(): UseStudentDirectoryDataResult {
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  const [selectedClass, setSelectedClass] = useState<string | null>(null);
+
+  // Load selected class from localStorage on mount
+  const [selectedClass, setSelectedClass] = useState<string | null>(() => {
+    const saved = localStorage.getItem("student_directory_selected_class");
+    return saved || null;
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
@@ -157,6 +163,12 @@ export function useStudentDirectoryData(): UseStudentDirectoryDataResult {
 
   const onSelectClass = useCallback((className: string | null) => {
     setSelectedClass(className);
+    // Save to localStorage
+    if (className) {
+      localStorage.setItem("student_directory_selected_class", className);
+    } else {
+      localStorage.removeItem("student_directory_selected_class");
+    }
   }, []);
 
   const clearError = useCallback(() => {

@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   UsersThreeIcon,
   ChalkboardTeacherIcon,
-  ArrowUpIcon,
+  PlusIcon,
 } from "@phosphor-icons/react";
 import type { Student } from "@/services/student-database";
 import { StudentPhoto } from "./StudentPhoto";
 import { formatStudentName } from "@/helpers/student_helpers";
+import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+type TeacherPosition = "left" | "center" | "right";
 
 export interface SeatingPosition {
   studentId: number;
@@ -27,8 +31,6 @@ interface ClassroomGridProps {
   onDrop: (e: React.DragEvent, row: number, col: number) => void;
 }
 
-const MIN_ROWS = 1; // Always show at least 1 row
-
 export function ClassroomGrid({
   selectedClass,
   students,
@@ -40,6 +42,110 @@ export function ClassroomGrid({
 }: ClassroomGridProps) {
   const { t } = useTranslation();
   const [draggedStudentId, setDraggedStudentId] = useState<number | null>(null);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+
+  // Memoize extra rows/cols based on selected class
+  const currentExtraRows = useMemo(() => {
+    if (!selectedClass) return 0;
+    const saved = localStorage.getItem(`classroom_extra_rows_${selectedClass}`);
+    return saved ? parseInt(saved, 10) : 0;
+  }, [selectedClass]);
+
+  const currentExtraCols = useMemo(() => {
+    if (!selectedClass) return 0;
+    const saved = localStorage.getItem(`classroom_extra_cols_${selectedClass}`);
+    return saved ? parseInt(saved, 10) : 0;
+  }, [selectedClass]);
+
+  const [extraRows, setExtraRowsState] = useState(currentExtraRows);
+  const [extraCols, setExtraColsState] = useState(currentExtraCols);
+
+  // Update extra rows/cols when class changes
+  useEffect(() => {
+    setExtraRowsState(currentExtraRows);
+    setExtraColsState(currentExtraCols);
+  }, [currentExtraRows, currentExtraCols]);
+
+  // One-time cleanup: remove any saved extra columns/rows on mount
+  useEffect(() => {
+    if (selectedClass) {
+      localStorage.removeItem(`classroom_extra_cols_${selectedClass}`);
+      localStorage.removeItem(`classroom_extra_rows_${selectedClass}`);
+      setExtraRowsState(0);
+      setExtraColsState(0);
+    }
+  }, [selectedClass]);
+
+  // Helper functions to update and save extra rows/cols
+  const setExtraRows = (value: number | ((prev: number) => number)) => {
+    const newValue = typeof value === "function" ? value(extraRows) : value;
+    setExtraRowsState(newValue);
+    if (selectedClass) {
+      localStorage.setItem(
+        `classroom_extra_rows_${selectedClass}`,
+        newValue.toString(),
+      );
+    }
+  };
+
+  const setExtraCols = (value: number | ((prev: number) => number)) => {
+    const newValue = typeof value === "function" ? value(extraCols) : value;
+    setExtraColsState(newValue);
+    if (selectedClass) {
+      localStorage.setItem(
+        `classroom_extra_cols_${selectedClass}`,
+        newValue.toString(),
+      );
+    }
+  };
+
+  // Memoize position based on selected class
+  const currentTeacherPosition = useMemo<TeacherPosition>(() => {
+    if (!selectedClass) return "center";
+    const saved = localStorage.getItem(
+      `classroom_teacher_position_${selectedClass}`,
+    );
+    if (
+      saved &&
+      (saved === "left" || saved === "center" || saved === "right")
+    ) {
+      return saved as TeacherPosition;
+    }
+    return "center";
+  }, [selectedClass]);
+
+  const [teacherPosition, setTeacherPositionState] = useState<TeacherPosition>(
+    currentTeacherPosition,
+  );
+
+  // Update state when class changes using useEffect
+  useEffect(() => {
+    setTeacherPositionState(currentTeacherPosition);
+  }, [currentTeacherPosition]);
+
+  // Save teacher position to localStorage
+  const handleTeacherPositionChange = (position: string) => {
+    if (!selectedClass || !position) return;
+    const validPosition = position as TeacherPosition;
+    setTeacherPositionState(validPosition);
+    localStorage.setItem(
+      `classroom_teacher_position_${selectedClass}`,
+      validPosition,
+    );
+  };
+
+  // Scroll to bottom when class changes
+  useEffect(() => {
+    if (selectedClass && gridContainerRef.current) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        gridContainerRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+      }, 100);
+    }
+  }, [selectedClass]);
 
   if (!selectedClass) {
     return (
@@ -71,25 +177,34 @@ export function ClassroomGrid({
   // Calculate the number of rows needed based on occupied seats
   const getRequiredRows = (className: string): number => {
     const classPositions = seatingPositions.get(className) || [];
-    if (classPositions.length === 0) return MIN_ROWS;
 
-    // Find the highest row number that has a student
+    // If no students positioned, only show extra rows (minimum 1)
+    if (classPositions.length === 0) {
+      return Math.max(1, extraRows);
+    }
+
+    // Find the highest row number that has a student (0-indexed)
     const maxRow = Math.max(...classPositions.map((pos) => pos.row));
 
-    // Always show one extra row beyond the last occupied row
-    return Math.max(MIN_ROWS, maxRow + 2);
+    // Total rows = positions needed + extra rows
+    return maxRow + 1 + extraRows;
   };
 
-  // Calculate the number of columns needed (always show one extra)
+  // Calculate the number of columns needed
   const getRequiredCols = (className: string): number => {
     const classPositions = seatingPositions.get(className) || [];
-    if (classPositions.length === 0) return 2; // Show at least 2 columns for empty classroom
 
-    // Find the highest column number that has a student
+    // If no students positioned, only show extra columns (minimum 1 for dragging)
+    if (classPositions.length === 0) {
+      return Math.max(1, extraCols);
+    }
+
+    // Find the highest column number that has a student (0-indexed)
     const maxCol = Math.max(...classPositions.map((pos) => pos.col));
 
-    // Always show one extra column beyond the last occupied column, but at least 2
-    return Math.max(2, maxCol + 2);
+    // Show occupied columns + any extra columns user added
+    // Don't automatically add an extra empty column - users can click "Add Column" if needed
+    return maxCol + 1 + extraCols;
   };
 
   const requiredRows = getRequiredRows(selectedClass);
@@ -114,9 +229,9 @@ export function ClassroomGrid({
 
   return (
     <div className="space-y-6">
-      {/* Unpositioned Students */}
+      {/* Unpositioned Students - Sticky */}
       {unpositionedStudents.length > 0 && (
-        <div className="border-border bg-card rounded-lg border p-4">
+        <div className="border-border bg-card/70 sticky top-0 z-10 rounded-lg border p-4 shadow-md backdrop-blur-sm">
           <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
             <UsersThreeIcon className="h-5 w-5" weight="duotone" />
             <span>
@@ -155,24 +270,10 @@ export function ClassroomGrid({
       )}
 
       {/* Classroom Grid */}
-      <div className="border-border bg-card rounded-lg border p-4">
-        <h3 className="text-muted-foreground mb-4 flex items-center justify-center gap-2 text-center text-lg font-semibold">
-          <ChalkboardTeacherIcon className="h-5 w-5" weight="duotone" />
-          <span>
-            {t("classroomLayout")} - {selectedClass}
-          </span>
-        </h3>
-
-        {/* Front of classroom indicator */}
-        <div className="mb-4 flex items-center justify-center">
-          <div className="border-primary bg-primary/10 rounded-lg border-2 px-6 py-2">
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              <ArrowUpIcon className="h-4 w-4" weight="bold" />
-              {t("classroomFront")}
-            </span>
-          </div>
-        </div>
-
+      <div
+        ref={gridContainerRef}
+        className="border-border bg-card rounded-lg border p-4"
+      >
         <div className="mb-4 flex flex-wrap gap-4">
           {Array.from({ length: requiredRows }, (_, row) => (
             <div key={`row-${row}`} className="flex w-full gap-4">
@@ -190,6 +291,9 @@ export function ClassroomGrid({
                     onDragOver={onDragOver}
                     onDrop={(e) => {
                       onDrop(e, row, col);
+                      // Reset extra columns and rows after drop
+                      setExtraRowsState(0);
+                      setExtraColsState(0);
                       // Force reset drag state after drop
                       setTimeout(() => setDraggedStudentId(null), 0);
                     }}
@@ -231,6 +335,103 @@ export function ClassroomGrid({
               })}
             </div>
           ))}
+        </div>
+
+        {/* Controls for adding rows and columns - sticky at bottom */}
+        <div className="border-border bg-card/95 sticky bottom-0 z-10 -mx-4 -mb-4 flex items-center justify-between gap-4 border-t p-4 backdrop-blur-sm">
+          <div className="flex gap-2">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExtraRows((prev) => Math.max(0, prev - 1))}
+                disabled={extraRows === 0}
+                className="px-2"
+                title={`Extra rows: ${extraRows}`}
+              >
+                −
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExtraRows((prev) => prev + 1)}
+                className="gap-2"
+              >
+                <PlusIcon className="h-4 w-4" />
+                {t("addRow")}
+                {extraRows > 0 && <span className="ml-1">({extraRows})</span>}
+              </Button>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExtraCols((prev) => Math.max(0, prev - 1))}
+                disabled={extraCols === 0}
+                className="px-2"
+                title={`Extra cols: ${extraCols}`}
+              >
+                −
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExtraCols((prev) => prev + 1)}
+                className="gap-2"
+              >
+                <PlusIcon className="h-4 w-4" />
+                {t("addColumn")}
+                {extraCols > 0 && <span className="ml-1">({extraCols})</span>}
+              </Button>
+            </div>
+          </div>
+
+          {/* Teacher position indicator and selector */}
+          <div className="flex flex-1 items-center gap-4">
+            <div
+              className={`flex flex-1 ${
+                teacherPosition === "left"
+                  ? "justify-start"
+                  : teacherPosition === "right"
+                    ? "justify-end"
+                    : "justify-center"
+              }`}
+            >
+              <div className="bg-primary/10 text-primary flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium">
+                <ChalkboardTeacherIcon className="h-4 w-4" weight="bold" />
+                <span>{t("classroomFront")}</span>
+              </div>
+            </div>
+
+            <ToggleGroup
+              type="single"
+              value={teacherPosition}
+              onValueChange={handleTeacherPositionChange}
+              className="shrink-0 gap-1"
+            >
+              <ToggleGroupItem
+                value="left"
+                aria-label="Left position"
+                size="sm"
+              >
+                {t("left")}
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="center"
+                aria-label="Center position"
+                size="sm"
+              >
+                {t("center")}
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="right"
+                aria-label="Right position"
+                size="sm"
+              >
+                {t("right")}
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </div>
       </div>
     </div>

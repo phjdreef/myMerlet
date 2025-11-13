@@ -30,7 +30,6 @@ export function StudentDirectoryContainer() {
     availableClasses,
     selectedClass,
     visibleCount,
-    totalCount,
     loading,
     error,
     classPlans,
@@ -40,7 +39,21 @@ export function StudentDirectoryContainer() {
     clearError,
   } = useStudentDirectoryData();
 
-  const [viewMode, setViewMode] = useState<ViewMode>(DEFAULT_VIEW_MODE);
+  // Load view mode from localStorage on mount
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem("student_directory_view_mode");
+    if (
+      saved &&
+      (saved === "list" ||
+        saved === "classroom" ||
+        saved === "plans" ||
+        saved === "grades")
+    ) {
+      return saved as ViewMode;
+    }
+    return DEFAULT_VIEW_MODE;
+  });
+
   const [seatingPositions, setSeatingPositions] = useState<
     Map<string, SeatingPosition[]>
   >(new Map());
@@ -139,6 +152,7 @@ export function StudentDirectoryContainer() {
       schoolYear: currentSchoolYear,
     });
 
+    // No compacting - students stay exactly where you drop them
     updatedPositions.set(className, classPositions);
     setSeatingPositions(updatedPositions);
     saveSeatingPositions(updatedPositions);
@@ -185,6 +199,7 @@ export function StudentDirectoryContainer() {
     const existingStudent = getStudentAtPosition(row, col, selectedClass);
 
     if (existingStudent && existingStudent.id !== draggedStudent.id) {
+      // Swapping two students - don't compact
       const classPositions = seatingPositions.get(selectedClass) || [];
       const draggedPosition = classPositions.find(
         (pos) => pos.studentId === draggedStudent.id,
@@ -218,6 +233,7 @@ export function StudentDirectoryContainer() {
           schoolYear: currentSchoolYear,
         });
 
+        // Don't compact on swap - preserve positions
         updatedPositions.set(selectedClass, positions);
         setSeatingPositions(updatedPositions);
         saveSeatingPositions(updatedPositions);
@@ -234,8 +250,13 @@ export function StudentDirectoryContainer() {
         saveSeatingPositions(updatedPositions);
       }
     } else {
+      // Dropping into empty cell
       setStudentPosition(draggedStudent.id, row, col, selectedClass);
     }
+
+    // Reset extra columns and rows to 0 after drop
+    localStorage.removeItem(`classroom_extra_cols_${selectedClass}`);
+    localStorage.removeItem(`classroom_extra_rows_${selectedClass}`);
 
     setDraggedStudent(null);
   };
@@ -257,6 +278,8 @@ export function StudentDirectoryContainer() {
     }
 
     setViewMode(mode);
+    // Save to localStorage
+    localStorage.setItem("student_directory_view_mode", mode);
   };
 
   const statusMessageVariant = useMemo(() => {
@@ -340,7 +363,6 @@ export function StudentDirectoryContainer() {
       <div className="flex flex-1 flex-col p-4">
         <div className="mb-6 space-y-4">
           <DirectoryHeader
-            totalCount={totalCount}
             visibleCount={visibleCount}
             selectedClass={selectedClass}
             viewMode={viewMode}

@@ -530,39 +530,52 @@ class ExamnetAPI {
       const results: ExamnetTestResult[] = [];
 
       // Handle different data structures
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const dataArray: any[] = Array.isArray(resultsData)
-        ? resultsData
-        : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (resultsData as any).students ||
-          (resultsData as any).attempts ||
-          (resultsData as any).data ||
+      let dataArray: unknown[] = [];
+
+      if (Array.isArray(resultsData)) {
+        dataArray = resultsData;
+      } else if (resultsData && typeof resultsData === "object") {
+        const data = resultsData as Record<string, unknown>;
+        dataArray =
+          (data.students as unknown[]) ||
+          (data.attempts as unknown[]) ||
+          (data.data as unknown[]) ||
           [];
+      }
 
       for (const item of dataArray) {
+        const record = item as Record<string, unknown>;
         results.push({
           testId: testId,
-          studentId: item.studentId || item.student_id || item.id || "",
+          studentId:
+            (record.studentId as string) ||
+            (record.student_id as string) ||
+            (record.id as string) ||
+            "",
           studentName:
-            item.studentName ||
-            item.student_name ||
-            item.name ||
-            item.fullName ||
+            (record.studentName as string) ||
+            (record.student_name as string) ||
+            (record.name as string) ||
+            (record.fullName as string) ||
             "Unknown",
-          score: item.score || item.grade || item.points || 0,
+          score:
+            (record.score as number) ||
+            (record.grade as number) ||
+            (record.points as number) ||
+            0,
           maxScore:
-            item.maxScore ||
-            item.max_score ||
-            item.total ||
-            item.totalPoints ||
+            (record.maxScore as number) ||
+            (record.max_score as number) ||
+            (record.total as number) ||
+            (record.totalPoints as number) ||
             0,
           submittedAt:
-            item.submittedAt ||
-            item.submitted_at ||
-            item.timestamp ||
-            item.finishedAt ||
+            (record.submittedAt as string) ||
+            (record.submitted_at as string) ||
+            (record.timestamp as string) ||
+            (record.finishedAt as string) ||
             new Date().toISOString(),
-          status: item.status || "completed",
+          status: (record.status as string) || "completed",
         });
       }
 
