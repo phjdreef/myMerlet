@@ -256,7 +256,11 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
                   type="radio"
                   checked={formData.isGeneral}
                   onChange={() =>
-                    setFormData({ ...formData, isGeneral: true, classNames: [] })
+                    setFormData({
+                      ...formData,
+                      isGeneral: true,
+                      classNames: [],
+                    })
                   }
                 />
                 <span>{t("applyToAllClasses")}</span>
@@ -265,7 +269,9 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
                 <input
                   type="radio"
                   checked={!formData.isGeneral}
-                  onChange={() => setFormData({ ...formData, isGeneral: false })}
+                  onChange={() =>
+                    setFormData({ ...formData, isGeneral: false })
+                  }
                 />
                 <span>{t("applyToSpecificClasses")}</span>
               </label>
@@ -318,7 +324,10 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
               <div className="flex-1">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="font-medium">
-                    {formatBlockedWeekRange(blockedWeek.weekStart, blockedWeek.weekEnd)}
+                    {formatBlockedWeekRange(
+                      blockedWeek.weekStart,
+                      blockedWeek.weekEnd,
+                    )}
                   </span>
                   <span
                     className={`rounded px-2 py-0.5 text-xs font-medium ${getTypeColor(
@@ -327,18 +336,17 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
                   >
                     {t(blockedWeek.type)}
                   </span>
-                  {!isGlobal && (
-                    blockedWeek.isGeneral ? (
+                  {!isGlobal &&
+                    (blockedWeek.isGeneral ? (
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         ({t("general")})
                       </span>
                     ) : (
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        ({t("classSpecific")}: {blockedWeek.classNames.join(", ")}
-                        )
+                        ({t("classSpecific")}:{" "}
+                        {blockedWeek.classNames.join(", ")})
                       </span>
-                    )
-                  )}
+                    ))}
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
                   {blockedWeek.reason}

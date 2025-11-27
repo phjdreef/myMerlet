@@ -15,7 +15,9 @@ export function CurriculumPlanner() {
   const [selectedPlan, setSelectedPlan] = useState<CurriculumPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"plans" | "blocked-weeks">("plans");
+  const [activeTab, setActiveTab] = useState<"plans" | "blocked-weeks">(
+    "plans",
+  );
   const currentWeek = getCurrentWeekNumber();
 
   useEffect(() => {
@@ -217,110 +219,113 @@ export function CurriculumPlanner() {
             <div className="flex flex-1 items-center justify-center">
               <div className="text-center">
                 <p className="mb-4 text-lg">{t("noPlansFound")}</p>
-                <Button onClick={handleCreateNew}>{t("createFirstPlan")}</Button>
+                <Button onClick={handleCreateNew}>
+                  {t("createFirstPlan")}
+                </Button>
               </div>
             </div>
           ) : (
             <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium">
-              {t("selectPlanLabel")}
-            </label>
-            <select
-              className="w-full max-w-md rounded border p-2"
-              value={selectedPlan?.id || ""}
-              onChange={(e) => {
-                const plan = plans.find((p) => p.id === e.target.value);
-                setSelectedPlan(plan || null);
-              }}
-            >
-              <option value="">{t("selectPlanPlaceholder")}</option>
-              {plans.map((plan) => {
-                const displayName =
-                  plan.classNames.length > 0
-                    ? `${plan.classNames.join(", ")} - ${plan.subject}`
-                    : plan.subject || t("namelessPlan");
-                return (
-                  <option key={plan.id} value={plan.id}>
-                    {displayName} ({plan.schoolYear})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
+              <div className="mb-4">
+                <label className="mb-2 block text-sm font-medium">
+                  {t("selectPlanLabel")}
+                </label>
+                <select
+                  className="w-full max-w-md rounded border p-2"
+                  value={selectedPlan?.id || ""}
+                  onChange={(e) => {
+                    const plan = plans.find((p) => p.id === e.target.value);
+                    setSelectedPlan(plan || null);
+                  }}
+                >
+                  <option value="">{t("selectPlanPlaceholder")}</option>
+                  {plans.map((plan) => {
+                    const displayName =
+                      plan.classNames.length > 0
+                        ? `${plan.classNames.join(", ")} - ${plan.subject}`
+                        : plan.subject || t("namelessPlan");
+                    return (
+                      <option key={plan.id} value={plan.id}>
+                        {displayName} ({plan.schoolYear})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
 
-          {selectedPlan && (
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <div className="mb-4 rounded-lg border bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/60">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="text-lg font-semibold">
-                      {selectedPlan.subject?.trim() || t("namelessPlan")}
-                    </div>
-                    {selectedPlan.classNames.length > 0 && (
-                      <div className="text-sm text-gray-600 dark:text-gray-300">
-                        {selectedPlan.classNames.join(", ")}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-300">
-                    {selectedPlan.schoolYear && (
+              {selectedPlan && (
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <div className="mb-4 rounded-lg border bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/60">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        {t("schoolYear")}: {selectedPlan.schoolYear}
-                      </div>
-                    )}
-                    {(() => {
-                      const parsedYears = parseSchoolYear(
-                        selectedPlan.schoolYear,
-                      );
-                      const startYear =
-                        selectedPlan.schoolYearStart ?? parsedYears.startYear;
-                      const endYear =
-                        selectedPlan.schoolYearEnd ?? parsedYears.endYear;
-                      if (!startYear) {
-                        return null;
-                      }
-                      return (
-                        <div>
-                          {t("schoolYearStartLabel")}: {startYear}
-                          {endYear ? ` → ${endYear}` : ""}
+                        <div className="text-lg font-semibold">
+                          {selectedPlan.subject?.trim() || t("namelessPlan")}
                         </div>
-                      );
-                    })()}
+                        {selectedPlan.classNames.length > 0 && (
+                          <div className="text-sm text-gray-600 dark:text-gray-300">
+                            {selectedPlan.classNames.join(", ")}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-300">
+                        {selectedPlan.schoolYear && (
+                          <div>
+                            {t("schoolYear")}: {selectedPlan.schoolYear}
+                          </div>
+                        )}
+                        {(() => {
+                          const parsedYears = parseSchoolYear(
+                            selectedPlan.schoolYear,
+                          );
+                          const startYear =
+                            selectedPlan.schoolYearStart ??
+                            parsedYears.startYear;
+                          const endYear =
+                            selectedPlan.schoolYearEnd ?? parsedYears.endYear;
+                          if (!startYear) {
+                            return null;
+                          }
+                          return (
+                            <div>
+                              {t("schoolYearStartLabel")}: {startYear}
+                              {endYear ? ` → ${endYear}` : ""}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mb-4 flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleExportPlan(selectedPlan)}
+                    >
+                      {t("exportPlan")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleEditPlan(selectedPlan)}
+                    >
+                      {t("edit")}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDeletePlan(selectedPlan.id)}
+                    >
+                      {t("delete")}
+                    </Button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    <CurriculumTimeline
+                      plan={selectedPlan}
+                      currentWeek={currentWeek}
+                      onUpdate={handleUpdatePlan}
+                    />
                   </div>
                 </div>
-              </div>
-              <div className="mb-4 flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleExportPlan(selectedPlan)}
-                >
-                  {t("exportPlan")}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleEditPlan(selectedPlan)}
-                >
-                  {t("edit")}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDeletePlan(selectedPlan.id)}
-                >
-                  {t("delete")}
-                </Button>
-              </div>
-              <div className="flex-1 overflow-y-auto pr-2">
-                <CurriculumTimeline
-                  plan={selectedPlan}
-                  currentWeek={currentWeek}
-                  onUpdate={handleUpdatePlan}
-                />
-              </div>
+              )}
             </div>
           )}
-        </div>
-      )}
         </>
       )}
 

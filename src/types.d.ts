@@ -27,8 +27,12 @@ interface ElectronWindow {
 interface SettingsAPI {
   getCurrentSchoolYear: () => Promise<string>;
   setCurrentSchoolYear: (schoolYear: string) => Promise<void>;
-  getGlobalBlockedWeeks: () => Promise<import('./services/curriculum-database').BlockedWeek[]>;
-  setGlobalBlockedWeeks: (blockedWeeks: import('./services/curriculum-database').BlockedWeek[]) => Promise<void>;
+  getGlobalBlockedWeeks: () => Promise<
+    import("./services/curriculum-database").BlockedWeek[]
+  >;
+  setGlobalBlockedWeeks: (
+    blockedWeeks: import("./services/curriculum-database").BlockedWeek[],
+  ) => Promise<void>;
 }
 
 interface MagisterAPI {

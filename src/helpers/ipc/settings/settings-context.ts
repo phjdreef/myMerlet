@@ -11,7 +11,10 @@ export function exposeSettingsAPI() {
     getGlobalBlockedWeeks: (): Promise<BlockedWeek[]> =>
       ipcRenderer.invoke(SETTINGS_CHANNELS.GET_GLOBAL_BLOCKED_WEEKS),
     setGlobalBlockedWeeks: (blockedWeeks: BlockedWeek[]) =>
-      ipcRenderer.invoke(SETTINGS_CHANNELS.SET_GLOBAL_BLOCKED_WEEKS, blockedWeeks),
+      ipcRenderer.invoke(
+        SETTINGS_CHANNELS.SET_GLOBAL_BLOCKED_WEEKS,
+        blockedWeeks,
+      ),
   };
 
   contextBridge.exposeInMainWorld("settingsAPI", settingsAPI);

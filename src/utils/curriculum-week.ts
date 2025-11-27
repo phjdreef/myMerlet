@@ -72,14 +72,17 @@ export function isWeekBlocked(
  * Format a week range for display
  * Returns "Week X" for single week or "Week X-Y" for range
  */
-export function formatBlockedWeekRange(weekStart: number, weekEnd: number): string {
+export function formatBlockedWeekRange(
+  weekStart: number,
+  weekEnd: number,
+): string {
   const start = clampWeekNumber(weekStart);
   const end = clampWeekNumber(weekEnd);
-  
+
   if (start === end) {
     return `Week ${start}`;
   }
-  
+
   return `Week ${start}-${end}`;
 }
 

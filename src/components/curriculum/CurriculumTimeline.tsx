@@ -38,7 +38,9 @@ export function CurriculumTimeline({
   const [pendingGoals, setPendingGoals] = useState<
     Record<number, StudyGoal | undefined>
   >({});
-  const [globalBlockedWeeks, setGlobalBlockedWeeks] = useState<BlockedWeek[]>([]);
+  const [globalBlockedWeeks, setGlobalBlockedWeeks] = useState<BlockedWeek[]>(
+    [],
+  );
   const currentWeekRef = useRef<HTMLDivElement | null>(null);
   const hasAutoScrolledRef = useRef(false);
 
@@ -123,16 +125,16 @@ export function CurriculumTimeline({
       const isWeekInRange = (bw: BlockedWeek) => {
         const start = bw.weekStart;
         const end = bw.weekEnd;
-        
+
         if (start === end) {
           return weekNumber === start;
         }
-        
+
         if (start < end) {
           // Normal range (e.g., week 10-15)
           return weekNumber >= start && weekNumber <= end;
         }
-        
+
         // Year-wrap range (e.g., week 52-2)
         return weekNumber >= start || weekNumber <= end;
       };
