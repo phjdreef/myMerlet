@@ -6,6 +6,7 @@ import { CurriculumTimeline } from "./curriculum/CurriculumTimeline";
 import { PlanEditor } from "./curriculum/PlanEditor";
 import { Button } from "./ui/button";
 import { parseSchoolYear } from "../utils/curriculum-week";
+import { GlobalBlockedWeeksManager } from "./settings/GlobalBlockedWeeksManager";
 import type { CurriculumPlan } from "../services/curriculum-database";
 
 export function CurriculumPlanner() {
@@ -14,6 +15,7 @@ export function CurriculumPlanner() {
   const [selectedPlan, setSelectedPlan] = useState<CurriculumPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"plans" | "blocked-weeks">("plans");
   const currentWeek = getCurrentWeekNumber();
 
   useEffect(() => {
@@ -175,20 +177,51 @@ export function CurriculumPlanner() {
 
   return (
     <div className="container mx-auto flex h-full flex-col p-4">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <h1 className="text-3xl font-bold">{t("curriculumPlanning")}</h1>
-        <Button onClick={handleCreateNew}>+ {t("newPlan")}</Button>
+        {activeTab === "plans" && (
+          <Button onClick={handleCreateNew}>+ {t("newPlan")}</Button>
+        )}
       </div>
 
-      {plans.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center">
-          <div className="text-center">
-            <p className="mb-4 text-lg">{t("noPlansFound")}</p>
-            <Button onClick={handleCreateNew}>{t("createFirstPlan")}</Button>
-          </div>
+      {/* Tabs */}
+      <div className="mb-4 border-b">
+        <div className="flex gap-1">
+          <button
+            className={`border-b-2 px-4 py-2 transition-colors ${
+              activeTab === "plans"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent hover:border-gray-300"
+            }`}
+            onClick={() => setActiveTab("plans")}
+          >
+            {t("plans")} ({plans.length})
+          </button>
+          <button
+            className={`border-b-2 px-4 py-2 transition-colors ${
+              activeTab === "blocked-weeks"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent hover:border-gray-300"
+            }`}
+            onClick={() => setActiveTab("blocked-weeks")}
+          >
+            {t("globalBlockedWeeks")}
+          </button>
         </div>
-      ) : (
-        <div className="flex flex-1 flex-col overflow-hidden">
+      </div>
+
+      {/* Plans Tab Content */}
+      {activeTab === "plans" && (
+        <>
+          {plans.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center">
+              <div className="text-center">
+                <p className="mb-4 text-lg">{t("noPlansFound")}</p>
+                <Button onClick={handleCreateNew}>{t("createFirstPlan")}</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-1 flex-col overflow-hidden">
           <div className="mb-4">
             <label className="mb-2 block text-sm font-medium">
               {t("selectPlanLabel")}
@@ -286,6 +319,15 @@ export function CurriculumPlanner() {
               </div>
             </div>
           )}
+        </div>
+      )}
+        </>
+      )}
+
+      {/* Global Blocked Weeks Tab Content */}
+      {activeTab === "blocked-weeks" && (
+        <div className="flex-1 overflow-auto">
+          <GlobalBlockedWeeksManager />
         </div>
       )}
     </div>

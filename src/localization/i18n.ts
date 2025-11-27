@@ -158,9 +158,14 @@ i18n.use(initReactI18next).init({
         clickToAdd: 'Klik op "+ Leerdoel" om er een toe te voegen.',
         // Blocked Weeks
         blockedWeeks: "Geblokkeerde Weken",
+        globalBlockedWeeks: "Algemene Geblokkeerde Weken",
+        globalBlockedWeeksDescription:
+          "Configureer vakanties en andere geblokkeerde periodes die voor alle planningen gelden.",
         addBlockedWeek: "Geblokkeerde Week Toevoegen",
         blockWeek: "Blokkeer Week",
         weekNumber: "Weeknummer",
+        weekStart: "Start Week",
+        weekEnd: "Eind Week",
         reason: "Reden",
         reasonPlaceholder: "bijv. Kerstvakantie, Toetsweek",
         blockType: "Type",
@@ -453,9 +458,14 @@ i18n.use(initReactI18next).init({
         clickToAdd: 'Click "+ Study Goal" to add one.',
         // Blocked Weeks
         blockedWeeks: "Blocked Weeks",
+        globalBlockedWeeks: "Global Blocked Weeks",
+        globalBlockedWeeksDescription:
+          "Configure holidays and other blocked periods that apply to all curriculum plans.",
         addBlockedWeek: "Add Blocked Week",
         blockWeek: "Block Week",
         weekNumber: "Week Number",
+        weekStart: "Start Week",
+        weekEnd: "End Week",
         reason: "Reason",
         reasonPlaceholder: "e.g. Christmas Holiday, Exam Week",
         blockType: "Type",

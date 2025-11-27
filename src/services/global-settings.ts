@@ -3,10 +3,12 @@ import path from "path";
 import fs from "fs";
 import { logger } from "../utils/logger";
 import { getCurrentSchoolYear, type SchoolYear } from "../utils/school-year";
+import type { BlockedWeek } from "./curriculum-database";
 
 export type GlobalSettings = {
   theme?: "system" | "twitter" | "graphite" | "nord" | "dracula" | "solarized";
   currentSchoolYear?: SchoolYear;
+  globalBlockedWeeks?: BlockedWeek[];
 };
 
 class GlobalSettingsManager {
@@ -110,6 +112,19 @@ class GlobalSettingsManager {
     if (!this.initialized) await this.init();
     const settings = this.readSettings();
     settings.currentSchoolYear = schoolYear;
+    this.writeSettings(settings);
+  }
+
+  async getGlobalBlockedWeeks(): Promise<BlockedWeek[]> {
+    if (!this.initialized) await this.init();
+    const settings = this.readSettings();
+    return settings.globalBlockedWeeks || [];
+  }
+
+  async setGlobalBlockedWeeks(blockedWeeks: BlockedWeek[]): Promise<void> {
+    if (!this.initialized) await this.init();
+    const settings = this.readSettings();
+    settings.globalBlockedWeeks = blockedWeeks;
     this.writeSettings(settings);
   }
 }

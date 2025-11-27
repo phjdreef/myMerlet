@@ -3,15 +3,18 @@ import { useTranslation } from "react-i18next";
 import { BlockedWeek } from "../../services/curriculum-database";
 import { Button } from "../ui/button";
 import { Trash2, Edit2, Plus } from "lucide-react";
+import { formatBlockedWeekRange } from "../../utils/curriculum-week";
 
 interface BlockedWeeksManagerProps {
   blockedWeeks: BlockedWeek[];
   availableClasses: string[];
   onChange: (blockedWeeks: BlockedWeek[]) => void;
+  isGlobal?: boolean; // If true, all blocked weeks are global and don't show class selection
 }
 
 interface BlockedWeekFormData {
-  weekNumber: number;
+  weekStart: number;
+  weekEnd: number;
   reason: string;
   type: "holiday" | "exam" | "event" | "other";
   isGeneral: boolean;
@@ -22,24 +25,27 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
   blockedWeeks,
   availableClasses,
   onChange,
+  isGlobal = false,
 }) => {
   const { t } = useTranslation();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<BlockedWeekFormData>({
-    weekNumber: 1,
+    weekStart: 1,
+    weekEnd: 1,
     reason: "",
     type: "holiday",
-    isGeneral: true,
+    isGeneral: isGlobal || true,
     classNames: [],
   });
 
   const resetForm = () => {
     setFormData({
-      weekNumber: 1,
+      weekStart: 1,
+      weekEnd: 1,
       reason: "",
       type: "holiday",
-      isGeneral: true,
+      isGeneral: isGlobal || true,
       classNames: [],
     });
     setIsAdding(false);
@@ -51,8 +57,10 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
 
     if (
       !formData.reason.trim() ||
-      formData.weekNumber < 1 ||
-      formData.weekNumber > 52
+      formData.weekStart < 1 ||
+      formData.weekStart > 53 ||
+      formData.weekEnd < 1 ||
+      formData.weekEnd > 53
     ) {
       return;
     }
@@ -64,7 +72,8 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
           bw.id === editingId
             ? {
                 ...bw,
-                weekNumber: formData.weekNumber,
+                weekStart: formData.weekStart,
+                weekEnd: formData.weekEnd,
                 reason: formData.reason.trim(),
                 type: formData.type,
                 isGeneral: formData.isGeneral,
@@ -77,7 +86,8 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
       // Add new blocked week
       const newBlockedWeek: BlockedWeek = {
         id: crypto.randomUUID(),
-        weekNumber: formData.weekNumber,
+        weekStart: formData.weekStart,
+        weekEnd: formData.weekEnd,
         reason: formData.reason.trim(),
         type: formData.type,
         isGeneral: formData.isGeneral,
@@ -91,7 +101,8 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
 
   const handleEdit = (blockedWeek: BlockedWeek) => {
     setFormData({
-      weekNumber: blockedWeek.weekNumber,
+      weekStart: blockedWeek.weekStart,
+      weekEnd: blockedWeek.weekEnd,
       reason: blockedWeek.reason,
       type: blockedWeek.type,
       isGeneral: blockedWeek.isGeneral,
@@ -130,7 +141,7 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
   };
 
   const sortedBlockedWeeks = [...blockedWeeks].sort(
-    (a, b) => a.weekNumber - b.weekNumber,
+    (a, b) => a.weekStart - b.weekStart,
   );
 
   return (
@@ -162,17 +173,17 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium">
-                {t("weekNumber")}
+                {t("weekStart")}
               </label>
               <input
                 type="number"
                 min="1"
-                max="52"
-                value={formData.weekNumber}
+                max="53"
+                value={formData.weekStart}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    weekNumber: parseInt(e.target.value) || 1,
+                    weekStart: parseInt(e.target.value) || 1,
                   })
                 }
                 className="w-full rounded-md border px-3 py-2"
@@ -182,24 +193,44 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
 
             <div>
               <label className="mb-1 block text-sm font-medium">
-                {t("blockType")}
+                {t("weekEnd")}
               </label>
-              <select
-                value={formData.type}
+              <input
+                type="number"
+                min="1"
+                max="53"
+                value={formData.weekEnd}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    type: e.target.value as BlockedWeekFormData["type"],
+                    weekEnd: parseInt(e.target.value) || 1,
                   })
                 }
                 className="w-full rounded-md border px-3 py-2"
-              >
-                <option value="holiday">{t("holiday")}</option>
-                <option value="exam">{t("exam")}</option>
-                <option value="event">{t("event")}</option>
-                <option value="other">{t("other")}</option>
-              </select>
+                required
+              />
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              {t("blockType")}
+            </label>
+            <select
+              value={formData.type}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  type: e.target.value as BlockedWeekFormData["type"],
+                })
+              }
+              className="w-full rounded-md border px-3 py-2"
+            >
+              <option value="holiday">{t("holiday")}</option>
+              <option value="exam">{t("exam")}</option>
+              <option value="event">{t("event")}</option>
+              <option value="other">{t("other")}</option>
+            </select>
           </div>
 
           <div>
@@ -218,28 +249,30 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                checked={formData.isGeneral}
-                onChange={() =>
-                  setFormData({ ...formData, isGeneral: true, classNames: [] })
-                }
-              />
-              <span>{t("applyToAllClasses")}</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                checked={!formData.isGeneral}
-                onChange={() => setFormData({ ...formData, isGeneral: false })}
-              />
-              <span>{t("applyToSpecificClasses")}</span>
-            </label>
-          </div>
+          {!isGlobal && (
+            <div className="space-y-2">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={formData.isGeneral}
+                  onChange={() =>
+                    setFormData({ ...formData, isGeneral: true, classNames: [] })
+                  }
+                />
+                <span>{t("applyToAllClasses")}</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={!formData.isGeneral}
+                  onChange={() => setFormData({ ...formData, isGeneral: false })}
+                />
+                <span>{t("applyToSpecificClasses")}</span>
+              </label>
+            </div>
+          )}
 
-          {!formData.isGeneral && (
+          {!isGlobal && !formData.isGeneral && (
             <div>
               <label className="mb-2 block text-sm font-medium">
                 {t("selectClassesForBlock")}
@@ -285,7 +318,7 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
               <div className="flex-1">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="font-medium">
-                    Week {blockedWeek.weekNumber}
+                    {formatBlockedWeekRange(blockedWeek.weekStart, blockedWeek.weekEnd)}
                   </span>
                   <span
                     className={`rounded px-2 py-0.5 text-xs font-medium ${getTypeColor(
@@ -294,15 +327,17 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
                   >
                     {t(blockedWeek.type)}
                   </span>
-                  {blockedWeek.isGeneral ? (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ({t("general")})
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ({t("classSpecific")}: {blockedWeek.classNames.join(", ")}
-                      )
-                    </span>
+                  {!isGlobal && (
+                    blockedWeek.isGeneral ? (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        ({t("general")})
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        ({t("classSpecific")}: {blockedWeek.classNames.join(", ")}
+                        )
+                      </span>
+                    )
                   )}
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-300">

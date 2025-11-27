@@ -12,6 +12,7 @@ import { formatWeekRange } from "../../utils/week-utils";
 import type {
   CurriculumPlan,
   StudyGoal,
+  BlockedWeek,
 } from "../../services/curriculum-database";
 import {
   generateWeekSequence,
@@ -37,8 +38,22 @@ export function CurriculumTimeline({
   const [pendingGoals, setPendingGoals] = useState<
     Record<number, StudyGoal | undefined>
   >({});
+  const [globalBlockedWeeks, setGlobalBlockedWeeks] = useState<BlockedWeek[]>([]);
   const currentWeekRef = useRef<HTMLDivElement | null>(null);
   const hasAutoScrolledRef = useRef(false);
+
+  // Load global blocked weeks
+  useEffect(() => {
+    const loadGlobalBlockedWeeks = async () => {
+      try {
+        const weeks = await window.settingsAPI.getGlobalBlockedWeeks();
+        setGlobalBlockedWeeks(weeks);
+      } catch (error) {
+        console.error("Failed to load global blocked weeks:", error);
+      }
+    };
+    loadGlobalBlockedWeeks();
+  }, []);
 
   useEffect(() => {
     startTransition(() => {
@@ -104,9 +119,34 @@ export function CurriculumTimeline({
 
   const getBlockedWeekInfo = useCallback(
     (weekNumber: number) => {
-      return plan.blockedWeeks.find((bw) => bw.weekNumber === weekNumber);
+      // Helper function to check if a week is within a blocked range
+      const isWeekInRange = (bw: BlockedWeek) => {
+        const start = bw.weekStart;
+        const end = bw.weekEnd;
+        
+        if (start === end) {
+          return weekNumber === start;
+        }
+        
+        if (start < end) {
+          // Normal range (e.g., week 10-15)
+          return weekNumber >= start && weekNumber <= end;
+        }
+        
+        // Year-wrap range (e.g., week 52-2)
+        return weekNumber >= start || weekNumber <= end;
+      };
+
+      // Check global blocked weeks first (they take precedence for display)
+      const globalBlock = globalBlockedWeeks.find(isWeekInRange);
+      if (globalBlock) {
+        return globalBlock;
+      }
+
+      // Then check plan-specific blocked weeks
+      return plan.blockedWeeks.find(isWeekInRange);
     },
-    [plan.blockedWeeks],
+    [plan.blockedWeeks, globalBlockedWeeks],
   );
 
   const getGoalsForWeek = useCallback(

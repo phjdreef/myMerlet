@@ -57,6 +57,32 @@ export function goalCoversWeek(goal: WeekSpan, weekNumber: number): boolean {
   return target >= start || target <= end;
 }
 
+/**
+ * Check if a week falls within a blocked week range
+ * Handles year-wrapping (e.g., week 52 to week 1)
+ */
+export function isWeekBlocked(
+  blockedWeek: { weekStart: number; weekEnd: number },
+  weekNumber: number,
+): boolean {
+  return goalCoversWeek(blockedWeek, weekNumber);
+}
+
+/**
+ * Format a week range for display
+ * Returns "Week X" for single week or "Week X-Y" for range
+ */
+export function formatBlockedWeekRange(weekStart: number, weekEnd: number): string {
+  const start = clampWeekNumber(weekStart);
+  const end = clampWeekNumber(weekEnd);
+  
+  if (start === end) {
+    return `Week ${start}`;
+  }
+  
+  return `Week ${start}-${end}`;
+}
+
 export function parseSchoolYear(schoolYear?: string): {
   startYear?: number;
   endYear?: number;

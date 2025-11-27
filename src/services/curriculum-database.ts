@@ -41,7 +41,8 @@ export interface StudyGoal {
 
 export interface BlockedWeek {
   id: string;
-  weekNumber: number;
+  weekStart: number; // Start week of the blocked period
+  weekEnd: number; // End week of the blocked period (can be same as weekStart for single week)
   reason: string; // e.g., "Christmas Holiday", "Exam Week", "School Trip"
   type: "holiday" | "exam" | "event" | "other"; // Category for visual styling
   isGeneral: boolean; // If true, applies to all classes; if false, only specific classes
