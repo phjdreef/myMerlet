@@ -5,6 +5,7 @@ import { getCurrentWeekNumber } from "../utils/week-utils";
 import { CurriculumTimeline } from "./curriculum/CurriculumTimeline";
 import { PlanEditor } from "./curriculum/PlanEditor";
 import { Button } from "./ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { parseSchoolYear } from "../utils/curriculum-week";
 import { GlobalBlockedWeeksManager } from "./settings/GlobalBlockedWeeksManager";
 import type { CurriculumPlan } from "../services/curriculum-database";
@@ -186,35 +187,23 @@ export function CurriculumPlanner() {
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="mb-4 border-b">
-        <div className="flex gap-1">
-          <button
-            className={`border-b-2 px-4 py-2 transition-colors ${
-              activeTab === "plans"
-                ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                : "border-transparent hover:border-gray-300"
-            }`}
-            onClick={() => setActiveTab("plans")}
-          >
-            {t("plans")} ({plans.length})
-          </button>
-          <button
-            className={`border-b-2 px-4 py-2 transition-colors ${
-              activeTab === "blocked-weeks"
-                ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                : "border-transparent hover:border-gray-300"
-            }`}
-            onClick={() => setActiveTab("blocked-weeks")}
-          >
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) =>
+          setActiveTab(value as "plans" | "blocked-weeks")
+        }
+        className="flex flex-1 flex-col"
+      >
+        <TabsList className="mb-4">
+          <TabsTrigger value="plans">
+            {t("plansTabTitle")} ({plans.length})
+          </TabsTrigger>
+          <TabsTrigger value="blocked-weeks">
             {t("globalBlockedWeeks")}
-          </button>
-        </div>
-      </div>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Plans Tab Content */}
-      {activeTab === "plans" && (
-        <>
+        <TabsContent value="plans" className="flex-1 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col">
           {plans.length === 0 ? (
             <div className="flex flex-1 items-center justify-center">
               <div className="text-center">
@@ -226,8 +215,8 @@ export function CurriculumPlanner() {
             </div>
           ) : (
             <div className="flex flex-1 flex-col overflow-hidden">
-              <div className="mb-4">
-                <label className="mb-2 block text-sm font-medium">
+              <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-3">
+                <label className="mb-1 block text-sm font-medium">
                   {t("selectPlanLabel")}
                 </label>
                 <select
@@ -255,67 +244,72 @@ export function CurriculumPlanner() {
 
               {selectedPlan && (
                 <div className="flex flex-1 flex-col overflow-hidden">
-                  <div className="mb-4 rounded-lg border bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/60">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <div className="text-lg font-semibold">
-                          {selectedPlan.subject?.trim() || t("namelessPlan")}
-                        </div>
-                        {selectedPlan.classNames.length > 0 && (
-                          <div className="text-sm text-gray-600 dark:text-gray-300">
-                            {selectedPlan.classNames.join(", ")}
+                  <div className="sticky top-[76px] z-10 bg-white dark:bg-gray-900 pb-3">
+                    <div className="rounded-lg border bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/60">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="text-base font-semibold">
+                            {selectedPlan.subject?.trim() || t("namelessPlan")}
                           </div>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-300">
-                        {selectedPlan.schoolYear && (
-                          <div>
-                            {t("schoolYear")}: {selectedPlan.schoolYear}
-                          </div>
-                        )}
-                        {(() => {
-                          const parsedYears = parseSchoolYear(
-                            selectedPlan.schoolYear,
-                          );
-                          const startYear =
-                            selectedPlan.schoolYearStart ??
-                            parsedYears.startYear;
-                          const endYear =
-                            selectedPlan.schoolYearEnd ?? parsedYears.endYear;
-                          if (!startYear) {
-                            return null;
-                          }
-                          return (
-                            <div>
-                              {t("schoolYearStartLabel")}: {startYear}
-                              {endYear ? ` → ${endYear}` : ""}
+                          {selectedPlan.classNames.length > 0 && (
+                            <div className="text-xs text-gray-600 dark:text-gray-300">
+                              {selectedPlan.classNames.join(", ")}
                             </div>
-                          );
-                        })()}
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-300">
+                          {selectedPlan.schoolYear && (
+                            <div>
+                              {t("schoolYear")}: {selectedPlan.schoolYear}
+                            </div>
+                          )}
+                          {(() => {
+                            const parsedYears = parseSchoolYear(
+                              selectedPlan.schoolYear,
+                            );
+                            const startYear =
+                              selectedPlan.schoolYearStart ??
+                              parsedYears.startYear;
+                            const endYear =
+                              selectedPlan.schoolYearEnd ?? parsedYears.endYear;
+                            if (!startYear) {
+                              return null;
+                            }
+                            return (
+                              <div>
+                                {t("schoolYearStartLabel")}: {startYear}
+                                {endYear ? ` → ${endYear}` : ""}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </div>
                     </div>
+                    <div className="mt-2 flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleExportPlan(selectedPlan)}
+                      >
+                        {t("exportPlan")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditPlan(selectedPlan)}
+                      >
+                        {t("edit")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeletePlan(selectedPlan.id)}
+                      >
+                        {t("delete")}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="mb-4 flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleExportPlan(selectedPlan)}
-                    >
-                      {t("exportPlan")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleEditPlan(selectedPlan)}
-                    >
-                      {t("edit")}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleDeletePlan(selectedPlan.id)}
-                    >
-                      {t("delete")}
-                    </Button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto pr-2">
+                  <div className="flex-1 overflow-y-auto">
                     <CurriculumTimeline
                       plan={selectedPlan}
                       currentWeek={currentWeek}
@@ -326,15 +320,12 @@ export function CurriculumPlanner() {
               )}
             </div>
           )}
-        </>
-      )}
+        </TabsContent>
 
-      {/* Global Blocked Weeks Tab Content */}
-      {activeTab === "blocked-weeks" && (
-        <div className="flex-1 overflow-auto">
+        <TabsContent value="blocked-weeks" className="mt-0 flex-1 overflow-y-auto data-[state=active]:flex data-[state=active]:flex-col">
           <GlobalBlockedWeeksManager />
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
