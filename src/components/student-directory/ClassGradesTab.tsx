@@ -275,7 +275,6 @@ export function ClassGradesTab({
                             {t("maxPoints")}: {test.maxPoints}
                           </span>
                           <span>n = {test.nTerm}</span>
-                          <span>R = {test.rTerm}</span>
                         </div>
                       )}
 

@@ -203,7 +203,10 @@ export function CurriculumPlanner() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="plans" className="flex-1 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent
+          value="plans"
+          className="flex-1 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col"
+        >
           {plans.length === 0 ? (
             <div className="flex flex-1 items-center justify-center">
               <div className="text-center">
@@ -215,7 +218,7 @@ export function CurriculumPlanner() {
             </div>
           ) : (
             <div className="flex flex-1 flex-col overflow-hidden">
-              <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-3">
+              <div className="sticky top-0 z-10 bg-white pb-3 dark:bg-gray-900">
                 <label className="mb-1 block text-sm font-medium">
                   {t("selectPlanLabel")}
                 </label>
@@ -244,7 +247,7 @@ export function CurriculumPlanner() {
 
               {selectedPlan && (
                 <div className="flex flex-1 flex-col overflow-hidden">
-                  <div className="sticky top-[76px] z-10 bg-white dark:bg-gray-900 pb-3">
+                  <div className="sticky top-[76px] z-10 bg-white pb-3 dark:bg-gray-900">
                     <div className="rounded-lg border bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/60">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -322,7 +325,10 @@ export function CurriculumPlanner() {
           )}
         </TabsContent>
 
-        <TabsContent value="blocked-weeks" className="mt-0 flex-1 overflow-y-auto data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent
+          value="blocked-weeks"
+          className="mt-0 flex-1 overflow-y-auto data-[state=active]:flex data-[state=active]:flex-col"
+        >
           <GlobalBlockedWeeksManager />
         </TabsContent>
       </Tabs>

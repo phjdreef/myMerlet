@@ -26,7 +26,6 @@ export interface Test {
 
   // CvTE test properties (only for testType === "cvte")
   nTerm?: number; // The n-term for CvTE formula (normering)
-  rTerm?: number; // The R-term (multiplier) for CvTE formula (default: 9)
   maxPoints?: number; // Maximum points for the entire test
 
   // Composite test properties (only for testType === "composite")
@@ -72,22 +71,21 @@ export interface TestStatistics {
 
 /**
  * Calculate grade using CvTE formula
- * Cijfer = R × (behaalde_score / maximale_score) + n
+ * Cijfer = (10 - N) × (behaalde_score / maximale_score) + N
  *
  * @param pointsEarned - Points the student earned
  * @param maxPoints - Maximum points possible
  * @param nTerm - The n-term (normering)
- * @param rTerm - The R-term (multiplier, default: 9)
  * @returns Calculated grade (cijfer)
  */
 export function calculateCvTEGrade(
   pointsEarned: number,
   maxPoints: number,
   nTerm: number,
-  rTerm: number = 9,
 ): number {
   if (maxPoints === 0) return nTerm;
-  const cijfer = rTerm * (pointsEarned / maxPoints) + nTerm;
+  const multiplier = 10 - nTerm;
+  const cijfer = multiplier * (pointsEarned / maxPoints) + nTerm;
   return Math.round(cijfer * 100) / 100; // Round to 2 decimals
 }
 

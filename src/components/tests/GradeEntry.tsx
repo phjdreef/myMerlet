@@ -86,8 +86,9 @@ export function GradeEntry({
     if (test.testType !== "cvte") return null;
     if (pointsEarned === 0) return null;
     if (!test.maxPoints || test.maxPoints === 0) return test.nTerm ?? null;
+    const multiplier = 10 - (test.nTerm ?? 1);
     const grade =
-      (test.rTerm ?? 0) * (pointsEarned / test.maxPoints) + (test.nTerm ?? 0);
+      multiplier * (pointsEarned / test.maxPoints) + (test.nTerm ?? 0);
     return Math.round(grade * 100) / 100;
   };
 
@@ -320,8 +321,8 @@ export function GradeEntry({
         <div>
           {test.testType === "cvte" ? (
             <p className="text-muted-foreground text-sm">
-              {t("maxPoints")}: {test.maxPoints} | {t("formula")}: {test.rTerm}{" "}
-              × ({t("points")} / {test.maxPoints}) + {test.nTerm}
+              {t("maxPoints")}: {test.maxPoints} | {t("formula")}: (10 -{" "}
+              {test.nTerm}) × ({t("points")} / {test.maxPoints}) + {test.nTerm}
             </p>
           ) : (
             <div className="text-muted-foreground space-y-1 text-sm">

@@ -119,10 +119,10 @@ function calculateCvTEGrade(
   pointsEarned: number,
   maxPoints: number,
   nTerm: number,
-  rTerm: number = 9,
 ): number {
   if (maxPoints <= 0) return 0;
-  const grade = rTerm * (pointsEarned / maxPoints) + nTerm;
+  const multiplier = 10 - nTerm;
+  const grade = multiplier * (pointsEarned / maxPoints) + nTerm;
   return Math.round(grade * 100) / 100; // Round to 2 decimals
 }
 
@@ -279,12 +279,11 @@ export function registerTestListeners() {
           if (updatedTest.testType === "cvte") {
             const maxPoints = toNumber(updatedTest.maxPoints) ?? 0;
             const nTerm = toNumber(updatedTest.nTerm) ?? 0;
-            const rTerm = toNumber(updatedTest.rTerm) ?? 9;
             const pointsEarned = toNumber(grade.pointsEarned) ?? 0;
 
             const calculatedRaw =
               maxPoints > 0 && pointsEarned > 0
-                ? calculateCvTEGrade(pointsEarned, maxPoints, nTerm, rTerm)
+                ? calculateCvTEGrade(pointsEarned, maxPoints, nTerm)
                 : 0;
             const calculated = Number.isFinite(calculatedRaw)
               ? calculatedRaw
@@ -438,7 +437,6 @@ export function registerTestListeners() {
               pointsEarned,
               test.maxPoints,
               test.nTerm,
-              test.rTerm || 9,
             );
           }
         } else if (test.testType === "composite") {

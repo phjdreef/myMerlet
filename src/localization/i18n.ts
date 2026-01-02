@@ -210,7 +210,8 @@ i18n.use(initReactI18next).init({
         weight: "Weging",
         maxPoints: "Maximum Punten",
         nTerm: "n-term",
-        rTerm: "R-term",
+        nTermHelp:
+          "Cijfer = (10 - N) × (punten / totaal) + N. Meestal N=1 voor bereik 1-10.",
         description: "Beschrijving",
         confirmDeleteTest: "Weet je zeker dat je deze toets wilt verwijderen?",
         noTestsYet: "Nog geen toetsen aangemaakt.",
@@ -510,7 +511,8 @@ i18n.use(initReactI18next).init({
         weight: "Weight",
         maxPoints: "Maximum Points",
         nTerm: "n-term",
-        rTerm: "R-term",
+        nTermHelp:
+          "Grade = (10 - N) × (points / total) + N. Usually N=1 for range 1-10.",
         description: "Description",
         confirmDeleteTest: "Are you sure you want to delete this test?",
         noTestsYet: "No tests created yet.",

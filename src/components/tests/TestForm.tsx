@@ -235,6 +235,8 @@ export function TestForm({
               </label>
               <input
                 type="number"
+                min="1"
+                max="9"
                 step="0.1"
                 value={formData.nTerm}
                 onChange={(event) =>
@@ -243,21 +245,9 @@ export function TestForm({
                 className="w-full rounded border px-3 py-2"
                 required
               />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                {t("rTerm")} (R)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                value={formData.rTerm}
-                onChange={(event) =>
-                  updateField("rTerm", parseFloat(event.target.value))
-                }
-                className="w-full rounded border px-3 py-2"
-                required
-              />
+              <p className="text-muted-foreground mt-1 text-xs">
+                {t("nTermHelp")}
+              </p>
             </div>
           </>
         )}

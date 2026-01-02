@@ -59,7 +59,6 @@ export function TestsManager({
     testType: "cvte" as TestType,
     // CvTE properties
     nTerm: 1,
-    rTerm: 9,
     maxPoints: 10,
     // Composite properties
     elements: [] as TestFormState["elements"],
@@ -188,7 +187,6 @@ export function TestsManager({
       weight: normalizedTest.weight,
       testType: normalizedTest.testType,
       nTerm: normalizedTest.nTerm || 1,
-      rTerm: normalizedTest.rTerm || 9,
       maxPoints: normalizedTest.maxPoints || 10,
       elements: normalizedTest.elements || [],
       customFormula: normalizedTest.customFormula || "",
@@ -426,7 +424,6 @@ export function TestsManager({
                           {t("maxPoints")}: {test.maxPoints}
                         </span>
                         <span>n = {test.nTerm}</span>
-                        <span>R = {test.rTerm}</span>
                       </div>
                     )}
 

@@ -7,7 +7,6 @@ export interface TestFormState {
   weight: number;
   testType: TestType;
   nTerm: number;
-  rTerm: number;
   maxPoints: number;
   elements: CompositeElement[];
   customFormula: string;
