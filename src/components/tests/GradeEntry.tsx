@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { FloppyDiskIcon, XIcon } from "@phosphor-icons/react";
-import type { Test, StudentGrade } from "@/services/test-database";
+import {
+  calculateCvTEGrade,
+  type Test,
+  type StudentGrade,
+} from "@/services/test-database";
 import type { Student } from "@/services/student-database";
 import { evaluateFormulaExpression } from "@/utils/formula-parser";
 import {
@@ -81,15 +85,15 @@ export function GradeEntry({
     }
   };
 
-  const calculateGrade = (pointsEarned: number): number | null => {
+  const calculateGrade = (pointsEarned?: number): number | null => {
     // CvTE formula only
     if (test.testType !== "cvte") return null;
-    if (pointsEarned === 0) return null;
-    if (!test.maxPoints || test.maxPoints === 0) return test.nTerm ?? null;
-    const multiplier = 10 - (test.nTerm ?? 1);
-    const grade =
-      multiplier * (pointsEarned / test.maxPoints) + (test.nTerm ?? 0);
-    return Math.round(grade * 100) / 100;
+    if (pointsEarned === undefined || !Number.isFinite(pointsEarned))
+      return null;
+    if (!test.maxPoints || test.maxPoints <= 0) return null;
+    const nTerm = test.nTerm ?? 1;
+    const mode = test.cvteCalculationMode ?? "legacy";
+    return calculateCvTEGrade(pointsEarned, test.maxPoints, nTerm, mode);
   };
 
   const calculateCompositeGrade = (
@@ -174,8 +178,10 @@ export function GradeEntry({
   };
 
   const handlePointsChange = (studentId: number, points: string) => {
-    const pointsEarned = points === "" ? 0 : parseFloat(points);
-    const calculatedGrade = calculateGrade(pointsEarned);
+    const parsed = points.trim() === "" ? undefined : parseFloat(points);
+    const pointsEarned = Number.isFinite(parsed) ? parsed : undefined;
+    const calculatedGrade =
+      pointsEarned !== undefined ? calculateGrade(pointsEarned) : null;
     const currentEntry = entries.get(studentId);
     const manualOverride = currentEntry?.manualOverride;
     const finalGrade =
@@ -198,7 +204,8 @@ export function GradeEntry({
     elementId: string,
     points: string,
   ) => {
-    const pointsEarned = points === "" ? 0 : parseFloat(points);
+    const parsed = points.trim() === "" ? undefined : parseFloat(points);
+    const pointsEarned = Number.isFinite(parsed) ? parsed : undefined;
     const currentEntry = entries.get(studentId);
     const currentElementGrades = currentEntry?.elementGrades || [];
 
@@ -206,7 +213,7 @@ export function GradeEntry({
     const updatedElementGrades = currentElementGrades.filter(
       (g) => g.elementId !== elementId,
     );
-    if (pointsEarned > 0) {
+    if (pointsEarned !== undefined) {
       updatedElementGrades.push({ elementId, pointsEarned });
     }
 
@@ -252,7 +259,7 @@ export function GradeEntry({
         if (test.testType === "cvte") {
           // CvTE test - save points earned
           if (
-            (entry.pointsEarned !== undefined && entry.pointsEarned > 0) ||
+            entry.pointsEarned !== undefined ||
             entry.manualOverride !== undefined
           ) {
             await window.testAPI.saveGrade(
@@ -321,8 +328,18 @@ export function GradeEntry({
         <div>
           {test.testType === "cvte" ? (
             <p className="text-muted-foreground text-sm">
-              {t("maxPoints")}: {test.maxPoints} | {t("formula")}: (10 -{" "}
-              {test.nTerm}) × ({t("points")} / {test.maxPoints}) + {test.nTerm}
+              {t("maxPoints")}: {test.maxPoints} | {t("formula")}:{" "}
+              {(() => {
+                const nTerm = test.nTerm ?? 1;
+                const mode = test.cvteCalculationMode ?? "legacy";
+                if (mode === "legacy") {
+                  return `(10 - ${nTerm}) × (${t("points")} / ${test.maxPoints}) + ${nTerm}`;
+                }
+                if (mode === "main") {
+                  return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixMain")}`;
+                }
+                return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixOfficial")}`;
+              })()}
             </p>
           ) : (
             <div className="text-muted-foreground space-y-1 text-sm">
@@ -410,7 +427,7 @@ export function GradeEntry({
             <tbody>
               {filteredAndSortedStudents.map((student, index) => {
                 const entry = entries.get(student.id) || {
-                  pointsEarned: 0,
+                  pointsEarned: undefined,
                   elementGrades: [],
                   calculatedGrade: null,
                   finalGrade: null,
@@ -445,7 +462,7 @@ export function GradeEntry({
                               min="0"
                               max={test.maxPoints}
                               step="0.5"
-                              value={entry.pointsEarned || ""}
+                              value={entry.pointsEarned ?? ""}
                               onChange={(e) =>
                                 handlePointsChange(student.id, e.target.value)
                               }
@@ -455,7 +472,6 @@ export function GradeEntry({
                                   ? "border-red-500 bg-red-50 dark:bg-red-900/20"
                                   : ""
                               }`}
-                              placeholder="0"
                               title={
                                 (entry.pointsEarned ?? 0) >
                                 (test.maxPoints ?? 0)
@@ -514,7 +530,6 @@ export function GradeEntry({
                                     ? "border-red-500 bg-red-50 dark:bg-red-900/20"
                                     : ""
                                 }`}
-                                placeholder="0"
                               />
                             )}
                           </td>
@@ -545,6 +560,7 @@ export function GradeEntry({
                           min="1"
                           max="10"
                           step="0.1"
+                          tabIndex={-1}
                           value={entry.manualOverride ?? ""}
                           onChange={(e) =>
                             handleManualOverrideChange(

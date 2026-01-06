@@ -6,6 +6,8 @@ import { evaluateFormulaExpression } from "../utils/formula-parser";
 
 export type TestType = "cvte" | "composite";
 
+export type CvTECalculationMode = "official" | "legacy" | "main";
+
 export interface CompositeElement {
   id: string;
   name: string; // e.g., "Creativity", "Effort", "Cleanliness"
@@ -27,6 +29,7 @@ export interface Test {
   // CvTE test properties (only for testType === "cvte")
   nTerm?: number; // The n-term for CvTE formula (normering)
   maxPoints?: number; // Maximum points for the entire test
+  cvteCalculationMode?: CvTECalculationMode; // Which formula to use for CvTE tests
 
   // Composite test properties (only for testType === "composite")
   elements?: CompositeElement[]; // Array of elements to score
@@ -71,7 +74,16 @@ export interface TestStatistics {
 
 /**
  * Calculate grade using CvTE formula
- * Cijfer = (10 - N) × (behaalde_score / maximale_score) + N
+ * Hoofdrelatie: C = 9 × (S / L) + N
+ *
+ * Waar:
+ * - C = cijfer
+ * - S = behaalde score (punten)
+ * - L = maximale score (maxPoints)
+ * - N = normeringsterm (nTerm)
+ *
+ * Om te garanderen dat 0% altijd 1,0 is en 100% altijd 10,0,
+ * worden (indien N != 1) grensrelaties toegepast.
  *
  * @param pointsEarned - Points the student earned
  * @param maxPoints - Maximum points possible
@@ -82,10 +94,51 @@ export function calculateCvTEGrade(
   pointsEarned: number,
   maxPoints: number,
   nTerm: number,
+  mode: CvTECalculationMode = "legacy",
 ): number {
-  if (maxPoints === 0) return nTerm;
-  const multiplier = 10 - nTerm;
-  const cijfer = multiplier * (pointsEarned / maxPoints) + nTerm;
+  if (!Number.isFinite(pointsEarned) || !Number.isFinite(maxPoints)) {
+    return 0;
+  }
+
+  if (maxPoints <= 0) {
+    return Math.round(nTerm * 100) / 100;
+  }
+
+  const score = Math.min(Math.max(pointsEarned, 0), maxPoints);
+
+  // Legacy: previous implementation used in this app
+  // C = (10 - N) * (S/L) + N
+  if (mode === "legacy") {
+    const multiplier = 10 - nTerm;
+    const cijfer = multiplier * (score / maxPoints) + nTerm;
+    return Math.round(cijfer * 100) / 100;
+  }
+
+  const scale = 9 / maxPoints;
+  const hoofdrelatie = scale * score + nTerm;
+
+  // Main relation only (no boundary relations), but clamped to [1, 10]
+  if (mode === "main") {
+    const cijfer = Math.min(10, Math.max(1, hoofdrelatie));
+    return Math.round(cijfer * 100) / 100;
+  }
+
+  // Official: apply boundary relations when N != 1
+  const grens1 = 1 + score * scale * 2;
+  const grens2 = 1 + score * scale * 0.5;
+  const grens3 = 10 - (maxPoints - score) * scale * 2;
+  const grens4 = 10 - (maxPoints - score) * scale * 0.5;
+
+  let cijfer: number;
+  if (nTerm > 1) {
+    cijfer = Math.min(hoofdrelatie, grens1, grens4);
+  } else if (nTerm < 1) {
+    cijfer = Math.max(hoofdrelatie, grens2, grens3);
+  } else {
+    cijfer = hoofdrelatie;
+  }
+
+  cijfer = Math.min(10, Math.max(1, cijfer));
   return Math.round(cijfer * 100) / 100; // Round to 2 decimals
 }
 

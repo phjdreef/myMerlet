@@ -60,6 +60,7 @@ export function TestsManager({
     // CvTE properties
     nTerm: 1,
     maxPoints: 10,
+    cvteCalculationMode: "legacy",
     // Composite properties
     elements: [] as TestFormState["elements"],
     customFormula: "", // Custom formula for composite tests
@@ -188,6 +189,7 @@ export function TestsManager({
       testType: normalizedTest.testType,
       nTerm: normalizedTest.nTerm || 1,
       maxPoints: normalizedTest.maxPoints || 10,
+      cvteCalculationMode: normalizedTest.cvteCalculationMode || "official",
       elements: normalizedTest.elements || [],
       customFormula: normalizedTest.customFormula || "",
       classGroups: normalizedTest.classGroups,

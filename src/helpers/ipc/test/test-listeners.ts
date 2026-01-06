@@ -7,7 +7,11 @@ import type {
   TestStatistics,
   CompositeElementGrade,
 } from "../../../services/test-database";
-import { calculateCompositeGrade } from "../../../services/test-database";
+import {
+  calculateCompositeGrade,
+  calculateCvTEGrade,
+  roundGrade,
+} from "../../../services/test-database";
 import { globalSettings } from "../../../services/global-settings";
 import * as fs from "fs";
 import * as path from "path";
@@ -113,22 +117,6 @@ const writeTests = (tests: Test[]): void => {
 
   writeJSONFile(getTestsFilePath(), normalized);
 };
-
-// CvTE Grade Calculation
-function calculateCvTEGrade(
-  pointsEarned: number,
-  maxPoints: number,
-  nTerm: number,
-): number {
-  if (maxPoints <= 0) return 0;
-  const multiplier = 10 - nTerm;
-  const grade = multiplier * (pointsEarned / maxPoints) + nTerm;
-  return Math.round(grade * 100) / 100; // Round to 2 decimals
-}
-
-function roundGrade(grade: number): number {
-  return Math.round(grade * 10) / 10; // Round to nearest 0.1
-}
 
 const toNumber = (value: unknown): number | undefined => {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -278,12 +266,13 @@ export function registerTestListeners() {
 
           if (updatedTest.testType === "cvte") {
             const maxPoints = toNumber(updatedTest.maxPoints) ?? 0;
-            const nTerm = toNumber(updatedTest.nTerm) ?? 0;
-            const pointsEarned = toNumber(grade.pointsEarned) ?? 0;
+            const nTerm = toNumber(updatedTest.nTerm) ?? 1;
+            const pointsEarned = toNumber(grade.pointsEarned);
+            const mode = updatedTest.cvteCalculationMode ?? "legacy";
 
             const calculatedRaw =
-              maxPoints > 0 && pointsEarned > 0
-                ? calculateCvTEGrade(pointsEarned, maxPoints, nTerm)
+              maxPoints > 0 && pointsEarned !== undefined
+                ? calculateCvTEGrade(pointsEarned, maxPoints, nTerm, mode)
                 : 0;
             const calculated = Number.isFinite(calculatedRaw)
               ? calculatedRaw
@@ -432,11 +421,12 @@ export function registerTestListeners() {
         // Calculate grade based on test type
         if (test.testType === "cvte") {
           // CvTE formula calculation
-          if (test.maxPoints && test.nTerm !== undefined && pointsEarned > 0) {
+          if (test.maxPoints && test.nTerm !== undefined) {
             calculatedGrade = calculateCvTEGrade(
               pointsEarned,
               test.maxPoints,
               test.nTerm,
+              test.cvteCalculationMode ?? "legacy",
             );
           }
         } else if (test.testType === "composite") {
@@ -447,9 +437,7 @@ export function registerTestListeners() {
         const finalGrade =
           manualOverride !== undefined
             ? manualOverride
-            : pointsEarned > 0
-              ? roundGrade(calculatedGrade)
-              : 0;
+            : roundGrade(calculatedGrade);
 
         const grades = readJSONFile<StudentGrade[]>(getGradesFilePath(), []);
         const existingGradeIndex = grades.findIndex(

@@ -235,8 +235,7 @@ export function TestForm({
               </label>
               <input
                 type="number"
-                min="1"
-                max="9"
+                min="0"
                 step="0.1"
                 value={formData.nTerm}
                 onChange={(event) =>
@@ -248,6 +247,26 @@ export function TestForm({
               <p className="text-muted-foreground mt-1 text-xs">
                 {t("nTermHelp")}
               </p>
+            </div>
+
+            <div className="col-span-2">
+              <label className="mb-1 block text-sm font-medium">
+                {t("cvteCalculation")}
+              </label>
+              <select
+                value={formData.cvteCalculationMode}
+                onChange={(event) =>
+                  updateField(
+                    "cvteCalculationMode",
+                    event.target.value as TestFormState["cvteCalculationMode"],
+                  )
+                }
+                className="w-full rounded border px-3 py-2"
+              >
+                <option value="legacy">{t("cvteCalculationLegacy")}</option>
+                <option value="official">{t("cvteCalculationOfficial")}</option>
+                <option value="main">{t("cvteCalculationMain")}</option>
+              </select>
             </div>
           </>
         )}

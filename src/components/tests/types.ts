@@ -1,4 +1,8 @@
-import type { CompositeElement, TestType } from "@/services/test-database";
+import type {
+  CompositeElement,
+  CvTECalculationMode,
+  TestType,
+} from "@/services/test-database";
 
 export interface TestFormState {
   name: string;
@@ -8,6 +12,7 @@ export interface TestFormState {
   testType: TestType;
   nTerm: number;
   maxPoints: number;
+  cvteCalculationMode: CvTECalculationMode;
   elements: CompositeElement[];
   customFormula: string;
   classGroups: string[];
