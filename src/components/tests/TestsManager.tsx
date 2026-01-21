@@ -123,7 +123,7 @@ export function TestsManager({
   // Auto-open test for editing when editTestId is provided
   useEffect(() => {
     if (editTestId && tests.length > 0) {
-      const testToEdit = tests.find(t => t.id === editTestId);
+      const testToEdit = tests.find((t) => t.id === editTestId);
       if (testToEdit) {
         handleEdit(testToEdit);
       }
@@ -382,148 +382,148 @@ export function TestsManager({
             </div>
           ) : (
             filteredTests.map((test) => {
-            const stats = statistics.get(test.id);
-            return (
-              <div
-                key={test.id}
-                className="hover:bg-accent/50 rounded-lg border p-4 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold">{test.name}</h3>
-                      <span className="text-muted-foreground text-sm">
-                        {formatDate(test.date)}
-                      </span>
-                      <span className="bg-primary/10 rounded px-2 py-0.5 text-xs">
-                        {t("weight")}: {test.weight}x
-                      </span>
-                      <span
-                        className={`rounded px-2 py-0.5 text-xs ${
-                          test.testType === "cvte"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-purple-100 text-purple-700"
-                        }`}
-                      >
-                        {test.testType === "cvte"
-                          ? t("cvteTest")
-                          : t("compositeTest")}
-                      </span>
-                    </div>
-                    {test.description && (
-                      <p className="text-muted-foreground mt-1 text-sm">
-                        {test.description}
-                      </p>
-                    )}
-
-                    {test.classGroups && test.classGroups.length > 0 && (
-                      <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-2 text-xs">
-                        <span className="font-medium">
-                          {t("testClassesLabel")}:
+              const stats = statistics.get(test.id);
+              return (
+                <div
+                  key={test.id}
+                  className="hover:bg-accent/50 rounded-lg border p-4 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold">{test.name}</h3>
+                        <span className="text-muted-foreground text-sm">
+                          {formatDate(test.date)}
                         </span>
-                        {test.classGroups.map((classLabel) => (
-                          <span
-                            key={`${test.id}-${classLabel}`}
-                            className="bg-muted rounded px-2 py-0.5"
-                          >
-                            {classLabel}
+                        <span className="bg-primary/10 rounded px-2 py-0.5 text-xs">
+                          {t("weight")}: {test.weight}x
+                        </span>
+                        <span
+                          className={`rounded px-2 py-0.5 text-xs ${
+                            test.testType === "cvte"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-purple-100 text-purple-700"
+                          }`}
+                        >
+                          {test.testType === "cvte"
+                            ? t("cvteTest")
+                            : t("compositeTest")}
+                        </span>
+                      </div>
+                      {test.description && (
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          {test.description}
+                        </p>
+                      )}
+
+                      {test.classGroups && test.classGroups.length > 0 && (
+                        <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-2 text-xs">
+                          <span className="font-medium">
+                            {t("testClassesLabel")}:
                           </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* CvTE Test Details */}
-                    {test.testType === "cvte" && (
-                      <div className="text-muted-foreground mt-2 flex gap-4 text-xs">
-                        <span>
-                          {t("maxPoints")}: {test.maxPoints}
-                        </span>
-                        <span>n = {test.nTerm}</span>
-                      </div>
-                    )}
-
-                    {/* Composite Test Details */}
-                    {test.testType === "composite" && test.elements && (
-                      <div className="mt-2 space-y-1">
-                        <div className="text-muted-foreground text-xs font-medium">
-                          {t("elements")}:
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {test.elements.map((element) => (
+                          {test.classGroups.map((classLabel) => (
                             <span
-                              key={element.id}
-                              className="bg-muted rounded px-2 py-1 text-xs"
+                              key={`${test.id}-${classLabel}`}
+                              className="bg-muted rounded px-2 py-0.5"
                             >
-                              {element.name} ({element.maxPoints}p,{" "}
-                              {(element.weight * 100).toFixed(0)}%)
+                              {classLabel}
                             </span>
                           ))}
                         </div>
-                        {test.customFormula &&
-                          test.customFormula.trim() !== "" && (
-                            <div className="text-muted-foreground mt-1 font-mono text-xs">
-                              {t("formula")}: {test.customFormula}
-                            </div>
-                          )}
-                      </div>
-                    )}
+                      )}
 
-                    {/* Statistics */}
-                    {stats && stats.totalGraded > 0 && (
-                      <div className="bg-muted/50 mt-3 flex gap-4 rounded p-2 text-xs">
-                        <span className="flex items-center gap-1">
-                          <ChartBarIcon className="h-3 w-3" />
-                          {t("average")}: {stats.average.toFixed(1)}
-                        </span>
-                        <span>
-                          {t("highest")}: {stats.highest.toFixed(1)}
-                        </span>
-                        <span>
-                          {t("lowest")}: {stats.lowest.toFixed(1)}
-                        </span>
-                        <span className="text-green-600">
-                          ≥5.5: {stats.aboveThreshold}
-                        </span>
-                        <span className="text-red-600">
-                          &lt;5.5: {stats.underThreshold}
-                        </span>
-                        <span>
-                          {t("total")}: {stats.totalGraded}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                      {/* CvTE Test Details */}
+                      {test.testType === "cvte" && (
+                        <div className="text-muted-foreground mt-2 flex gap-4 text-xs">
+                          <span>
+                            {t("maxPoints")}: {test.maxPoints}
+                          </span>
+                          <span>n = {test.nTerm}</span>
+                        </div>
+                      )}
 
-                  <div className="flex gap-2">
-                    {onSelectTest && (
+                      {/* Composite Test Details */}
+                      {test.testType === "composite" && test.elements && (
+                        <div className="mt-2 space-y-1">
+                          <div className="text-muted-foreground text-xs font-medium">
+                            {t("elements")}:
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {test.elements.map((element) => (
+                              <span
+                                key={element.id}
+                                className="bg-muted rounded px-2 py-1 text-xs"
+                              >
+                                {element.name} ({element.maxPoints}p,{" "}
+                                {(element.weight * 100).toFixed(0)}%)
+                              </span>
+                            ))}
+                          </div>
+                          {test.customFormula &&
+                            test.customFormula.trim() !== "" && (
+                              <div className="text-muted-foreground mt-1 font-mono text-xs">
+                                {t("formula")}: {test.customFormula}
+                              </div>
+                            )}
+                        </div>
+                      )}
+
+                      {/* Statistics */}
+                      {stats && stats.totalGraded > 0 && (
+                        <div className="bg-muted/50 mt-3 flex gap-4 rounded p-2 text-xs">
+                          <span className="flex items-center gap-1">
+                            <ChartBarIcon className="h-3 w-3" />
+                            {t("average")}: {stats.average.toFixed(1)}
+                          </span>
+                          <span>
+                            {t("highest")}: {stats.highest.toFixed(1)}
+                          </span>
+                          <span>
+                            {t("lowest")}: {stats.lowest.toFixed(1)}
+                          </span>
+                          <span className="text-green-600">
+                            ≥5.5: {stats.aboveThreshold}
+                          </span>
+                          <span className="text-red-600">
+                            &lt;5.5: {stats.underThreshold}
+                          </span>
+                          <span>
+                            {t("total")}: {stats.totalGraded}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      {onSelectTest && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onSelectTest(test)}
+                        >
+                          {t("enterGrades")}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => onSelectTest(test)}
+                        variant="ghost"
+                        onClick={() => handleEdit(test)}
                       >
-                        {t("enterGrades")}
+                        <PencilSimpleIcon className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEdit(test)}
-                    >
-                      <PencilSimpleIcon className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDelete(test.id)}
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDelete(test.id)}
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
         </div>
       )}
     </div>

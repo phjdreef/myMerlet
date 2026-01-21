@@ -350,9 +350,9 @@ export function ClassGradesTab({
                         variant="ghost"
                         onClick={(event) => {
                           event.stopPropagation();
-                          navigate({ 
-                            to: "/tests", 
-                            state: { editTestId: test.id } as any 
+                          navigate({
+                            to: "/tests",
+                            state: { editTestId: test.id } as any,
                           });
                         }}
                       >
