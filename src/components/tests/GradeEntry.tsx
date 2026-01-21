@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { FloppyDiskIcon, XIcon } from "@phosphor-icons/react";
+import { ChartBarIcon, FloppyDiskIcon } from "@phosphor-icons/react";
 import {
   calculateCvTEGrade,
   type Test,
@@ -52,6 +52,40 @@ export function GradeEntry({
       }
     >
   >(new Map());
+
+  // Calculate live statistics from current entries
+  const liveStatistics = (() => {
+    const finalGrades = Array.from(entries.values())
+      .map((entry) => entry.finalGrade)
+      .filter((grade): grade is number => grade !== null && grade !== 0);
+
+    if (finalGrades.length === 0) {
+      return {
+        average: 0,
+        highest: 0,
+        lowest: 0,
+        aboveThreshold: 0,
+        underThreshold: 0,
+        totalGraded: 0,
+      };
+    }
+
+    const sum = finalGrades.reduce((acc, grade) => acc + grade, 0);
+    const average = sum / finalGrades.length;
+    const highest = Math.max(...finalGrades);
+    const lowest = Math.min(...finalGrades);
+    const aboveThreshold = finalGrades.filter((g) => g >= 5.5).length;
+    const underThreshold = finalGrades.filter((g) => g < 5.5).length;
+
+    return {
+      average: Math.round(average * 10) / 10,
+      highest,
+      lowest,
+      aboveThreshold,
+      underThreshold,
+      totalGraded: finalGrades.length,
+    };
+  })();
 
   useEffect(() => {
     loadGrades();
@@ -322,42 +356,62 @@ export function GradeEntry({
     });
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          {test.testType === "cvte" ? (
-            <p className="text-muted-foreground text-sm">
-              {t("maxPoints")}: {test.maxPoints} | {t("formula")}:{" "}
-              {(() => {
-                const nTerm = test.nTerm ?? 1;
-                const mode = test.cvteCalculationMode ?? "legacy";
-                if (mode === "legacy") {
-                  return `(10 - ${nTerm}) × (${t("points")} / ${test.maxPoints}) + ${nTerm}`;
-                }
-                if (mode === "main") {
-                  return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixMain")}`;
-                }
-                return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixOfficial")}`;
-              })()}
-            </p>
-          ) : (
-            <div className="text-muted-foreground space-y-1 text-sm">
-              <p>
-                {t("compositeTest")} - {test.elements?.length || 0}{" "}
-                {t("elements")}
-              </p>
-              {test.customFormula && test.customFormula.trim() !== "" && (
-                <p className="font-mono text-xs">
-                  {t("formula")}: {test.customFormula}
-                </p>
-              )}
-            </div>
-          )}
+    <div className="flex h-full flex-col gap-4">
+      {/* Live Statistics Banner */}
+      {liveStatistics.totalGraded > 0 && (
+        <div className="bg-muted/50 flex flex-wrap gap-4 rounded-lg border p-3 text-sm">
+          <span className="flex items-center gap-1 font-medium">
+            <ChartBarIcon className="h-4 w-4" />
+            {t("average")}: {liveStatistics.average.toFixed(1)}
+          </span>
+          <span>
+            {t("highest")}: {liveStatistics.highest.toFixed(1)}
+          </span>
+          <span>
+            {t("lowest")}: {liveStatistics.lowest.toFixed(1)}
+          </span>
+          <span className="text-green-600">
+            ≥5.5: {liveStatistics.aboveThreshold}
+          </span>
+          <span className="text-red-600">
+            &lt;5.5: {liveStatistics.underThreshold}
+          </span>
+          <span>
+            {t("total")}: {liveStatistics.totalGraded}
+          </span>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          <XIcon className="h-4 w-4" />
-        </Button>
+      )}
+
+      {/* Header */}
+      <div>
+        {test.testType === "cvte" ? (
+          <p className="text-muted-foreground text-sm">
+            {t("maxPoints")}: {test.maxPoints} | {t("formula")}:{" "}
+            {(() => {
+              const nTerm = test.nTerm ?? 1;
+              const mode = test.cvteCalculationMode ?? "legacy";
+              if (mode === "legacy") {
+                return `(10 - ${nTerm}) × (${t("points")} / ${test.maxPoints}) + ${nTerm}`;
+              }
+              if (mode === "main") {
+                return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixMain")}`;
+              }
+              return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixOfficial")}`;
+            })()}
+          </p>
+        ) : (
+          <div className="text-muted-foreground space-y-1 text-sm">
+            <p>
+              {t("compositeTest")} - {test.elements?.length || 0}{" "}
+              {t("elements")}
+            </p>
+            {test.customFormula && test.customFormula.trim() !== "" && (
+              <p className="font-mono text-xs">
+                {t("formula")}: {test.customFormula}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Search and Sort Controls */}
@@ -371,7 +425,7 @@ export function GradeEntry({
             className="w-full rounded border px-3 py-2 text-sm"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <span className="text-muted-foreground text-sm">{t("sortBy")}:</span>
           <select
             value={sortBy}
@@ -388,18 +442,20 @@ export function GradeEntry({
       </div>
 
       {/* Grade Entry Table */}
-      <div className="rounded-lg border">
-        <div className="overflow-x-auto">
+      <div className="flex-1 overflow-hidden rounded-lg border">
+        <div className="h-full overflow-auto pr-2">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50">
+            <thead className="bg-muted/50 sticky top-0 z-10">
               <tr>
-                <th className="p-3 text-left font-medium">#</th>
-                <th className="p-3 text-left font-medium">{t("photo")}</th>
-                <th className="p-3 text-left font-medium">
+                <th className="bg-muted/50 p-3 text-left font-medium">#</th>
+                <th className="bg-muted/50 p-3 text-left font-medium">
+                  {t("photo")}
+                </th>
+                <th className="bg-muted/50 p-3 text-left font-medium">
                   {t("studentName")}
                 </th>
                 {test.testType === "cvte" ? (
-                  <th className="p-3 text-left font-medium">
+                  <th className="bg-muted/50 p-3 text-left font-medium">
                     {t("pointsEarned")}
                     <span className="text-muted-foreground ml-1 text-xs font-normal">
                       (max: {test.maxPoints})
@@ -407,7 +463,10 @@ export function GradeEntry({
                   </th>
                 ) : (
                   test.elements?.map((element) => (
-                    <th key={element.id} className="p-3 text-left font-medium">
+                    <th
+                      key={element.id}
+                      className="bg-muted/50 p-3 text-left font-medium"
+                    >
                       {element.name}
                       <span className="text-muted-foreground ml-1 text-xs font-normal">
                         (max: {element.maxPoints})
@@ -415,13 +474,15 @@ export function GradeEntry({
                     </th>
                   ))
                 )}
-                <th className="p-3 text-left font-medium">
+                <th className="bg-muted/50 p-3 text-left font-medium">
                   {t("calculatedGrade")}
                 </th>
-                <th className="p-3 text-left font-medium">
+                <th className="bg-muted/50 p-3 text-left font-medium">
                   {t("manualOverride")}
                 </th>
-                <th className="p-3 text-left font-medium">{t("finalGrade")}</th>
+                <th className="bg-muted/50 p-3 text-left font-medium">
+                  {t("finalGrade")}
+                </th>
               </tr>
             </thead>
             <tbody>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "@tanstack/react-router";
 import type { Test, TestStatistics } from "../../services/test-database";
 import type { Student } from "../../services/student-database";
 import { GradeEntry } from "../tests/GradeEntry";
@@ -17,6 +18,7 @@ export function ClassGradesTab({
   students,
 }: ClassGradesTabProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [tests, setTests] = useState<Test[]>([]);
   const [statistics, setStatistics] = useState<Map<string, TestStatistics>>(
     new Map(),
@@ -61,7 +63,10 @@ export function ClassGradesTab({
 
           const statsMap = new Map<string, TestStatistics>();
           for (const test of normalized) {
-            const statsResult = await window.testAPI.getTestStatistics(test.id);
+            const statsResult = await window.testAPI.getTestStatistics(
+              test.id,
+              classGroup,
+            );
             if (statsResult.success && statsResult.data) {
               statsMap.set(test.id, statsResult.data as TestStatistics);
             }
@@ -152,7 +157,7 @@ export function ClassGradesTab({
             </Button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-hidden">
           <GradeEntry
             key={`${selectedTest.id}-${selectedTestMode}`}
             test={selectedTest}
@@ -328,17 +333,32 @@ export function ClassGradesTab({
                       )}
                     </div>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSelectedTest(test);
-                        setSelectedTestMode("edit");
-                      }}
-                    >
-                      {t("enterGrades")}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedTest(test);
+                          setSelectedTestMode("edit");
+                        }}
+                      >
+                        {t("enterGrades")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate({ 
+                            to: "/tests", 
+                            state: { editTestId: test.id } as any 
+                          });
+                        }}
+                      >
+                        {t("editTest")}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );

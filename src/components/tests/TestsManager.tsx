@@ -26,6 +26,7 @@ interface TestsManagerProps {
   variant?: "class" | "global";
   enableSearch?: boolean;
   enableClassFilter?: boolean;
+  editTestId?: string;
 }
 
 export function TestsManager({
@@ -36,6 +37,7 @@ export function TestsManager({
   variant = "class",
   enableSearch = false,
   enableClassFilter = false,
+  editTestId,
 }: TestsManagerProps) {
   const { t } = useTranslation();
   const { currentSchoolYear } = useSchoolYear();
@@ -117,6 +119,16 @@ export function TestsManager({
   useEffect(() => {
     void loadTests();
   }, [loadTests]);
+
+  // Auto-open test for editing when editTestId is provided
+  useEffect(() => {
+    if (editTestId && tests.length > 0) {
+      const testToEdit = tests.find(t => t.id === editTestId);
+      if (testToEdit) {
+        handleEdit(testToEdit);
+      }
+    }
+  }, [editTestId, tests]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -362,13 +374,14 @@ export function TestsManager({
       )}
 
       {/* Tests List */}
-      <div className="space-y-2">
-        {filteredTests.length === 0 ? (
-          <div className="text-muted-foreground rounded-lg border p-8 text-center">
-            {tests.length === 0 ? t("noTestsYet") : t("noTestsMatch")}
-          </div>
-        ) : (
-          filteredTests.map((test) => {
+      {!isCreating && (
+        <div className="space-y-2">
+          {filteredTests.length === 0 ? (
+            <div className="text-muted-foreground rounded-lg border p-8 text-center">
+              {tests.length === 0 ? t("noTestsYet") : t("noTestsMatch")}
+            </div>
+          ) : (
+            filteredTests.map((test) => {
             const stats = statistics.get(test.id);
             return (
               <div
@@ -511,7 +524,8 @@ export function TestsManager({
             );
           })
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

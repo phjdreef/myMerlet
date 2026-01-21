@@ -185,7 +185,10 @@ interface TestAPI {
     data?: unknown;
     error?: string;
   }>;
-  getTestStatistics: (testId: string) => Promise<{
+  getTestStatistics: (
+    testId: string,
+    classGroup?: string,
+  ) => Promise<{
     success: boolean;
     data?: unknown;
     error?: string;

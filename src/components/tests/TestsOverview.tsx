@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "@tanstack/react-router";
 import { studentDB } from "../../services/student-database";
 import { TestsManager } from "./TestsManager";
 
 export function TestsOverview() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const editTestId = (location.state as any)?.editTestId;
   const [availableClassGroups, setAvailableClassGroups] = useState<string[]>(
     [],
   );
@@ -65,6 +68,7 @@ export function TestsOverview() {
             enableSearch
             enableClassFilter
             variant="global"
+            editTestId={editTestId}
           />
         )}
       </div>

@@ -51,6 +51,7 @@ export interface TestAPI {
   ) => Promise<{ success: boolean; data?: StudentGrade; error?: string }>;
   getTestStatistics: (
     testId: string,
+    classGroup?: string,
   ) => Promise<{ success: boolean; data?: TestStatistics; error?: string }>;
 }
 
@@ -100,8 +101,8 @@ export function exposeTestAPI() {
         elementGrades,
         manualOverride,
       ),
-    getTestStatistics: (testId: string) =>
-      ipcRenderer.invoke(TEST_CHANNELS.GET_TEST_STATISTICS, testId),
+    getTestStatistics: (testId: string, classGroup?: string) =>
+      ipcRenderer.invoke(TEST_CHANNELS.GET_TEST_STATISTICS, testId, classGroup),
   };
 
   contextBridge.exposeInMainWorld("testAPI", testAPI);

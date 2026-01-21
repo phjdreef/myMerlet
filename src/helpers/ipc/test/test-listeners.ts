@@ -551,10 +551,29 @@ export function registerTestListeners() {
   // Get test statistics
   ipcMain.handle(
     TEST_CHANNELS.GET_TEST_STATISTICS,
-    async (_event, testId: string) => {
+    async (_event, testId: string, classGroup?: string) => {
       try {
         const grades = readJSONFile<StudentGrade[]>(getGradesFilePath(), []);
-        const testGrades = grades.filter((g) => g.testId === testId);
+        let testGrades = grades.filter((g) => g.testId === testId);
+
+        // Filter by class if classGroup is provided
+        if (classGroup) {
+          const studentsDB = readJSONFile<any[]>(
+            path.join(app.getPath("userData"), "students.json"),
+            [],
+          );
+          const classStudentIds = new Set(
+            studentsDB
+              .filter(
+                (s) =>
+                  Array.isArray(s.klassen) && s.klassen.includes(classGroup),
+              )
+              .map((s) => s.id),
+          );
+          testGrades = testGrades.filter((g) =>
+            classStudentIds.has(g.studentId),
+          );
+        }
 
         if (testGrades.length === 0) {
           return {

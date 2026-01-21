@@ -103,7 +103,7 @@ i18n.use(initReactI18next).init({
         classesOptional: "Klassen (optioneel, meerdere mogelijk)",
         classesLoading: "Klassen laden...",
         selectClassPlaceholder: "-- Selecteer een klas --",
-        addCustomClassName: "Of voeg een aangepaste klasnaam toe:",
+        addCustomClassName: "Of voeg een aangepaste leerjaar toe:",
         customClassPlaceholder: "bijv. Bijles groep, Extra lessen",
         add: "Toevoegen",
         noClassesFound:
@@ -113,9 +113,9 @@ i18n.use(initReactI18next).init({
         schoolYearPlaceholder: "bijv. 2024-2025",
         schoolYearMaskHint:
           "Gebruik het formaat 2024-2025. Het start- en eindjaar worden automatisch opgeslagen.",
-        schoolYearStartLabel: "Startjaar",
-        schoolYearStartPlaceholder: "bijv. 2024",
-        schoolYearEndSummary: "Eindigt in {{year}}",
+        schoolYearStartLabel: "Schooljaar (eerste jaar)",
+        schoolYearStartPlaceholder: "bijv. 2025 (voor schooljaar 2025-2026)",
+        schoolYearEndSummary: "Loopt tot {{year}}",
         schoolYearEndPending:
           "Voer een startjaar in om het eindjaar te berekenen.",
         schoolYearWeekRange: "Schooljaar weekbereik",
@@ -270,6 +270,8 @@ i18n.use(initReactI18next).init({
         points: "punten",
         saving: "Opslaan...",
         saveAllGrades: "Alle Cijfers Opslaan",
+        unsavedChangesWarning:
+          "Je hebt onopgeslagen wijzigingen. Wil je de cijfers eerst opslaan? Klik op 'Annuleren' om terug te gaan en te bewaren, of 'OK' om door te gaan zonder op te slaan.",
         searchStudents: "Zoek leerlingen...",
         searchTests: "Zoek toetsen...",
         filterByClass: "Filter op klas",
@@ -423,9 +425,9 @@ i18n.use(initReactI18next).init({
         schoolYearPlaceholder: "e.g. 2024-2025",
         schoolYearMaskHint:
           "Use the 2024-2025 format. Start and end year are stored automatically.",
-        schoolYearStartLabel: "Start Year",
-        schoolYearStartPlaceholder: "e.g. 2024",
-        schoolYearEndSummary: "Ends in {{year}}",
+        schoolYearStartLabel: "School Year (first year)",
+        schoolYearStartPlaceholder: "e.g. 2025 (for school year 2025-2026)",
+        schoolYearEndSummary: "Runs until {{year}}",
         schoolYearEndPending: "Enter a start year to calculate the end year.",
         schoolYearWeekRange: "School year week range",
         schoolYearStartWeek: "Start week",
@@ -577,6 +579,8 @@ i18n.use(initReactI18next).init({
         points: "points",
         saving: "Saving...",
         saveAllGrades: "Save All Grades",
+        unsavedChangesWarning:
+          "You have unsaved changes. Do you want to save the grades first? Click 'Cancel' to go back and save, or 'OK' to proceed without saving.",
         searchStudents: "Search students...",
         searchTests: "Search tests...",
         filterByClass: "Filter by class",
