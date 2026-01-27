@@ -201,9 +201,7 @@ export function CurriculumTimelineReadMode({
                   {goal.topicIds && goal.topicIds.length > 0 && (
                     <div className="space-y-2">
                       {goal.topicIds.map((topicId) => {
-                        const topic = plan.topics.find(
-                          (t) => t.id === topicId,
-                        );
+                        const topic = plan.topics.find((t) => t.id === topicId);
                         if (!topic) return null;
                         return (
                           <div

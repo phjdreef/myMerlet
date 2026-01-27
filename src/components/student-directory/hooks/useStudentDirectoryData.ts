@@ -131,10 +131,11 @@ export function useStudentDirectoryData(): UseStudentDirectoryDataResult {
     setFilteredStudents(sortStudents(filtered));
 
     const filteredPlans = selectedClass
-      ? plans.filter((plan) => 
-          plan.classNames.includes(selectedClass) && 
-          plan.isTemplate === false &&
-          plan.classNames.length === 1
+      ? plans.filter(
+          (plan) =>
+            plan.classNames.includes(selectedClass) &&
+            plan.isTemplate === false &&
+            plan.classNames.length === 1,
         )
       : [];
     setClassPlans(filteredPlans);

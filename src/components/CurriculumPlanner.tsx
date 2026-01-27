@@ -87,16 +87,14 @@ export function CurriculumPlanner() {
         // Templates have isTemplate === true (explicitly marked as template)
         // For backwards compatibility with old data (isTemplate === undefined):
         //   - Show if classNames.length !== 1 (old templates had 0 or multiple classes)
-        const templatePlans = (plansData.plans || []).filter(
-          (plan) => {
-            // Explicitly marked as template
-            if (plan.isTemplate === true) return true;
-            // Explicitly marked as class-specific copy
-            if (plan.isTemplate === false) return false;
-            // Old data without isTemplate field - use classNames heuristic
-            return plan.classNames.length !== 1;
-          }
-        );
+        const templatePlans = (plansData.plans || []).filter((plan) => {
+          // Explicitly marked as template
+          if (plan.isTemplate === true) return true;
+          // Explicitly marked as class-specific copy
+          if (plan.isTemplate === false) return false;
+          // Old data without isTemplate field - use classNames heuristic
+          return plan.classNames.length !== 1;
+        });
         setPlans(templatePlans);
         logger.log("Loaded curriculum template plans:", templatePlans.length);
       } else {

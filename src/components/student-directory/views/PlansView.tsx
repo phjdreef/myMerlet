@@ -31,9 +31,10 @@ export function PlansView({
   const getEffectivePlan = useMemo(() => {
     return (plan: CurriculumPlan) => {
       // Check if this is a template (explicitly marked or old template with multiple/zero classes)
-      const isTemplatePlan = plan.isTemplate === true || 
-                             (plan.isTemplate === undefined && plan.classNames.length !== 1);
-      
+      const isTemplatePlan =
+        plan.isTemplate === true ||
+        (plan.isTemplate === undefined && plan.classNames.length !== 1);
+
       if (isTemplatePlan) {
         // This is a template, always use current school year from settings
         return {
@@ -131,7 +132,9 @@ export function PlansView({
               size="sm"
               variant="outline"
               onClick={() => {
-                const selectedPlan = classPlans.find(p => p.id === selectedPlanTab);
+                const selectedPlan = classPlans.find(
+                  (p) => p.id === selectedPlanTab,
+                );
                 if (selectedPlan) handleExportPlan(selectedPlan);
               }}
             >
@@ -143,9 +146,10 @@ export function PlansView({
       <div className="flex-1 overflow-auto">
         {classPlans.map((plan) => {
           const effectivePlan = getEffectivePlan(plan);
-          const isTemplatePlan = plan.isTemplate === true || 
-                                 (plan.isTemplate === undefined && plan.classNames.length !== 1);
-          
+          const isTemplatePlan =
+            plan.isTemplate === true ||
+            (plan.isTemplate === undefined && plan.classNames.length !== 1);
+
           return (
             <TabsContent key={plan.id} value={plan.id} className="space-y-4">
               {isTemplatePlan && (

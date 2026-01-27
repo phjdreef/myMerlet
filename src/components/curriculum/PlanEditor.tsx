@@ -54,7 +54,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
         const plansData = result.data as { plans: CurriculumPlan[] };
         // Find all class-specific copies that were created from this template
         const copies = (plansData.plans || []).filter(
-          (p) => p.sourceTemplateId === plan.id && p.isTemplate === false
+          (p) => p.sourceTemplateId === plan.id && p.isTemplate === false,
         );
         const classNames = copies.flatMap((p) => p.classNames);
         setCopiedToClasses([...new Set(classNames)]); // Remove duplicates
@@ -102,7 +102,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
     if (copiedToClasses.includes(className)) {
       alert(
         t("alreadyCopiedToClass", { className }) ||
-        `Deze planning is al gekopieerd naar klas "${className}".`
+          `Deze planning is al gekopieerd naar klas "${className}".`,
       );
       return;
     }
@@ -124,10 +124,12 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
           topicIds: [...goal.topicIds],
         })),
         topics: editedPlan.topics.map((topic) => ({ ...topic })),
-        paragraphs: editedPlan.paragraphs.map((paragraph) => ({ ...paragraph })),
+        paragraphs: editedPlan.paragraphs.map((paragraph) => ({
+          ...paragraph,
+        })),
         blockedWeeks: editedPlan.blockedWeeks.map((week) => ({ ...week })),
       };
-      
+
       // Save the class-specific copy
       try {
         const result = await window.curriculumAPI.savePlan(classSpecificCopy);
@@ -136,27 +138,27 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
           setCopiedToClasses([...copiedToClasses, className]);
           alert(
             t("classSpecificCopyCreated", { className }) ||
-            `✅ Planning gekopieerd naar klas "${className}"!\n\nJe kunt dit nu bekijken in Klassen → ${className} → Planning.`
+              `✅ Planning gekopieerd naar klas "${className}"!\n\nJe kunt dit nu bekijken in Klassen → ${className} → Planning.`,
           );
         } else {
           logger.error("Failed to create class-specific copy:", result.error);
           alert(
             t("classSpecificCopyError") ||
-            "❌ Fout bij het kopiëren van de planning naar de klas."
+              "❌ Fout bij het kopiëren van de planning naar de klas.",
           );
         }
       } catch (error) {
         logger.error("Error creating class-specific copy:", error);
         alert(
           t("classSpecificCopyError") ||
-          "❌ Fout bij het kopiëren van de planning naar de klas."
+            "❌ Fout bij het kopiëren van de planning naar de klas.",
         );
       }
-      
+
       // Don't add the class to the template itself
       return;
     }
-    
+
     // If not a template, just add the class normally
     setEditedPlan({
       ...editedPlan,
@@ -423,17 +425,29 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
               <label className="mb-1 block text-sm font-medium">
                 {t("classesOptional")}
               </label>
-              
+
               {editedPlan.isTemplate === true && (
                 <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-900/20">
                   <p className="font-medium text-blue-900 dark:text-blue-100">
                     💡 {t("templateWorkflowTitle") || "Hoe werkt het?"}
                   </p>
                   <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-blue-800 dark:text-blue-300">
-                    <li>{t("templateWorkflowStep1") || "Vul eerst je template volledig in (onderwerpen, paragrafen, leerdoelen)"}</li>
-                    <li>{t("templateWorkflowStep2") || "Kies een klas uit de lijst hieronder"}</li>
-                    <li>{t("templateWorkflowStep3") || "Er wordt automatisch een kopie gemaakt voor die klas"}</li>
-                    <li>{t("templateWorkflowStep4") || "Je template blijft ongewijzigd en kan opnieuw worden toegewezen"}</li>
+                    <li>
+                      {t("templateWorkflowStep1") ||
+                        "Vul eerst je template volledig in (onderwerpen, paragrafen, leerdoelen)"}
+                    </li>
+                    <li>
+                      {t("templateWorkflowStep2") ||
+                        "Kies een klas uit de lijst hieronder"}
+                    </li>
+                    <li>
+                      {t("templateWorkflowStep3") ||
+                        "Er wordt automatisch een kopie gemaakt voor die klas"}
+                    </li>
+                    <li>
+                      {t("templateWorkflowStep4") ||
+                        "Je template blijft ongewijzigd en kan opnieuw worden toegewezen"}
+                    </li>
                   </ol>
                 </div>
               )}
@@ -455,7 +469,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                   </div>
                 </div>
               )}
-              
+
               {isLoadingClasses ? (
                 <div className="text-sm text-gray-500">
                   {t("classesLoading")}
@@ -503,7 +517,11 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                       >
                         <option value="">{t("selectClassPlaceholder")}</option>
                         {availableClasses
-                          .filter((c) => !editedPlan.classNames.includes(c) && !copiedToClasses.includes(c))
+                          .filter(
+                            (c) =>
+                              !editedPlan.classNames.includes(c) &&
+                              !copiedToClasses.includes(c),
+                          )
                           .map((className) => (
                             <option key={className} value={className}>
                               {className}

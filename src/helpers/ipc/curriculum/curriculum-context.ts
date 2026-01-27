@@ -9,8 +9,17 @@ export const curriculumAPI = {
     ipcRenderer.invoke(CURRICULUM_CHANNELS.SAVE_PLAN, plan),
   deletePlan: (planId: string) =>
     ipcRenderer.invoke(CURRICULUM_CHANNELS.DELETE_PLAN, planId),
-  exportPlanToDocx: (planId: string, language: "nl" | "en", className?: string) =>
-    ipcRenderer.invoke(CURRICULUM_CHANNELS.EXPORT_PLAN_DOCX, planId, language, className),
+  exportPlanToDocx: (
+    planId: string,
+    language: "nl" | "en",
+    className?: string,
+  ) =>
+    ipcRenderer.invoke(
+      CURRICULUM_CHANNELS.EXPORT_PLAN_DOCX,
+      planId,
+      language,
+      className,
+    ),
 };
 
 contextBridge.exposeInMainWorld("curriculumAPI", curriculumAPI);

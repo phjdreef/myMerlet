@@ -39,7 +39,9 @@ export function CurriculumTimelineEditMode({
 }: CurriculumTimelineEditModeProps) {
   const { t } = useTranslation();
   const [localTitles, setLocalTitles] = useState<Record<string, string>>({});
-  const [localDescriptions, setLocalDescriptions] = useState<Record<string, string>>({});
+  const [localDescriptions, setLocalDescriptions] = useState<
+    Record<string, string>
+  >({});
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
 
   const flushDebounces = useCallback(() => {
@@ -50,52 +52,66 @@ export function CurriculumTimelineEditMode({
     debounceTimers.current = {};
   }, []);
 
-  const handleTitleChange = useCallback((goalId: string, value: string) => {
-    // Update local state immediately
-    setLocalTitles(prev => ({ ...prev, [goalId]: value }));
-    
-    // Clear existing timer
-    if (debounceTimers.current[`title-${goalId}`]) {
-      clearTimeout(debounceTimers.current[`title-${goalId}`]);
-    }
-    
-    // Set new timer to update parent after 300ms of no typing
-    debounceTimers.current[`title-${goalId}`] = setTimeout(() => {
-      onUpdateGoal(goalId, { title: value });
-      delete debounceTimers.current[`title-${goalId}`];
-    }, 300);
-  }, [onUpdateGoal]);
+  const handleTitleChange = useCallback(
+    (goalId: string, value: string) => {
+      // Update local state immediately
+      setLocalTitles((prev) => ({ ...prev, [goalId]: value }));
 
-  const handleDescriptionChange = useCallback((goalId: string, value: string) => {
-    // Update local state immediately
-    setLocalDescriptions(prev => ({ ...prev, [goalId]: value }));
-    
-    // Clear existing timer
-    if (debounceTimers.current[`desc-${goalId}`]) {
-      clearTimeout(debounceTimers.current[`desc-${goalId}`]);
-    }
-    
-    // Set new timer to update parent after 300ms of no typing
-    debounceTimers.current[`desc-${goalId}`] = setTimeout(() => {
-      onUpdateGoal(goalId, { description: value });
-      delete debounceTimers.current[`desc-${goalId}`];
-    }, 300);
-  }, [onUpdateGoal]);
+      // Clear existing timer
+      if (debounceTimers.current[`title-${goalId}`]) {
+        clearTimeout(debounceTimers.current[`title-${goalId}`]);
+      }
 
-  const handleToggleParagraph = useCallback((goalId: string, paragraphId: string) => {
-    flushDebounces();
-    onToggleParagraph(goalId, paragraphId);
-  }, [flushDebounces, onToggleParagraph]);
+      // Set new timer to update parent after 300ms of no typing
+      debounceTimers.current[`title-${goalId}`] = setTimeout(() => {
+        onUpdateGoal(goalId, { title: value });
+        delete debounceTimers.current[`title-${goalId}`];
+      }, 300);
+    },
+    [onUpdateGoal],
+  );
 
-  const handleToggleTopic = useCallback((goalId: string, topicId: string) => {
-    flushDebounces();
-    onToggleTopic(goalId, topicId);
-  }, [flushDebounces, onToggleTopic]);
+  const handleDescriptionChange = useCallback(
+    (goalId: string, value: string) => {
+      // Update local state immediately
+      setLocalDescriptions((prev) => ({ ...prev, [goalId]: value }));
+
+      // Clear existing timer
+      if (debounceTimers.current[`desc-${goalId}`]) {
+        clearTimeout(debounceTimers.current[`desc-${goalId}`]);
+      }
+
+      // Set new timer to update parent after 300ms of no typing
+      debounceTimers.current[`desc-${goalId}`] = setTimeout(() => {
+        onUpdateGoal(goalId, { description: value });
+        delete debounceTimers.current[`desc-${goalId}`];
+      }, 300);
+    },
+    [onUpdateGoal],
+  );
+
+  const handleToggleParagraph = useCallback(
+    (goalId: string, paragraphId: string) => {
+      flushDebounces();
+      onToggleParagraph(goalId, paragraphId);
+    },
+    [flushDebounces, onToggleParagraph],
+  );
+
+  const handleToggleTopic = useCallback(
+    (goalId: string, topicId: string) => {
+      flushDebounces();
+      onToggleTopic(goalId, topicId);
+    },
+    [flushDebounces, onToggleTopic],
+  );
 
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      Object.values(debounceTimers.current).forEach(timer => clearTimeout(timer));
+      Object.values(debounceTimers.current).forEach((timer) =>
+        clearTimeout(timer),
+      );
     };
   }, []);
 
@@ -206,7 +222,9 @@ export function CurriculumTimelineEditMode({
                           type="text"
                           className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
                           value={localTitles[goal.id] ?? goal.title ?? ""}
-                          onChange={(e) => handleTitleChange(goal.id, e.target.value)}
+                          onChange={(e) =>
+                            handleTitleChange(goal.id, e.target.value)
+                          }
                           placeholder={
                             t("studyGoalTitlePlaceholder") ??
                             "Titel van het leerdoel"
@@ -221,8 +239,12 @@ export function CurriculumTimelineEditMode({
                         </label>
                         <textarea
                           className="min-h-20 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                          value={localDescriptions[goal.id] ?? goal.description ?? ""}
-                          onChange={(e) => handleDescriptionChange(goal.id, e.target.value)}
+                          value={
+                            localDescriptions[goal.id] ?? goal.description ?? ""
+                          }
+                          onChange={(e) =>
+                            handleDescriptionChange(goal.id, e.target.value)
+                          }
                           placeholder={
                             t("studyGoalDescriptionPlaceholder") ??
                             "Beschrijving (optioneel)"

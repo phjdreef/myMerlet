@@ -244,13 +244,17 @@ export function CurriculumTimeline({
     (goalId: string, updates: Partial<StudyGoal>) => {
       // Update the goal immediately in state for responsive UI
       setPendingGoals((prev) => {
-        const existingPending = Object.values(prev).find(g => g?.id === goalId);
+        const existingPending = Object.values(prev).find(
+          (g) => g?.id === goalId,
+        );
         if (existingPending) {
-          const weekNumber = Object.keys(prev).find(k => prev[Number(k)]?.id === goalId);
+          const weekNumber = Object.keys(prev).find(
+            (k) => prev[Number(k)]?.id === goalId,
+          );
           if (weekNumber) {
             return {
               ...prev,
-              [weekNumber]: { ...existingPending, ...updates }
+              [weekNumber]: { ...existingPending, ...updates },
             };
           }
         }
