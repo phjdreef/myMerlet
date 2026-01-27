@@ -37,6 +37,7 @@ export function StudentDirectoryContainer() {
     onSelectClass,
     setSelectedPlanTab,
     clearError,
+    refresh,
   } = useStudentDirectoryData();
 
   // Load view mode from localStorage on mount
@@ -332,6 +333,7 @@ export function StudentDirectoryContainer() {
           selectedPlanTab={selectedPlanTab}
           onSelectPlan={setSelectedPlanTab}
           currentWeek={currentWeek}
+          onReloadPlans={refresh}
         />
       );
       break;

@@ -41,6 +41,8 @@ export function CurriculumTimeline({
   const [globalBlockedWeeks, setGlobalBlockedWeeks] = useState<BlockedWeek[]>(
     [],
   );
+  const [draggedGoal, setDraggedGoal] = useState<StudyGoal | null>(null);
+  const [dragOverWeek, setDragOverWeek] = useState<number | null>(null);
   const currentWeekRef = useRef<HTMLDivElement | null>(null);
   const hasAutoScrolledRef = useRef(false);
 
@@ -240,6 +242,21 @@ export function CurriculumTimeline({
 
   const updateGoal = useCallback(
     (goalId: string, updates: Partial<StudyGoal>) => {
+      // Update the goal immediately in state for responsive UI
+      setPendingGoals((prev) => {
+        const existingPending = Object.values(prev).find(g => g?.id === goalId);
+        if (existingPending) {
+          const weekNumber = Object.keys(prev).find(k => prev[Number(k)]?.id === goalId);
+          if (weekNumber) {
+            return {
+              ...prev,
+              [weekNumber]: { ...existingPending, ...updates }
+            };
+          }
+        }
+        return prev;
+      });
+
       if (onUpdate) {
         onUpdate({
           ...plan,
@@ -320,6 +337,79 @@ export function CurriculumTimeline({
       updateGoal(goalId, { paragraphIds });
     },
     [pendingGoals, plan.studyGoals, updateGoal],
+  );
+
+  // Drag & Drop handlers for week shifting
+  const handleDragStart = useCallback((goal: StudyGoal) => {
+    setDraggedGoal(goal);
+  }, []);
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, weekNumber: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverWeek(weekNumber);
+    },
+    [],
+  );
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverWeek(null);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent, targetWeek: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverWeek(null);
+
+      if (!draggedGoal || !onUpdate) {
+        return;
+      }
+
+      const originalWeekStart = draggedGoal.weekStart;
+      const originalWeekEnd = draggedGoal.weekEnd;
+      const weekOffset = targetWeek - originalWeekStart;
+
+      if (weekOffset === 0) {
+        setDraggedGoal(null);
+        return;
+      }
+
+      // Calculate new week range for the dragged goal
+      const newWeekStart = targetWeek;
+      const goalDuration = originalWeekEnd - originalWeekStart;
+      const newWeekEnd = newWeekStart + goalDuration;
+
+      // Shift only goals that start AFTER the original week end (not at or during)
+      const updatedGoals = plan.studyGoals.map((goal) => {
+        if (goal.id === draggedGoal.id) {
+          // Update the dragged goal
+          return {
+            ...goal,
+            weekStart: newWeekStart,
+            weekEnd: newWeekEnd,
+          };
+        } else if (goal.weekStart > originalWeekEnd) {
+          // Shift following goals (only those that start after the original goal ended)
+          return {
+            ...goal,
+            weekStart: goal.weekStart + weekOffset,
+            weekEnd: goal.weekEnd + weekOffset,
+          };
+        }
+        return goal;
+      });
+
+      onUpdate({
+        ...plan,
+        studyGoals: updatedGoals,
+        updatedAt: new Date().toISOString(),
+      });
+
+      setDraggedGoal(null);
+    },
+    [draggedGoal, onUpdate, plan],
   );
 
   useEffect(() => {
@@ -484,6 +574,14 @@ export function CurriculumTimeline({
               onAddGoal={
                 onUpdate ? () => addGoalForWeek(weekNumber) : undefined
               }
+              onDragStart={onUpdate ? handleDragStart : undefined}
+              onDragOver={
+                onUpdate ? (e) => handleDragOver(e, weekNumber) : undefined
+              }
+              onDragLeave={onUpdate ? handleDragLeave : undefined}
+              onDrop={onUpdate ? (e) => handleDrop(e, weekNumber) : undefined}
+              isDragOver={dragOverWeek === weekNumber}
+              isDragging={draggedGoal !== null}
             />
           );
         })}

@@ -3,6 +3,7 @@ import {
   CalendarBlankIcon,
   PencilSimpleIcon,
   PlusIcon,
+  DotsSixVertical,
 } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import type {
@@ -22,6 +23,12 @@ interface CurriculumTimelineReadModeProps {
   currentWeekRef?: React.RefObject<HTMLDivElement | null>;
   onEdit?: () => void;
   onAddGoal?: () => void;
+  onDragStart?: (goal: StudyGoal) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragLeave?: () => void;
+  onDrop?: (e: React.DragEvent) => void;
+  isDragOver?: boolean;
+  isDragging?: boolean;
 }
 
 export function CurriculumTimelineReadMode({
@@ -34,6 +41,12 @@ export function CurriculumTimelineReadMode({
   currentWeekRef,
   onEdit,
   onAddGoal,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  isDragOver,
+  isDragging,
 }: CurriculumTimelineReadModeProps) {
   const { t } = useTranslation();
 
@@ -75,8 +88,11 @@ export function CurriculumTimelineReadMode({
             : hasGoals
               ? "border border-gray-200 bg-white/80 dark:border-gray-700 dark:bg-gray-900/50"
               : "border border-dashed border-gray-200 bg-white/80 dark:bg-gray-900/50"
-      }`}
+      } ${isDragOver ? "bg-blue-100/50 ring-2 ring-blue-400 dark:bg-blue-800/30 dark:ring-blue-500" : ""}`}
       ref={currentWeekRef}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
     >
       <div className="w-32 shrink-0">
         <div className="text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
@@ -136,9 +152,18 @@ export function CurriculumTimelineReadMode({
           goals.map((goal) => (
             <div
               key={goal.id}
-              className="group relative rounded-lg border border-gray-200 bg-white/90 p-4 shadow-sm transition hover:border-blue-200 dark:border-gray-700 dark:bg-gray-900/60"
+              className={`group relative rounded-lg border border-gray-200 bg-white/90 p-4 shadow-sm transition hover:border-blue-200 dark:border-gray-700 dark:bg-gray-900/60 ${
+                onDragStart ? "cursor-move" : ""
+              }`}
+              draggable={!!onDragStart}
+              onDragStart={() => onDragStart?.(goal)}
             >
               <div className="flex items-start justify-between gap-3">
+                {onDragStart && (
+                  <div className="shrink-0 pt-1 opacity-40 transition-opacity group-hover:opacity-100">
+                    <DotsSixVertical className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                  </div>
+                )}
                 <div className="flex-1 space-y-3">
                   <div className="text-base font-semibold text-gray-900 dark:text-gray-100">
                     {goal.title || t("untitledGoal", "Naamloos leerdoel")}
@@ -156,9 +181,6 @@ export function CurriculumTimelineReadMode({
                           (p) => p.id === paragraphId,
                         );
                         if (!paragraph) return null;
-                        const topic = plan.topics.find(
-                          (t) => t.id === paragraph.topicId,
-                        );
                         return (
                           <div
                             key={paragraph.id}
@@ -170,38 +192,41 @@ export function CurriculumTimelineReadMode({
                                 § {paragraph.number} {paragraph.title}
                               </span>
                             </div>
-                            <div className="mt-1 text-xs text-emerald-800 dark:text-blue-200">
-                              {topic?.name || t("paragraph", "Paragraaf")}
-                              {topic?.description && (
-                                <div
-                                  className="prose prose-sm mt-1 max-w-none text-xs text-emerald-800 dark:text-emerald-200"
-                                  dangerouslySetInnerHTML={{
-                                    __html: topic.description,
-                                  }}
-                                />
-                              )}
-                            </div>
                           </div>
                         );
                       })}
                     </div>
                   )}
-                  {/* 
-                  {getTopicsForGoal(goal).length > 0 && (
+
+                  {goal.topicIds && goal.topicIds.length > 0 && (
                     <div className="space-y-2">
-                      {getTopicsForGoal(goal).map((topic) => (
-                        <div
-                          key={topic.id}
-                          className="rounded-lg border border-emerald-200/60 bg-emerald-50/50 p-3 dark:border-emerald-800/40 dark:bg-emerald-900/20"
-                        >
-                          <div className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                            <BookOpenIcon className="h-4 w-4" />
-                            <span>{topic.name}</span>
+                      {goal.topicIds.map((topicId) => {
+                        const topic = plan.topics.find(
+                          (t) => t.id === topicId,
+                        );
+                        if (!topic) return null;
+                        return (
+                          <div
+                            key={topic.id}
+                            className="rounded-lg border border-emerald-200/60 bg-emerald-50/50 p-3 dark:border-emerald-800/40 dark:bg-emerald-900/20"
+                          >
+                            <div className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                              <BookOpenIcon className="h-4 w-4" />
+                              <span>{topic.name}</span>
+                            </div>
+                            {topic.description && (
+                              <div
+                                className="prose prose-sm mt-1 max-w-none text-xs text-emerald-800 dark:text-emerald-200"
+                                dangerouslySetInnerHTML={{
+                                  __html: topic.description,
+                                }}
+                              />
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
-                  )} */}
+                  )}
 
                   {(goal.experiment || goal.skills || goal.details) && (
                     <div className="space-y-2 border-t pt-3 dark:border-gray-700">

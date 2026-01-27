@@ -15,9 +15,6 @@ import {
   clampWeekNumber,
   DEFAULT_WEEK_END,
   DEFAULT_WEEK_START,
-  maskSchoolYearInput,
-  parseSchoolYear,
-  formatSchoolYearFromStart,
 } from "../../utils/curriculum-week";
 
 interface PlanEditorProps {
@@ -34,11 +31,38 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
   >("info");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
+  const [copiedToClasses, setCopiedToClasses] = useState<string[]>([]);
+  const [weekStartInput, setWeekStartInput] = useState<string>(
+    plan.weekRangeStart.toString(),
+  );
+  const [weekEndInput, setWeekEndInput] = useState<string>(
+    plan.weekRangeEnd.toString(),
+  );
 
   // Load available classes from student database
   useEffect(() => {
     loadAvailableClasses();
+    if (plan.isTemplate === true) {
+      loadCopiedToClasses();
+    }
   }, []);
+
+  const loadCopiedToClasses = async () => {
+    try {
+      const result = await window.curriculumAPI.getAllPlans();
+      if (result.success && result.data) {
+        const plansData = result.data as { plans: CurriculumPlan[] };
+        // Find all class-specific copies that were created from this template
+        const copies = (plansData.plans || []).filter(
+          (p) => p.sourceTemplateId === plan.id && p.isTemplate === false
+        );
+        const classNames = copies.flatMap((p) => p.classNames);
+        setCopiedToClasses([...new Set(classNames)]); // Remove duplicates
+      }
+    } catch (error) {
+      logger.error("Failed to load copied classes:", error);
+    }
+  };
 
   const loadAvailableClasses = async () => {
     try {
@@ -71,6 +95,80 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
       updatedAt: new Date().toISOString(),
     };
     onSave(updatedPlan);
+  };
+
+  const handleAddClass = async (className: string) => {
+    // Check if already copied to this class
+    if (copiedToClasses.includes(className)) {
+      alert(
+        t("alreadyCopiedToClass", { className }) ||
+        `Deze planning is al gekopieerd naar klas "${className}".`
+      );
+      return;
+    }
+
+    // If this is a template and we're adding a class, create a class-specific copy
+    if (editedPlan.isTemplate === true) {
+      const classSpecificCopy = {
+        ...editedPlan,
+        id: crypto.randomUUID(),
+        classNames: [className],
+        isTemplate: false,
+        sourceTemplateId: editedPlan.id, // Link back to the source template
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        // Deep copy all nested arrays to ensure they're independent
+        studyGoals: editedPlan.studyGoals.map((goal) => ({
+          ...goal,
+          paragraphIds: [...goal.paragraphIds],
+          topicIds: [...goal.topicIds],
+        })),
+        topics: editedPlan.topics.map((topic) => ({ ...topic })),
+        paragraphs: editedPlan.paragraphs.map((paragraph) => ({ ...paragraph })),
+        blockedWeeks: editedPlan.blockedWeeks.map((week) => ({ ...week })),
+      };
+      
+      // Save the class-specific copy
+      try {
+        const result = await window.curriculumAPI.savePlan(classSpecificCopy);
+        if (result.success) {
+          logger.log("Class-specific copy created for:", className);
+          setCopiedToClasses([...copiedToClasses, className]);
+          alert(
+            t("classSpecificCopyCreated", { className }) ||
+            `✅ Planning gekopieerd naar klas "${className}"!\n\nJe kunt dit nu bekijken in Klassen → ${className} → Planning.`
+          );
+        } else {
+          logger.error("Failed to create class-specific copy:", result.error);
+          alert(
+            t("classSpecificCopyError") ||
+            "❌ Fout bij het kopiëren van de planning naar de klas."
+          );
+        }
+      } catch (error) {
+        logger.error("Error creating class-specific copy:", error);
+        alert(
+          t("classSpecificCopyError") ||
+          "❌ Fout bij het kopiëren van de planning naar de klas."
+        );
+      }
+      
+      // Don't add the class to the template itself
+      return;
+    }
+    
+    // If not a template, just add the class normally
+    setEditedPlan({
+      ...editedPlan,
+      classNames: [...editedPlan.classNames, className],
+    });
+  };
+
+  const handleRemoveClass = (className: string) => {
+    setEditedPlan({
+      ...editedPlan,
+      classNames: editedPlan.classNames.filter((c) => c !== className),
+    });
   };
 
   // Topic management
@@ -137,56 +235,46 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
     field: "weekRangeStart" | "weekRangeEnd",
     value: string,
   ) => {
+    // Update the input field immediately
+    if (field === "weekRangeStart") {
+      setWeekStartInput(value);
+    } else {
+      setWeekEndInput(value);
+    }
+  };
+
+  const handleWeekRangeBlur = (
+    field: "weekRangeStart" | "weekRangeEnd",
+    value: string,
+  ) => {
+    // On blur, validate and update the plan
     const parsed = Number.parseInt(value, 10);
     const fallback =
       field === "weekRangeStart" ? DEFAULT_WEEK_START : DEFAULT_WEEK_END;
-    const normalized = Number.isNaN(parsed)
-      ? fallback
-      : clampWeekNumber(parsed);
 
-    setEditedPlan((prev) => ({
-      ...prev,
-      [field]: normalized,
-    }));
-  };
-
-  const handleSchoolYearChange = (value: string) => {
-    const masked = maskSchoolYearInput(value);
-    const { startYear, endYear } = parseSchoolYear(masked);
-    setEditedPlan((prev) => ({
-      ...prev,
-      schoolYear: masked,
-      schoolYearStart: startYear ?? null,
-      schoolYearEnd:
-        endYear ?? (startYear ? startYear + 1 : (prev.schoolYearEnd ?? null)),
-    }));
-  };
-
-  const handleSchoolYearStartChange = (value: string) => {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) {
+    if (value === "" || Number.isNaN(parsed)) {
+      // Reset to fallback
+      if (field === "weekRangeStart") {
+        setWeekStartInput(fallback.toString());
+      } else {
+        setWeekEndInput(fallback.toString());
+      }
       setEditedPlan((prev) => ({
         ...prev,
-        schoolYearStart: null,
-        schoolYearEnd: null,
-        schoolYear: "",
+        [field]: fallback,
       }));
-      return;
+    } else {
+      const normalized = clampWeekNumber(parsed);
+      if (field === "weekRangeStart") {
+        setWeekStartInput(normalized.toString());
+      } else {
+        setWeekEndInput(normalized.toString());
+      }
+      setEditedPlan((prev) => ({
+        ...prev,
+        [field]: normalized,
+      }));
     }
-
-    const parsed = Number.parseInt(trimmed, 10);
-    if (Number.isNaN(parsed)) {
-      return;
-    }
-
-    const normalizedYear = Math.min(Math.max(parsed, 1900), 2500);
-    const formatted = formatSchoolYearFromStart(normalizedYear);
-    setEditedPlan((prev) => ({
-      ...prev,
-      schoolYearStart: normalizedYear,
-      schoolYearEnd: normalizedYear + 1,
-      schoolYear: formatted,
-    }));
   };
 
   return (
@@ -232,10 +320,142 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
       <div className="flex-1 overflow-auto">
         {activeTab === "info" && (
           <div className="max-w-2xl space-y-4">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-900/20">
+              <p className="font-medium text-blue-800 dark:text-blue-200">
+                {t("templateSchoolYearInfo") ||
+                  "Templates zijn schooljaar-onafhankelijk"}
+              </p>
+              <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                {t("templateSchoolYearDescription") ||
+                  "Wanneer je een template aan een klas toewijst, wordt het huidige schooljaar uit de instellingen gebruikt."}
+              </p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                {t("subject")}
+              </label>
+              <input
+                type="text"
+                className="w-full rounded border p-2"
+                value={editedPlan.subject}
+                onChange={(e) =>
+                  setEditedPlan({ ...editedPlan, subject: e.target.value })
+                }
+                placeholder={t("subjectPlaceholder")}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                {t("yearLevel")}
+              </label>
+              <input
+                type="text"
+                className="w-full rounded border p-2"
+                value={editedPlan.yearLevel || ""}
+                onChange={(e) =>
+                  setEditedPlan({ ...editedPlan, yearLevel: e.target.value })
+                }
+                placeholder={t("yearLevelPlaceholder")}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                {t("curriculumDescription")}
+              </label>
+              <input
+                type="text"
+                className="w-full rounded border p-2"
+                value={editedPlan.description || ""}
+                onChange={(e) =>
+                  setEditedPlan({ ...editedPlan, description: e.target.value })
+                }
+                placeholder={t("descriptionPlaceholder")}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                {t("schoolYearWeekRange")}
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
+                    {t("schoolYearStartWeek")}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={53}
+                    className="w-full rounded border p-2"
+                    value={weekStartInput}
+                    onChange={(e) =>
+                      handleWeekRangeChange("weekRangeStart", e.target.value)
+                    }
+                    onBlur={(e) =>
+                      handleWeekRangeBlur("weekRangeStart", e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
+                    {t("schoolYearEndWeek")}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={53}
+                    className="w-full rounded border p-2"
+                    value={weekEndInput}
+                    onChange={(e) =>
+                      handleWeekRangeChange("weekRangeEnd", e.target.value)
+                    }
+                    onBlur={(e) =>
+                      handleWeekRangeBlur("weekRangeEnd", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {t("schoolYearWeekRangeHint")}
+              </p>
+            </div>
             <div>
               <label className="mb-1 block text-sm font-medium">
                 {t("classesOptional")}
               </label>
+              
+              {editedPlan.isTemplate === true && (
+                <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-900/20">
+                  <p className="font-medium text-blue-900 dark:text-blue-100">
+                    💡 {t("templateWorkflowTitle") || "Hoe werkt het?"}
+                  </p>
+                  <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-blue-800 dark:text-blue-300">
+                    <li>{t("templateWorkflowStep1") || "Vul eerst je template volledig in (onderwerpen, paragrafen, leerdoelen)"}</li>
+                    <li>{t("templateWorkflowStep2") || "Kies een klas uit de lijst hieronder"}</li>
+                    <li>{t("templateWorkflowStep3") || "Er wordt automatisch een kopie gemaakt voor die klas"}</li>
+                    <li>{t("templateWorkflowStep4") || "Je template blijft ongewijzigd en kan opnieuw worden toegewezen"}</li>
+                  </ol>
+                </div>
+              )}
+
+              {copiedToClasses.length > 0 && (
+                <div className="mb-3 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-900/20">
+                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                    ✅ {t("copiedToClasses") || "Gekopieerd naar klassen:"}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {copiedToClasses.map((className) => (
+                      <span
+                        key={className}
+                        className="rounded-full bg-green-200 px-3 py-1 text-xs font-medium text-green-800 dark:bg-green-800 dark:text-green-200"
+                      >
+                        {className}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {isLoadingClasses ? (
                 <div className="text-sm text-gray-500">
                   {t("classesLoading")}
@@ -253,14 +473,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                           <span>{className}</span>
                           <button
                             type="button"
-                            onClick={() => {
-                              setEditedPlan({
-                                ...editedPlan,
-                                classNames: editedPlan.classNames.filter(
-                                  (c) => c !== className,
-                                ),
-                              });
-                            }}
+                            onClick={() => handleRemoveClass(className)}
                             className="hover:text-red-200"
                           >
                             ✕
@@ -284,19 +497,13 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                             e.target.value &&
                             !editedPlan.classNames.includes(e.target.value)
                           ) {
-                            setEditedPlan({
-                              ...editedPlan,
-                              classNames: [
-                                ...editedPlan.classNames,
-                                e.target.value,
-                              ],
-                            });
+                            handleAddClass(e.target.value);
                           }
                         }}
                       >
                         <option value="">{t("selectClassPlaceholder")}</option>
                         {availableClasses
-                          .filter((c) => !editedPlan.classNames.includes(c))
+                          .filter((c) => !editedPlan.classNames.includes(c) && !copiedToClasses.includes(c))
                           .map((className) => (
                             <option key={className} value={className}>
                               {className}
@@ -306,56 +513,6 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                     </div>
                   )}
 
-                  {/* Add custom class */}
-                  <div>
-                    <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
-                      {t("addCustomClassName")}
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        id="custom-class-input"
-                        className="flex-1 rounded border p-2"
-                        placeholder={t("customClassPlaceholder")}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            const input = e.currentTarget;
-                            const value = input.value.trim();
-                            if (
-                              value &&
-                              !editedPlan.classNames.includes(value)
-                            ) {
-                              setEditedPlan({
-                                ...editedPlan,
-                                classNames: [...editedPlan.classNames, value],
-                              });
-                              input.value = "";
-                            }
-                          }
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          const input = document.getElementById(
-                            "custom-class-input",
-                          ) as HTMLInputElement;
-                          const value = input.value.trim();
-                          if (value && !editedPlan.classNames.includes(value)) {
-                            setEditedPlan({
-                              ...editedPlan,
-                              classNames: [...editedPlan.classNames, value],
-                            });
-                            input.value = "";
-                          }
-                        }}
-                      >
-                        {t("add")}
-                      </Button>
-                    </div>
-                  </div>
-
                   {availableClasses.length === 0 && (
                     <div className="text-sm text-gray-500">
                       {t("noClassesFound")}
@@ -363,101 +520,6 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                   )}
                 </div>
               )}
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                {t("subject")}
-              </label>
-              <input
-                type="text"
-                className="w-full rounded border p-2"
-                value={editedPlan.subject}
-                onChange={(e) =>
-                  setEditedPlan({ ...editedPlan, subject: e.target.value })
-                }
-                placeholder={t("subjectPlaceholder")}
-              />
-            </div>
-            <div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    {t("schoolYear")}
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    className="w-full rounded border p-2"
-                    value={editedPlan.schoolYear}
-                    onChange={(e) => handleSchoolYearChange(e.target.value)}
-                    placeholder={t("schoolYearPlaceholder")}
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {t("schoolYearMaskHint")}
-                  </p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    {t("schoolYearStartLabel")}
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full rounded border p-2"
-                    value={editedPlan.schoolYearStart ?? ""}
-                    onChange={(e) =>
-                      handleSchoolYearStartChange(e.target.value)
-                    }
-                    placeholder={t("schoolYearStartPlaceholder")}
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {editedPlan.schoolYearEnd
-                      ? t("schoolYearEndSummary", {
-                          year: editedPlan.schoolYearEnd,
-                        })
-                      : t("schoolYearEndPending")}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                {t("schoolYearWeekRange")}
-              </label>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
-                    {t("schoolYearStartWeek")}
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={53}
-                    className="w-full rounded border p-2"
-                    value={editedPlan.weekRangeStart}
-                    onChange={(e) =>
-                      handleWeekRangeChange("weekRangeStart", e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
-                    {t("schoolYearEndWeek")}
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={53}
-                    className="w-full rounded border p-2"
-                    value={editedPlan.weekRangeEnd}
-                    onChange={(e) =>
-                      handleWeekRangeChange("weekRangeEnd", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                {t("schoolYearWeekRangeHint")}
-              </p>
             </div>
           </div>
         )}

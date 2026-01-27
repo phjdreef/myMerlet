@@ -525,7 +525,7 @@ export function registerCurriculumListeners() {
 
   ipcMain.handle(
     CURRICULUM_CHANNELS.EXPORT_PLAN_DOCX,
-    async (_, planId: string, language: "nl" | "en" = "nl") => {
+    async (_, planId: string, language: "nl" | "en" = "nl", className?: string) => {
       try {
         const plan = await curriculumDB.getPlanById(planId);
         if (!plan) {
@@ -534,8 +534,15 @@ export function registerCurriculumListeners() {
 
         const document = await buildPlanDocument(plan, language);
         const buffer = await Packer.toBuffer(document);
+        
+        // Use provided className or fall back to plan's className
+        const classNamePart = className
+          ? `-${className}`
+          : plan.classNames && plan.classNames.length > 0 
+          ? `-${plan.classNames[0]}` 
+          : "";
         const defaultName = `${sanitizeFileName(
-          `${plan.subject || "curriculum-plan"}-${plan.schoolYear || "plan"}`,
+          `${plan.subject || "curriculum-plan"}-${plan.schoolYear || "plan"}${classNamePart}`,
         )}.docx`;
 
         const { canceled, filePath } = await dialog.showSaveDialog({

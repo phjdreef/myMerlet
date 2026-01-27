@@ -112,6 +112,7 @@ interface CurriculumAPI {
   exportPlanToDocx: (
     planId: string,
     language: "nl" | "en",
+    className?: string,
   ) => Promise<{
     success: boolean;
     data?: unknown;

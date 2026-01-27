@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { logger } from "../utils/logger";
 import { getCurrentWeekNumber } from "../utils/week-utils";
@@ -6,24 +6,76 @@ import { CurriculumTimeline } from "./curriculum/CurriculumTimeline";
 import { PlanEditor } from "./curriculum/PlanEditor";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { parseSchoolYear } from "../utils/curriculum-week";
 import { GlobalBlockedWeeksManager } from "./settings/GlobalBlockedWeeksManager";
+import { useSchoolYear } from "../contexts/SchoolYearContext";
 import type { CurriculumPlan } from "../services/curriculum-database";
 
 export function CurriculumPlanner() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { currentSchoolYear } = useSchoolYear();
   const [plans, setPlans] = useState<CurriculumPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<CurriculumPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [subjectFilter, setSubjectFilter] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"plans" | "blocked-weeks">(
     "plans",
   );
   const currentWeek = getCurrentWeekNumber();
 
-  useEffect(() => {
-    loadPlans();
-  }, []);
+  // For templates (multiple classes or no classes), use current school year from context
+  const effectiveSelectedPlan = useMemo(() => {
+    if (!selectedPlan) return null;
+
+    // Templates don't have schoolYear set, so we use the current one from settings
+    if (!selectedPlan.schoolYear || !selectedPlan.schoolYearStart) {
+      return {
+        ...selectedPlan,
+        schoolYear: currentSchoolYear,
+        schoolYearStart: parseInt(currentSchoolYear.split("-")[0], 10),
+        schoolYearEnd: parseInt(currentSchoolYear.split("-")[1], 10),
+      };
+    }
+
+    return selectedPlan;
+  }, [selectedPlan, currentSchoolYear]);
+
+  // Get unique subjects for filter
+  const availableSubjects = useMemo(() => {
+    const subjects = new Set<string>();
+    plans.forEach((plan) => {
+      if (plan.subject) subjects.add(plan.subject);
+    });
+    return Array.from(subjects).sort();
+  }, [plans]);
+
+  // Filter and group plans
+  const filteredPlans = useMemo(() => {
+    return plans.filter(
+      (plan) => !subjectFilter || plan.subject === subjectFilter,
+    );
+  }, [plans, subjectFilter]);
+
+  // Group by subject, then by year level
+  const plansBySubjectAndYear = useMemo(() => {
+    const grouped = new Map<string, Map<string, CurriculumPlan[]>>();
+    filteredPlans.forEach((plan) => {
+      const subject = plan.subject || t("noSubject") || "Geen vak";
+      if (!grouped.has(subject)) {
+        grouped.set(subject, new Map<string, CurriculumPlan[]>());
+      }
+
+      const subjectGroup = grouped.get(subject)!;
+      // Group by year level
+      const yearLevel = plan.yearLevel || t("noYearLevel") || "Geen leerjaar";
+
+      if (!subjectGroup.has(yearLevel)) {
+        subjectGroup.set(yearLevel, []);
+      }
+      subjectGroup.get(yearLevel)!.push(plan);
+    });
+    return grouped;
+  }, [filteredPlans, t]);
 
   const loadPlans = async () => {
     setIsLoading(true);
@@ -31,8 +83,22 @@ export function CurriculumPlanner() {
       const result = await window.curriculumAPI.getAllPlans();
       if (result.success && result.data) {
         const plansData = result.data as { plans: CurriculumPlan[] };
-        setPlans(plansData.plans || []);
-        logger.log("Loaded curriculum plans:", plansData.plans?.length || 0);
+        // Filter to show only template plans (not class-specific copies)
+        // Templates have isTemplate === true (explicitly marked as template)
+        // For backwards compatibility with old data (isTemplate === undefined):
+        //   - Show if classNames.length !== 1 (old templates had 0 or multiple classes)
+        const templatePlans = (plansData.plans || []).filter(
+          (plan) => {
+            // Explicitly marked as template
+            if (plan.isTemplate === true) return true;
+            // Explicitly marked as class-specific copy
+            if (plan.isTemplate === false) return false;
+            // Old data without isTemplate field - use classNames heuristic
+            return plan.classNames.length !== 1;
+          }
+        );
+        setPlans(templatePlans);
+        logger.log("Loaded curriculum template plans:", templatePlans.length);
       } else {
         logger.error("Failed to load plans:", result.error);
       }
@@ -42,6 +108,10 @@ export function CurriculumPlanner() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadPlans();
+  }, []);
 
   const handleSavePlan = async (plan: CurriculumPlan) => {
     try {
@@ -82,20 +152,22 @@ export function CurriculumPlanner() {
   };
 
   const handleCreateNew = () => {
-    const currentYearValue = new Date().getFullYear();
     const newPlan: CurriculumPlan = {
       id: crypto.randomUUID(),
+      yearLevel: "",
+      description: "",
       classNames: [],
       subject: "",
-      schoolYear: `${currentYearValue}-${currentYearValue + 1}`,
-      schoolYearStart: currentYearValue,
-      schoolYearEnd: currentYearValue + 1,
+      schoolYear: "", // Templates are school-year independent
+      schoolYearStart: null,
+      schoolYearEnd: null,
       weekRangeStart: 1,
       weekRangeEnd: 52,
       topics: [],
       paragraphs: [],
       studyGoals: [],
       blockedWeeks: [],
+      isTemplate: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -130,33 +202,6 @@ export function CurriculumPlanner() {
     }
   };
 
-  const handleExportPlan = async (plan: CurriculumPlan) => {
-    try {
-      const result = await window.curriculumAPI.exportPlanToDocx(
-        plan.id,
-        i18n.language as "nl" | "en",
-      );
-      if (result.success) {
-        const data = result.data as { filePath?: string } | undefined;
-        const filePath = data?.filePath;
-        if (filePath) {
-          alert(t("exportPlanSuccessWithPath", { filePath }));
-        } else {
-          alert(t("exportPlanSuccess"));
-        }
-        logger.log("Curriculum plan exported", filePath);
-      } else if (result.error !== "cancelled") {
-        const errorMessage = result.error || t("unknownError");
-        alert(t("exportPlanError", { error: errorMessage }));
-        logger.error("Failed to export plan:", result.error);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      alert(t("exportPlanError", { error: message }));
-      logger.error("Error exporting plan:", error);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -167,14 +212,91 @@ export function CurriculumPlanner() {
 
   if (isEditing && selectedPlan) {
     return (
-      <PlanEditor
-        plan={selectedPlan}
-        onSave={handleSavePlan}
-        onCancel={() => {
-          setIsEditing(false);
-          setSelectedPlan(null);
-        }}
-      />
+      <div className="container mx-auto flex h-full flex-col p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold">
+            {selectedPlan.id ? t("editPlan") : t("newPlan")}
+          </h2>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setIsEditing(false);
+              setSelectedPlan(null);
+            }}
+          >
+            {t("cancel")}
+          </Button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <PlanEditor
+            plan={selectedPlan}
+            onSave={handleSavePlan}
+            onCancel={() => {
+              setIsEditing(false);
+              setSelectedPlan(null);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Timeline view for selected plan
+  if (selectedPlan && !isEditing) {
+    return (
+      <div className="container mx-auto flex h-full flex-col p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedPlan(null)}
+            >
+              ← {t("back") || "Terug"}
+            </Button>
+            <div>
+              <h2 className="text-xl font-semibold">{selectedPlan.subject}</h2>
+              {selectedPlan.description && (
+                <div className="text-base text-gray-700 dark:text-gray-300">
+                  {selectedPlan.description}
+                </div>
+              )}
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {effectiveSelectedPlan?.schoolYear}
+                {selectedPlan.classNames.length > 0 && (
+                  <span> · {selectedPlan.classNames.join(", ")}</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleEditPlan(selectedPlan)}
+            >
+              {t("edit")}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                handleDeletePlan(selectedPlan.id);
+                setSelectedPlan(null);
+              }}
+            >
+              {t("delete")}
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <CurriculumTimeline
+            plan={effectiveSelectedPlan || selectedPlan}
+            currentWeek={currentWeek}
+            onUpdate={handleUpdatePlan}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -218,109 +340,153 @@ export function CurriculumPlanner() {
             </div>
           ) : (
             <div className="flex flex-1 flex-col overflow-hidden">
-              <div className="sticky top-0 z-10 bg-white pb-3 dark:bg-gray-900">
+              {/* Filter bar */}
+              <div className="mb-4">
                 <label className="mb-1 block text-sm font-medium">
-                  {t("selectPlanLabel")}
+                  {t("filterBySubject") || "Filter op vak"}
                 </label>
                 <select
                   className="w-full max-w-md rounded border p-2"
-                  value={selectedPlan?.id || ""}
-                  onChange={(e) => {
-                    const plan = plans.find((p) => p.id === e.target.value);
-                    setSelectedPlan(plan || null);
-                  }}
+                  value={subjectFilter}
+                  onChange={(e) => setSubjectFilter(e.target.value)}
                 >
-                  <option value="">{t("selectPlanPlaceholder")}</option>
-                  {plans.map((plan) => {
-                    const displayName =
-                      plan.classNames.length > 0
-                        ? `${plan.classNames.join(", ")} - ${plan.subject}`
-                        : plan.subject || t("namelessPlan");
-                    return (
-                      <option key={plan.id} value={plan.id}>
-                        {displayName} ({plan.schoolYear})
-                      </option>
-                    );
-                  })}
+                  <option value="">{t("allSubjects") || "Alle vakken"}</option>
+                  {availableSubjects.map((subject) => (
+                    <option key={subject} value={subject}>
+                      {subject}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              {selectedPlan && (
-                <div className="flex flex-1 flex-col overflow-hidden">
-                  <div className="sticky top-[76px] z-10 bg-white pb-3 dark:bg-gray-900">
-                    <div className="rounded-lg border bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/60">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <div className="text-base font-semibold">
-                            {selectedPlan.subject?.trim() || t("namelessPlan")}
+              {/* Curriculum overview */}
+              <div className="flex-1 space-y-6 overflow-y-auto">
+                {Array.from(plansBySubjectAndYear.entries()).map(
+                  ([subject, yearLevelGroups]) => (
+                    <div key={subject} className="space-y-4">
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                        {subject}
+                      </h2>
+                      {Array.from(yearLevelGroups.entries()).map(
+                        ([yearLevel, plans]) => (
+                          <div
+                            key={`${subject}-${yearLevel}`}
+                            className="space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                                {yearLevel}
+                              </h3>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const newPlan: CurriculumPlan = {
+                                    id: crypto.randomUUID(),
+                                    yearLevel: yearLevel,
+                                    description: "",
+                                    classNames: [],
+                                    subject: subject,
+                                    schoolYear: "",
+                                    schoolYearStart: null,
+                                    schoolYearEnd: null,
+                                    weekRangeStart: 1,
+                                    weekRangeEnd: 52,
+                                    topics: [],
+                                    paragraphs: [],
+                                    studyGoals: [],
+                                    blockedWeeks: [],
+                                    isTemplate: true,
+                                    createdAt: new Date().toISOString(),
+                                    updatedAt: new Date().toISOString(),
+                                  };
+                                  setSelectedPlan(newPlan);
+                                  setIsEditing(true);
+                                }}
+                              >
+                                + {t("addCurriculum") || "Voeg curriculum toe"}
+                              </Button>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                              {plans.map((plan) => {
+                                const effectivePlan =
+                                  !plan.schoolYear || !plan.schoolYearStart
+                                    ? {
+                                        ...plan,
+                                        schoolYear: currentSchoolYear,
+                                        schoolYearStart: parseInt(
+                                          currentSchoolYear.split("-")[0],
+                                          10,
+                                        ),
+                                        schoolYearEnd: parseInt(
+                                          currentSchoolYear.split("-")[1],
+                                          10,
+                                        ),
+                                      }
+                                    : plan;
+
+                                return (
+                                  <div
+                                    key={plan.id}
+                                    className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:border-blue-400 hover:shadow-md dark:border-gray-700 dark:bg-gray-900/50 dark:hover:border-blue-600"
+                                    onClick={() => {
+                                      setSelectedPlan(plan);
+                                      setIsEditing(false);
+                                    }}
+                                  >
+                                    <div className="mb-2 flex items-start justify-between">
+                                      <div className="flex-1">
+                                        <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                          {plan.subject}
+                                        </div>
+                                        {plan.description && (
+                                          <div className="text-sm text-gray-700 dark:text-gray-300">
+                                            {plan.description}
+                                          </div>
+                                        )}
+                                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                                          {effectivePlan.schoolYear}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {plan.classNames.length > 0 && (
+                                      <div className="mb-2 flex flex-wrap gap-1">
+                                        {plan.classNames.map((className) => (
+                                          <span
+                                            key={className}
+                                            className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-200"
+                                          >
+                                            {className}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      {plan.studyGoals.length}{" "}
+                                      {t("studyGoals") || "leerdoelen"} ·{" "}
+                                      {t("weeks")} {plan.weekRangeStart}-
+                                      {plan.weekRangeEnd}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          {selectedPlan.classNames.length > 0 && (
-                            <div className="text-xs text-gray-600 dark:text-gray-300">
-                              {selectedPlan.classNames.join(", ")}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-300">
-                          {selectedPlan.schoolYear && (
-                            <div>
-                              {t("schoolYear")}: {selectedPlan.schoolYear}
-                            </div>
-                          )}
-                          {(() => {
-                            const parsedYears = parseSchoolYear(
-                              selectedPlan.schoolYear,
-                            );
-                            const startYear =
-                              selectedPlan.schoolYearStart ??
-                              parsedYears.startYear;
-                            const endYear =
-                              selectedPlan.schoolYearEnd ?? parsedYears.endYear;
-                            if (!startYear) {
-                              return null;
-                            }
-                            return (
-                              <div>
-                                {t("schoolYearStartLabel")}: {startYear}
-                                {endYear ? ` → ${endYear}` : ""}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
+                        ),
+                      )}
                     </div>
-                    <div className="mt-2 flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleExportPlan(selectedPlan)}
-                      >
-                        {t("exportPlan")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditPlan(selectedPlan)}
-                      >
-                        {t("edit")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDeletePlan(selectedPlan.id)}
-                      >
-                        {t("delete")}
-                      </Button>
-                    </div>
+                  ),
+                )}
+
+                {filteredPlans.length === 0 && (
+                  <div className="py-8 text-center text-gray-500">
+                    {t("noPlansMatchFilter") ||
+                      "Geen plannen gevonden met deze filter"}
                   </div>
-                  <div className="flex-1 overflow-y-auto">
-                    <CurriculumTimeline
-                      plan={selectedPlan}
-                      currentWeek={currentWeek}
-                      onUpdate={handleUpdatePlan}
-                    />
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </TabsContent>

@@ -76,21 +76,9 @@ export function useStudentDirectoryData(): UseStudentDirectoryDataResult {
         const sortedStudents = sortStudents(savedStudents);
         setStudents(sortedStudents);
         setTotalCount(sortedStudents.length);
-
-        const savedDate = metadata
-          ? new Date(metadata.value).toLocaleString()
-          : "Unknown";
-
-        setTransientMessage(
-          `✅ ${t("successfullyLoadedStudents", {
-            count: sortedStudents.length,
-            date: savedDate,
-          })}`,
-        );
       } else {
         setStudents([]);
         setTotalCount(0);
-        setTransientMessage(`📂 ${t("noSavedStudentsFound")}`);
       }
     } catch (err) {
       clearPendingTimeout();
@@ -143,7 +131,11 @@ export function useStudentDirectoryData(): UseStudentDirectoryDataResult {
     setFilteredStudents(sortStudents(filtered));
 
     const filteredPlans = selectedClass
-      ? plans.filter((plan) => plan.classNames.includes(selectedClass))
+      ? plans.filter((plan) => 
+          plan.classNames.includes(selectedClass) && 
+          plan.isTemplate === false &&
+          plan.classNames.length === 1
+        )
       : [];
     setClassPlans(filteredPlans);
 

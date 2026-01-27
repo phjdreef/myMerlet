@@ -51,6 +51,8 @@ export interface BlockedWeek {
 
 export interface CurriculumPlan {
   id: string;
+  yearLevel: string; // e.g. "2 HAVO", "4 VWO", "3 VMBO-TL"
+  description?: string; // e.g. "Periode 1: Beweging"
   classNames: string[]; // Changed from className to support multiple classes
   subject: string;
   schoolYear: string;
@@ -62,6 +64,8 @@ export interface CurriculumPlan {
   paragraphs: Paragraph[];
   studyGoals: StudyGoal[];
   blockedWeeks: BlockedWeek[]; // Weeks that are holidays, exams, etc.
+  isTemplate?: boolean; // true = template (stays in Planning section), false/undefined = class-specific copy
+  sourceTemplateId?: string; // For class-specific copies: ID of the template it was copied from
   createdAt: string;
   updatedAt: string;
 }
