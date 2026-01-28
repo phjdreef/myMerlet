@@ -161,17 +161,14 @@ export function getYearForWeek(
     return startYear;
   }
 
-  if (start <= end) {
-    return startYear;
-  }
+  // Use week 30 as the summer vacation threshold
+  // Weeks 30-53: first calendar year of school year (start year)
+  // Weeks 1-29: second calendar year of school year (end year)
+  const SUMMER_THRESHOLD = 30;
 
-  if (week >= start) {
+  if (week >= SUMMER_THRESHOLD) {
     return startYear;
-  }
-
-  if (week <= end) {
+  } else {
     return endYear;
   }
-
-  return fallbackYear;
 }
