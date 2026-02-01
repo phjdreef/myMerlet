@@ -32,10 +32,7 @@ export function TestForm({
   const formulaInputRef = useRef<HTMLInputElement>(null);
 
   // Chart data: show current n-term and two reference lines
-  const chartNTerms = useMemo(
-    () => [0, formData.nTerm, 2.0],
-    [formData.nTerm],
-  );
+  const chartNTerms = useMemo(() => [0, formData.nTerm, 2.0], [formData.nTerm]);
 
   const updateField = <Key extends keyof TestFormState>(
     key: Key,

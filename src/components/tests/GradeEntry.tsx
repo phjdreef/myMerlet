@@ -37,7 +37,7 @@ export function GradeEntry({
 
   // Chart data: show three reference n-term lines
   const chartNTerms = useMemo(() => [0, 1.0, 2.0], []);
-  
+
   // Chart modal state
   const [showChart, setShowChart] = useState(false);
 
@@ -373,14 +373,14 @@ export function GradeEntry({
           onClick={() => setShowChart(false)}
         >
           <div
-            className="mx-4 max-h-[90vh] w-full max-w-4xl overflow-auto rounded-lg bg-background p-4 shadow-xl"
+            className="bg-background mx-4 max-h-[90vh] w-full max-w-4xl overflow-auto rounded-lg p-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-lg font-semibold">{t("cvteChart")}</h3>
               <button
                 onClick={() => setShowChart(false)}
-                className="rounded-lg p-2 hover:bg-muted"
+                className="hover:bg-muted rounded-lg p-2"
               >
                 ✕
               </button>
@@ -426,21 +426,21 @@ export function GradeEntry({
             <p className="text-muted-foreground text-sm">
               {t("maxPoints")}: {test.maxPoints} | {t("formula")}:{" "}
               {(() => {
-              const nTerm = test.nTerm ?? 1;
-              const mode = test.cvteCalculationMode ?? "legacy";
-              if (mode === "legacy") {
-                return `(10 - ${nTerm}) × (${t("points")} / ${test.maxPoints}) + ${nTerm}`;
-              }
-              if (mode === "main") {
-                return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixMain")}`;
-              }
-              return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixOfficial")}`;
-            })()}
+                const nTerm = test.nTerm ?? 1;
+                const mode = test.cvteCalculationMode ?? "legacy";
+                if (mode === "legacy") {
+                  return `(10 - ${nTerm}) × (${t("points")} / ${test.maxPoints}) + ${nTerm}`;
+                }
+                if (mode === "main") {
+                  return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixMain")}`;
+                }
+                return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixOfficial")}`;
+              })()}
             </p>
             {test.maxPoints && (
               <button
                 onClick={() => setShowChart(true)}
-                className="flex items-center gap-1 rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground hover:bg-primary/90"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-1 text-xs"
               >
                 <ChartBarIcon className="h-4 w-4" />
                 {t("showChart", "Toon Grafiek")}

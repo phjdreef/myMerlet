@@ -15,7 +15,7 @@ export default function DragWindowRegion({
   title,
 }: DragWindowRegionProps): ReactElement {
   const { t } = useTranslation();
-  
+
   return (
     <div className="flex w-screen items-stretch justify-between">
       <div className="draglayer flex w-full items-center">

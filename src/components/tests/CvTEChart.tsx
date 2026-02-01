@@ -129,7 +129,7 @@ function CvTEChartComponent({
   let low = 0;
   let high = maxPoints;
   const precision = 0.1; // Search to 0.1 point precision
-  
+
   while (high - low > precision) {
     const mid = (low + high) / 2;
     const grade = calculateCvTEGrade(mid, maxPoints, currentNTerm, mode);
