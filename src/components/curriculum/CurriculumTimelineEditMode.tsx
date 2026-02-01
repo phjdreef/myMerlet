@@ -186,15 +186,7 @@ export function CurriculumTimelineEditMode({
 
       <div className="flex-1 space-y-3">
         {/* Done editing button at the top */}
-        <div className="flex items-center justify-between gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onAddGoal?.()}
-            disabled={!!blockedWeekInfo}
-          >
-            + {t("addStudyGoal", "Weekdoel")}
-          </Button>
+        <div className="flex items-center justify-end gap-2">
           <Button size="sm" variant="outline" onClick={onDoneEditing}>
             {t("doneEditing", "Klaar met bewerken")}
           </Button>

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { logger } from "../utils/logger";
+import { ErrorBanner } from "./ui/error-banner";
+import LoadingSpinner from "./LoadingSpinner";
 
 interface ExamnetTest {
   id: number;
@@ -79,13 +81,13 @@ export default function ExamnetDashboard() {
 
   const handleSyncData = async () => {
     try {
-      console.log("[ExamnetDashboard] Sync data button clicked");
+      logger.debug("[ExamnetDashboard] Sync data button clicked");
       setLoading(true);
       setError(null);
 
-      console.log("[ExamnetDashboard] Calling window.examnetAPI.syncData()");
+      logger.debug("[ExamnetDashboard] Calling window.examnetAPI.syncData()");
       const response = await window.examnetAPI.syncData();
-      console.log("[ExamnetDashboard] Sync response:", response);
+      logger.debug("[ExamnetDashboard] Sync response:", response);
 
       if (response.success) {
         setData(response.data as ExamnetData);
@@ -94,8 +96,7 @@ export default function ExamnetDashboard() {
         setError(response.error || "Failed to sync data");
       }
     } catch (err) {
-      console.error("[ExamnetDashboard] Sync error:", err);
-      logger.error("Sync error:", err);
+      logger.error("[ExamnetDashboard] Sync error:", err);
       setError(err instanceof Error ? err.message : "Failed to sync data");
     } finally {
       setLoading(false);
@@ -140,12 +141,7 @@ export default function ExamnetDashboard() {
         </p>
       </div>
 
-      {error && (
-        <div className="bg-destructive/10 text-destructive rounded-lg border p-4">
-          <p className="font-medium">Error</p>
-          <p className="text-sm">{error}</p>
-        </div>
-      )}
+      {error && <ErrorBanner error={error} variant="error" />}
 
       {!isAuthenticated ? (
         <div className="bg-card rounded-lg border p-6 shadow-sm">

@@ -18,6 +18,8 @@ import { GradesView } from "./views/GradesView";
 import { useStudentDirectoryData } from "./hooks/useStudentDirectoryData";
 import { PlansView } from "./views/PlansView";
 import { StudentListView } from "./views/StudentListView";
+import { ErrorBanner } from "../ui/error-banner";
+import LoadingSpinner from "../LoadingSpinner";
 
 const DEFAULT_VIEW_MODE: ViewMode = "list";
 
@@ -373,29 +375,15 @@ export function StudentDirectoryContainer() {
           />
         </div>
 
-        {error && (
-          <div className={`mb-4 rounded-md px-4 py-3 ${statusMessageStyles}`}>
-            <div className="flex items-start justify-between gap-4">
-              <p className="text-sm font-medium">
-                {statusMessageVariant === "error"
-                  ? `${t("errorLabel")}: ${error}`
-                  : error}
-              </p>
-              <button
-                type="button"
-                onClick={clearError}
-                className="text-muted-foreground text-xs underline-offset-4 hover:underline"
-              >
-                {t("dismiss")}
-              </button>
-            </div>
-          </div>
-        )}
+        <ErrorBanner
+          error={error}
+          variant={statusMessageVariant === "error" ? "error" : "success"}
+          onDismiss={clearError}
+        />
 
         {loading && (
           <div className="flex items-center justify-center py-8">
-            <div className="border-primary mr-3 h-8 w-8 animate-spin rounded-full border-b-2" />
-            <p>{t("loadingStudents")}</p>
+            <LoadingSpinner text={t("loadingStudents")} />
           </div>
         )}
 

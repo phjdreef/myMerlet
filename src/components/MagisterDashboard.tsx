@@ -4,6 +4,8 @@ import { useSchoolYear } from "../contexts/SchoolYearContext";
 import { logger } from "../utils/logger";
 import StudentDirectory from "./StudentDirectory";
 import { Button } from "./ui/button";
+import { ErrorBanner } from "./ui/error-banner";
+import LoadingSpinner from "./LoadingSpinner";
 
 export default function MagisterDashboard({
   onLogout,
@@ -28,10 +30,7 @@ export default function MagisterDashboard({
       const response = await window.magisterAPI.getAllStudents();
 
       if (response.success && response.data) {
-        const responseData = response.data as {
-          items?: Array<{ id: number; [key: string]: unknown }>;
-        };
-        const items = responseData.items || [];
+        const items = response.data.items || [];
 
         // Add current school year to all students
         const studentsWithSchoolYear = items.map((student) => ({
@@ -228,30 +227,20 @@ export default function MagisterDashboard({
       {/* Content based on active tab */}
       {activeTab === "overview" && (
         <>
-          {error && (
-            <div
-              className={`mb-4 rounded-md border px-4 py-3 ${
-                error.startsWith("✅") || error.startsWith("📸")
-                  ? "border-green-200 bg-green-50 text-green-800"
-                  : error.startsWith("⚠️")
-                    ? "border-yellow-200 bg-yellow-50 text-yellow-800"
-                    : "bg-destructive/10 border-destructive/20 text-destructive"
-              }`}
-            >
-              <p className="text-sm font-medium">
-                {error.startsWith("✅") ||
-                error.startsWith("📸") ||
-                error.startsWith("⚠️")
-                  ? error
-                  : t("errorPrefix", { error })}
-              </p>
-            </div>
-          )}
+          <ErrorBanner
+            error={error}
+            variant={
+              error?.startsWith("✅") || error?.startsWith("📸")
+                ? "success"
+                : error?.startsWith("⚠️")
+                  ? "warning"
+                  : "error"
+            }
+          />
 
           {loading && (
             <div className="flex items-center justify-center py-8">
-              <div className="border-primary mr-3 h-8 w-8 animate-spin rounded-full border-b-2"></div>
-              <p>{t("loading")}</p>
+              <LoadingSpinner text={t("loading")} />
             </div>
           )}
 

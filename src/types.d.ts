@@ -9,6 +9,18 @@ declare module "*.svg?raw" {
   export default content;
 }
 
+// API Response types
+type APIResponse<T = unknown> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
+
+type APIResult = {
+  success: boolean;
+  error?: string;
+};
+
 // Preload types
 interface ThemeModeContext {
   toggle: () => Promise<boolean>;
@@ -36,199 +48,116 @@ interface SettingsAPI {
 }
 
 interface MagisterAPI {
-  authenticate: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  getTodayInfo: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  getUserInfo: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  logout: () => Promise<{ success: boolean; error?: string }>;
-  isAuthenticated: () => Promise<{
-    success: boolean;
-    data?: boolean;
-    error?: string;
-  }>;
-  testAPI: () => Promise<{ success: boolean; data?: unknown; error?: string }>;
-  getAllStudents: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  clearToken: () => Promise<{ success: boolean; error?: string }>;
-  fetchStudentPhoto: (
-    studentId: number,
-  ) => Promise<{ success: boolean; data?: string; error?: string }>;
+  authenticate: () => Promise<APIResponse>;
+  getTodayInfo: () => Promise<APIResponse>;
+  getUserInfo: () => Promise<APIResponse>;
+  logout: () => Promise<APIResult>;
+  isAuthenticated: () => Promise<APIResponse<boolean>>;
+  testAPI: () => Promise<APIResponse>;
+  getAllStudents: () => Promise<
+    APIResponse<{ items: import("./services/student-database").Student[] }>
+  >;
+  clearToken: () => Promise<APIResult>;
+  fetchStudentPhoto: (studentId: number) => Promise<APIResponse<string>>;
 }
 
 interface StudentDBAPI {
   saveStudents: (
-    students: unknown[],
-  ) => Promise<{ success: boolean; error?: string }>;
-  getAllStudents: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
+    students: import("./services/student-database").Student[],
+  ) => Promise<APIResult>;
+  getAllStudents: () => Promise<
+    APIResponse<import("./services/student-database").Student[]>
+  >;
   searchStudents: (
     query: string,
-  ) => Promise<{ success: boolean; data?: unknown; error?: string }>;
-  getMetadata: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  clearAllData: () => Promise<{ success: boolean; error?: string }>;
-  savePhoto: (
-    externeId: string,
-    photoData: string,
-  ) => Promise<{ success: boolean; error?: string }>;
-  getPhoto: (
-    externeId: string,
-  ) => Promise<{ success: boolean; data?: string | null; error?: string }>;
+  ) => Promise<APIResponse<import("./services/student-database").Student[]>>;
+  getMetadata: () => Promise<
+    APIResponse<{
+      key: string;
+      value: string;
+      totalCount: number;
+    }>
+  >;
+  clearAllData: () => Promise<APIResult>;
+  savePhoto: (externeId: string, photoData: string) => Promise<APIResult>;
+  getPhoto: (externeId: string) => Promise<APIResponse<string | null>>;
 }
 
 interface CurriculumAPI {
-  getAllPlans: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  getPlanByClass: (className: string) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  savePlan: (plan: unknown) => Promise<{ success: boolean; error?: string }>;
-  deletePlan: (planId: string) => Promise<{ success: boolean; error?: string }>;
+  getAllPlans: () => Promise<
+    APIResponse<{
+      plans: import("./services/curriculum-database").CurriculumPlan[];
+    }>
+  >;
+  getPlanByClass: (
+    className: string,
+  ) => Promise<
+    APIResponse<import("./services/curriculum-database").CurriculumPlan>
+  >;
+  savePlan: (
+    plan: import("./services/curriculum-database").CurriculumPlan,
+  ) => Promise<APIResult>;
+  deletePlan: (planId: string) => Promise<APIResult>;
   exportPlanToDocx: (
     planId: string,
     language: "nl" | "en",
     className?: string,
-  ) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
+  ) => Promise<APIResponse<string>>;
 }
 
 interface TestAPI {
-  getAllTests: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  getTestsForClassGroup: (classGroup: string) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  getTest: (testId: string) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  createTest: (test: unknown) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
+  getAllTests: () => Promise<
+    APIResponse<import("./services/test-database").Test[]>
+  >;
+  getTestsForClassGroup: (
+    classGroup: string,
+  ) => Promise<APIResponse<import("./services/test-database").Test[]>>;
+  getTest: (
+    testId: string,
+  ) => Promise<APIResponse<import("./services/test-database").Test>>;
+  createTest: (
+    test: Omit<
+      import("./services/test-database").Test,
+      "id" | "createdAt" | "updatedAt"
+    >,
+  ) => Promise<APIResponse<import("./services/test-database").Test>>;
   updateTest: (
     testId: string,
-    updates: unknown,
-  ) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  deleteTest: (testId: string) => Promise<{
-    success: boolean;
-    error?: string;
-  }>;
-  getGradesForTest: (testId: string) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
+    updates: Partial<import("./services/test-database").Test>,
+  ) => Promise<APIResponse<import("./services/test-database").Test>>;
+  deleteTest: (testId: string) => Promise<APIResult>;
+  getGradesForTest: (
+    testId: string,
+  ) => Promise<APIResponse<import("./services/test-database").StudentGrade[]>>;
   getGradesForStudent: (
     studentId: number,
     classGroup: string,
-  ) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
+  ) => Promise<APIResponse<import("./services/test-database").StudentGrade[]>>;
   saveGrade: (
     testId: string,
     studentId: number,
     pointsEarned: number,
     manualOverride?: number,
-  ) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
+  ) => Promise<APIResponse<import("./services/test-database").StudentGrade>>;
   saveCompositeGrade: (
     testId: string,
     studentId: number,
-    elementGrades: unknown[],
+    elementGrades: import("./services/test-database").CompositeElementGrade[],
     manualOverride?: number,
-  ) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
+  ) => Promise<APIResponse<import("./services/test-database").StudentGrade>>;
   getTestStatistics: (
     testId: string,
     classGroup?: string,
-  ) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
+  ) => Promise<APIResponse<import("./services/test-database").TestStatistics>>;
 }
 
 interface ExamnetAPI {
-  login: (
-    username: string,
-    password: string,
-  ) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  logout: () => Promise<{
-    success: boolean;
-    error?: string;
-  }>;
-  getTests: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  getTestResults: (testId: string) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  getStudents: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
-  syncData: () => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-  }>;
+  login: (username: string, password: string) => Promise<APIResponse>;
+  logout: () => Promise<APIResult>;
+  getTests: () => Promise<APIResponse>;
+  getTestResults: (testId: string) => Promise<APIResponse>;
+  getStudents: () => Promise<APIResponse>;
+  syncData: () => Promise<APIResponse>;
 }
 
 declare interface Window {

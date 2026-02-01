@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { BlockedWeeksManager } from "../curriculum/BlockedWeeksManager";
 import type { BlockedWeek } from "../../services/curriculum-database";
+import LoadingSpinner from "../LoadingSpinner";
+import { logger } from "../../utils/logger";
 
 export function GlobalBlockedWeeksManager() {
   const { t } = useTranslation();
@@ -17,7 +19,7 @@ export function GlobalBlockedWeeksManager() {
       const weeks = await window.settingsAPI.getGlobalBlockedWeeks();
       setBlockedWeeks(weeks);
     } catch (error) {
-      console.error("Failed to load global blocked weeks:", error);
+      logger.error("Failed to load global blocked weeks:", error);
     } finally {
       setLoading(false);
     }
@@ -28,12 +30,12 @@ export function GlobalBlockedWeeksManager() {
       await window.settingsAPI.setGlobalBlockedWeeks(weeks);
       setBlockedWeeks(weeks);
     } catch (error) {
-      console.error("Failed to save global blocked weeks:", error);
+      logger.error("Failed to save global blocked weeks:", error);
     }
   };
 
   if (loading) {
-    return <div className="text-sm text-gray-500">{t("loading")}</div>;
+    return <LoadingSpinner size="sm" text={t("loading")} />;
   }
 
   return (
