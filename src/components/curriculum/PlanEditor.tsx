@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "../ui/button";
 import { RichTextEditor } from "../ui/rich-text-editor";
 import { CurriculumTimeline } from "./CurriculumTimeline";
@@ -6,6 +6,7 @@ import { BlockedWeeksManager } from "./BlockedWeeksManager";
 import { getCurrentWeekNumber } from "../../utils/week-utils";
 import { logger } from "../../utils/logger";
 import { useTranslation } from "react-i18next";
+import { Trash } from "@phosphor-icons/react";
 import type {
   CurriculumPlan,
   Topic,
@@ -27,7 +28,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
   const { t } = useTranslation();
   const [editedPlan, setEditedPlan] = useState<CurriculumPlan>(plan);
   const [activeTab, setActiveTab] = useState<
-    "info" | "topics" | "paragraphs" | "goals" | "blocked-weeks"
+    "info" | "topics" | "paragraphs" | "weekplanning" | "blocked-weeks"
   >("info");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
@@ -40,14 +41,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
   );
 
   // Load available classes from student database
-  useEffect(() => {
-    loadAvailableClasses();
-    if (plan.isTemplate === true) {
-      loadCopiedToClasses();
-    }
-  }, []);
-
-  const loadCopiedToClasses = async () => {
+  const loadCopiedToClasses = useCallback(async () => {
     try {
       const result = await window.curriculumAPI.getAllPlans();
       if (result.success && result.data) {
@@ -62,9 +56,9 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
     } catch (error) {
       logger.error("Failed to load copied classes:", error);
     }
-  };
+  }, [plan.id]);
 
-  const loadAvailableClasses = async () => {
+  const loadAvailableClasses = useCallback(async () => {
     try {
       setIsLoadingClasses(true);
       const result = await window.studentDBAPI.getAllStudents();
@@ -87,7 +81,14 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
     } finally {
       setIsLoadingClasses(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadAvailableClasses();
+    if (plan.isTemplate === true) {
+      loadCopiedToClasses();
+    }
+  }, [plan.isTemplate, loadAvailableClasses, loadCopiedToClasses]);
 
   const handleSave = () => {
     const updatedPlan = {
@@ -280,21 +281,28 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
   };
 
   return (
-    <div className="container mx-auto flex h-full flex-col p-4">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">{t("editPlan")}</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onCancel}>
-            {t("cancel")}
-          </Button>
-          <Button onClick={handleSave}>{t("save")}</Button>
+    <div className="container mx-auto h-full p-4">
+      <div className="flex h-full flex-col">
+        {/* Header with title and buttons */}
+        <div className="mb-6 shrink-0">
+          <h1 className="mb-3 text-3xl font-bold">{t("editPlan")}</h1>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onCancel}>
+              {t("cancel")}
+            </Button>
+            <Button onClick={handleSave}>{t("save")}</Button>
+          </div>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="mb-4 flex gap-2 border-b">
-        {["info", "topics", "paragraphs", "goals", "blocked-weeks"].map(
-          (tab) => (
+        {/* Tabs */}
+        <div className="mb-4 flex shrink-0 gap-2 border-b">
+          {[
+            "info",
+            "topics",
+            "paragraphs",
+            "weekplanning",
+            "blocked-weeks",
+          ].map((tab) => (
             <button
               key={tab}
               className={`border-b-2 px-4 py-2 transition-colors ${
@@ -309,375 +317,405 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
                 `${t("topics")} (${editedPlan.topics.length})`}
               {tab === "paragraphs" &&
                 `${t("paragraphs")} (${editedPlan.paragraphs.length})`}
-              {tab === "goals" &&
+              {tab === "weekplanning" &&
                 `${t("studyGoals")} (${editedPlan.studyGoals.length})`}
               {tab === "blocked-weeks" &&
                 `${t("blockedWeeks")} (${editedPlan.blockedWeeks.length})`}
             </button>
-          ),
-        )}
-      </div>
+          ))}
+        </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto">
-        {activeTab === "info" && (
-          <div className="max-w-2xl space-y-4">
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-900/20">
-              <p className="font-medium text-blue-800 dark:text-blue-200">
-                {t("templateSchoolYearInfo") ||
-                  "Templates zijn schooljaar-onafhankelijk"}
-              </p>
-              <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
-                {t("templateSchoolYearDescription") ||
-                  "Wanneer je een template aan een klas toewijst, wordt het huidige schooljaar uit de instellingen gebruikt."}
-              </p>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                {t("subject")}
-              </label>
-              <input
-                type="text"
-                className="w-full rounded border p-2"
-                value={editedPlan.subject}
-                onChange={(e) =>
-                  setEditedPlan({ ...editedPlan, subject: e.target.value })
-                }
-                placeholder={t("subjectPlaceholder")}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                {t("yearLevel")}
-              </label>
-              <input
-                type="text"
-                className="w-full rounded border p-2"
-                value={editedPlan.yearLevel || ""}
-                onChange={(e) =>
-                  setEditedPlan({ ...editedPlan, yearLevel: e.target.value })
-                }
-                placeholder={t("yearLevelPlaceholder")}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                {t("curriculumDescription")}
-              </label>
-              <input
-                type="text"
-                className="w-full rounded border p-2"
-                value={editedPlan.description || ""}
-                onChange={(e) =>
-                  setEditedPlan({ ...editedPlan, description: e.target.value })
-                }
-                placeholder={t("descriptionPlaceholder")}
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                {t("schoolYearWeekRange")}
-              </label>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
-                    {t("schoolYearStartWeek")}
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={53}
-                    className="w-full rounded border p-2"
-                    value={weekStartInput}
-                    onChange={(e) =>
-                      handleWeekRangeChange("weekRangeStart", e.target.value)
-                    }
-                    onBlur={(e) =>
-                      handleWeekRangeBlur("weekRangeStart", e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
-                    {t("schoolYearEndWeek")}
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={53}
-                    className="w-full rounded border p-2"
-                    value={weekEndInput}
-                    onChange={(e) =>
-                      handleWeekRangeChange("weekRangeEnd", e.target.value)
-                    }
-                    onBlur={(e) =>
-                      handleWeekRangeBlur("weekRangeEnd", e.target.value)
-                    }
-                  />
-                </div>
+        {/* Content - scrollable area */}
+        <div className="min-h-0 flex-1 overflow-auto">
+          {activeTab === "info" && (
+            <div className="max-w-2xl space-y-4">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-900/20">
+                <p className="font-medium text-blue-800 dark:text-blue-200">
+                  {t("templateSchoolYearInfo") ||
+                    "Templates zijn schooljaar-onafhankelijk"}
+                </p>
+                <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                  {t("templateSchoolYearDescription") ||
+                    "Wanneer je een template aan een klas toewijst, wordt het huidige schooljaar uit de instellingen gebruikt."}
+                </p>
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                {t("schoolYearWeekRangeHint")}
-              </p>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                {t("classesOptional")}
-              </label>
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("subject")}
+                </label>
+                <input
+                  type="text"
+                  className="w-full rounded border p-2"
+                  value={editedPlan.subject}
+                  onChange={(e) =>
+                    setEditedPlan({ ...editedPlan, subject: e.target.value })
+                  }
+                  placeholder={t("subjectPlaceholder")}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("yearLevel")}
+                </label>
+                <input
+                  type="text"
+                  className="w-full rounded border p-2"
+                  value={editedPlan.yearLevel || ""}
+                  onChange={(e) =>
+                    setEditedPlan({ ...editedPlan, yearLevel: e.target.value })
+                  }
+                  placeholder={t("yearLevelPlaceholder")}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("curriculumDescription")}
+                </label>
+                <input
+                  type="text"
+                  className="w-full rounded border p-2"
+                  value={editedPlan.description || ""}
+                  onChange={(e) =>
+                    setEditedPlan({
+                      ...editedPlan,
+                      description: e.target.value,
+                    })
+                  }
+                  placeholder={t("descriptionPlaceholder")}
+                />
+              </div>
 
-              {editedPlan.isTemplate === true && (
-                <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-900/20">
-                  <p className="font-medium text-blue-900 dark:text-blue-100">
-                    💡 {t("templateWorkflowTitle") || "Hoe werkt het?"}
-                  </p>
-                  <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-blue-800 dark:text-blue-300">
-                    <li>
-                      {t("templateWorkflowStep1") ||
-                        "Vul eerst je template volledig in (onderwerpen, paragrafen, leerdoelen)"}
-                    </li>
-                    <li>
-                      {t("templateWorkflowStep2") ||
-                        "Kies een klas uit de lijst hieronder"}
-                    </li>
-                    <li>
-                      {t("templateWorkflowStep3") ||
-                        "Er wordt automatisch een kopie gemaakt voor die klas"}
-                    </li>
-                    <li>
-                      {t("templateWorkflowStep4") ||
-                        "Je template blijft ongewijzigd en kan opnieuw worden toegewezen"}
-                    </li>
-                  </ol>
-                </div>
-              )}
-
-              {copiedToClasses.length > 0 && (
-                <div className="mb-3 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-900/20">
-                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                    ✅ {t("copiedToClasses") || "Gekopieerd naar klassen:"}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {copiedToClasses.map((className) => (
-                      <span
-                        key={className}
-                        className="rounded-full bg-green-200 px-3 py-1 text-xs font-medium text-green-800 dark:bg-green-800 dark:text-green-200"
-                      >
-                        {className}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {isLoadingClasses ? (
-                <div className="text-sm text-gray-500">
-                  {t("classesLoading")}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {/* Selected classes display */}
-                  {editedPlan.classNames.length > 0 && (
-                    <div className="flex flex-wrap gap-2 rounded border bg-gray-50 p-3 dark:bg-gray-800">
-                      {editedPlan.classNames.map((className) => (
-                        <div
-                          key={className}
-                          className="flex items-center gap-2 rounded bg-blue-500 px-3 py-1 text-sm text-white"
-                        >
-                          <span>{className}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveClass(className)}
-                            className="hover:text-red-200"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Add from dropdown - always show */}
-                  {availableClasses.length > 0 && (
-                    <div>
-                      <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
-                        {t("selectClassLabel")}
-                      </label>
-                      <select
-                        className="w-full rounded border p-2"
-                        value=""
-                        onChange={(e) => {
-                          if (
-                            e.target.value &&
-                            !editedPlan.classNames.includes(e.target.value)
-                          ) {
-                            handleAddClass(e.target.value);
-                          }
-                        }}
-                      >
-                        <option value="">{t("selectClassPlaceholder")}</option>
-                        {availableClasses
-                          .filter(
-                            (c) =>
-                              !editedPlan.classNames.includes(c) &&
-                              !copiedToClasses.includes(c),
-                          )
-                          .map((className) => (
-                            <option key={className} value={className}>
-                              {className}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {availableClasses.length === 0 && (
-                    <div className="text-sm text-gray-500">
-                      {t("noClassesFound")}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "topics" && (
-          <div className="space-y-4">
-            <Button onClick={addTopic}>+ {t("addTopic")}</Button>
-            <div className="space-y-4">
-              {editedPlan.topics.map((topic) => (
-                <div key={topic.id} className="space-y-3 rounded border p-4">
-                  <div className="flex items-start gap-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("schoolYearWeekRange")}
+                </label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
+                      {t("schoolYearStartWeek")}
+                    </label>
                     <input
-                      type="text"
-                      className="flex-1 rounded border p-2 font-medium"
-                      value={topic.name}
+                      type="number"
+                      min={1}
+                      max={53}
+                      className="w-full rounded border p-2"
+                      value={weekStartInput}
                       onChange={(e) =>
-                        updateTopic(topic.id, { name: e.target.value })
+                        handleWeekRangeChange("weekRangeStart", e.target.value)
                       }
-                      placeholder={t("topicName")}
+                      onBlur={(e) =>
+                        handleWeekRangeBlur("weekRangeStart", e.target.value)
+                      }
                     />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => deleteTopic(topic.id)}
-                    >
-                      🗑️
-                    </Button>
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      {t("descriptionOptional")}
+                    <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
+                      {t("schoolYearEndWeek")}
                     </label>
-                    <RichTextEditor
-                      content={topic.description || ""}
-                      onChange={(content) =>
-                        updateTopic(topic.id, { description: content })
+                    <input
+                      type="number"
+                      min={1}
+                      max={53}
+                      className="w-full rounded border p-2"
+                      value={weekEndInput}
+                      onChange={(e) =>
+                        handleWeekRangeChange("weekRangeEnd", e.target.value)
                       }
-                      placeholder={t("addDetailedDescription")}
+                      onBlur={(e) =>
+                        handleWeekRangeBlur("weekRangeEnd", e.target.value)
+                      }
                     />
                   </div>
                 </div>
-              ))}
-              {editedPlan.topics.length === 0 && (
-                <p className="text-gray-500 italic">{t("noTopicsYet")}</p>
-              )}
-            </div>
-          </div>
-        )}
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  {t("schoolYearWeekRangeHint")}
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("classesOptional")}
+                </label>
 
-        {activeTab === "paragraphs" && (
-          <div className="space-y-4">
-            <Button onClick={addParagraph}>+ {t("addParagraph")}</Button>
-            <div className="space-y-2">
-              {editedPlan.paragraphs.map((paragraph) => (
-                <div
-                  key={paragraph.id}
-                  className="flex items-start gap-2 rounded border p-3"
-                >
-                  <div className="flex-1 space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        className="w-24 rounded border p-2"
-                        value={paragraph.number}
-                        onChange={(e) =>
-                          updateParagraph(paragraph.id, {
-                            number: e.target.value,
-                          })
-                        }
-                        placeholder={t("paragraphNumberPlaceholder")}
-                      />
-                      <input
-                        type="text"
-                        className="flex-1 rounded border p-2"
-                        value={paragraph.title}
-                        onChange={(e) =>
-                          updateParagraph(paragraph.id, {
-                            title: e.target.value,
-                          })
-                        }
-                        placeholder={t("paragraphTitle")}
-                      />
+                {editedPlan.isTemplate === true && (
+                  <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-900/20">
+                    <p className="font-medium text-blue-900 dark:text-blue-100">
+                      💡 {t("templateWorkflowTitle") || "Hoe werkt het?"}
+                    </p>
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-blue-800 dark:text-blue-300">
+                      <li>
+                        {t("templateWorkflowStep1") ||
+                          "Vul eerst je template volledig in (onderwerpen, paragrafen, leerdoelen)"}
+                      </li>
+                      <li>
+                        {t("templateWorkflowStep2") ||
+                          "Kies een klas uit de lijst hieronder"}
+                      </li>
+                      <li>
+                        {t("templateWorkflowStep3") ||
+                          "Er wordt automatisch een kopie gemaakt voor die klas"}
+                      </li>
+                      <li>
+                        {t("templateWorkflowStep4") ||
+                          "Je template blijft ongewijzigd en kan opnieuw worden toegewezen"}
+                      </li>
+                    </ol>
+                  </div>
+                )}
+
+                {copiedToClasses.length > 0 && (
+                  <div className="mb-3 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-900/20">
+                    <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                      ✅ {t("copiedToClasses") || "Gekopieerd naar klassen:"}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {copiedToClasses.map((className) => (
+                        <span
+                          key={className}
+                          className="rounded-full bg-green-200 px-3 py-1 text-xs font-medium text-green-800 dark:bg-green-800 dark:text-green-200"
+                        >
+                          {className}
+                        </span>
+                      ))}
                     </div>
-                    {editedPlan.topics.length > 0 && (
+                  </div>
+                )}
+
+                {isLoadingClasses ? (
+                  <div className="text-sm text-gray-500">
+                    {t("classesLoading")}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Selected classes display */}
+                    {editedPlan.classNames.length > 0 && (
+                      <div className="flex flex-wrap gap-2 rounded border bg-gray-50 p-3 dark:bg-gray-800">
+                        {editedPlan.classNames.map((className) => (
+                          <div
+                            key={className}
+                            className="flex items-center gap-2 rounded bg-blue-500 px-3 py-1 text-sm text-white"
+                          >
+                            <span>{className}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveClass(className)}
+                              className="hover:text-red-200"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add from dropdown - always show */}
+                    {availableClasses.length > 0 && (
                       <div>
-                        <label className="mb-1 block text-xs text-gray-600">
-                          {t("linkTopicOptional")}
+                        <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
+                          {t("selectClassLabel")}
                         </label>
                         <select
-                          className="w-full rounded border p-2 text-sm"
-                          value={paragraph.topicId || ""}
-                          onChange={(e) =>
-                            updateParagraph(paragraph.id, {
-                              topicId: e.target.value || undefined,
-                            })
-                          }
+                          className="w-full rounded border p-2"
+                          value=""
+                          onChange={(e) => {
+                            if (
+                              e.target.value &&
+                              !editedPlan.classNames.includes(e.target.value)
+                            ) {
+                              handleAddClass(e.target.value);
+                            }
+                          }}
                         >
-                          <option value="">{t("noTopicOption")}</option>
-                          {editedPlan.topics.map((topic) => (
-                            <option key={topic.id} value={topic.id}>
-                              {topic.name}
-                            </option>
-                          ))}
+                          <option value="">
+                            {t("selectClassPlaceholder")}
+                          </option>
+                          {availableClasses
+                            .filter(
+                              (c) =>
+                                !editedPlan.classNames.includes(c) &&
+                                !copiedToClasses.includes(c),
+                            )
+                            .map((className) => (
+                              <option key={className} value={className}>
+                                {className}
+                              </option>
+                            ))}
                         </select>
                       </div>
                     )}
+
+                    {availableClasses.length === 0 && (
+                      <div className="text-sm text-gray-500">
+                        {t("noClassesFound")}
+                      </div>
+                    )}
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteParagraph(paragraph.id)}
-                  >
-                    🗑️
-                  </Button>
-                </div>
-              ))}
-              {editedPlan.paragraphs.length === 0 && (
-                <p className="text-gray-500 italic">{t("noParagraphsYet")}</p>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {activeTab === "goals" && (
-          <CurriculumTimeline
-            plan={editedPlan}
-            currentWeek={getCurrentWeekNumber()}
-            onUpdate={(updatedPlan) => setEditedPlan(updatedPlan)}
-          />
-        )}
+          {activeTab === "topics" && (
+            <div className="space-y-4">
+              <Button onClick={addTopic}>+ {t("addTopic")}</Button>
+              <div className="space-y-4">
+                {editedPlan.topics.map((topic) => (
+                  <div key={topic.id} className="space-y-3 rounded border p-4">
+                    <div className="flex items-start gap-2">
+                      <input
+                        type="text"
+                        className="flex-1 rounded border p-2 font-medium"
+                        value={topic.name}
+                        onChange={(e) =>
+                          updateTopic(topic.id, { name: e.target.value })
+                        }
+                        placeholder={t("topicName")}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteTopic(topic.id)}
+                        className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">
+                        {t("descriptionOptional")}
+                      </label>
+                      <RichTextEditor
+                        content={topic.description || ""}
+                        onChange={(content) =>
+                          updateTopic(topic.id, { description: content })
+                        }
+                        placeholder={t("addDetailedDescription")}
+                      />
+                    </div>
+                  </div>
+                ))}
+                {editedPlan.topics.length === 0 && (
+                  <p className="text-gray-500 italic">{t("noTopicsYet")}</p>
+                )}
+              </div>
+            </div>
+          )}
 
-        {activeTab === "blocked-weeks" && (
-          <BlockedWeeksManager
-            blockedWeeks={editedPlan.blockedWeeks}
-            availableClasses={availableClasses}
-            onChange={(blockedWeeks) =>
-              setEditedPlan({ ...editedPlan, blockedWeeks })
-            }
-          />
-        )}
+          {activeTab === "paragraphs" && (
+            <div className="space-y-4">
+              <Button onClick={addParagraph}>+ {t("addParagraph")}</Button>
+              <div className="space-y-4">
+                {editedPlan.paragraphs.map((paragraph) => {
+                  return (
+                    <div
+                      key={paragraph.id}
+                      className="rounded border border-gray-300 bg-white p-4 dark:border-gray-600 dark:bg-gray-800"
+                    >
+                      <div className="mb-3 flex items-start gap-2">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              className="w-24 rounded border p-2 dark:bg-gray-700"
+                              value={paragraph.number}
+                              onChange={(e) =>
+                                updateParagraph(paragraph.id, {
+                                  number: e.target.value,
+                                })
+                              }
+                              placeholder={t("paragraphNumberPlaceholder")}
+                            />
+                            <input
+                              type="text"
+                              className="flex-1 rounded border p-2 dark:bg-gray-700"
+                              value={paragraph.title}
+                              onChange={(e) =>
+                                updateParagraph(paragraph.id, {
+                                  title: e.target.value,
+                                })
+                              }
+                              placeholder={t("paragraphTitle")}
+                            />
+                          </div>
+                          {editedPlan.topics.length > 0 && (
+                            <div>
+                              <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
+                                {t("linkTopicOptional")}
+                              </label>
+                              <select
+                                className="w-full rounded border p-2 text-sm dark:bg-gray-700"
+                                value={paragraph.topicId || ""}
+                                onChange={(e) =>
+                                  updateParagraph(paragraph.id, {
+                                    topicId: e.target.value || undefined,
+                                  })
+                                }
+                              >
+                                <option value="">{t("noTopicOption")}</option>
+                                {editedPlan.topics.map((topic) => (
+                                  <option key={topic.id} value={topic.id}>
+                                    {topic.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteParagraph(paragraph.id)}
+                          className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Study goals for this paragraph */}
+                      <div className="mt-4 border-t border-gray-200 pt-3 dark:border-gray-700">
+                        <label className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          {t("paragraphGoals")}
+                        </label>
+                        <RichTextEditor
+                          content={paragraph.studyGoals || ""}
+                          onChange={(content) =>
+                            updateParagraph(paragraph.id, {
+                              studyGoals: content,
+                            })
+                          }
+                          placeholder={
+                            t("paragraphGoalPlaceholder") ||
+                            "Beschrijving van het leerdoel..."
+                          }
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                {editedPlan.paragraphs.length === 0 && (
+                  <p className="text-gray-500 italic">{t("noParagraphsYet")}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "weekplanning" && (
+            <CurriculumTimeline
+              plan={editedPlan}
+              currentWeek={getCurrentWeekNumber()}
+              onUpdate={(updatedPlan) => setEditedPlan(updatedPlan)}
+            />
+          )}
+
+          {activeTab === "blocked-weeks" && (
+            <BlockedWeeksManager
+              blockedWeeks={editedPlan.blockedWeeks}
+              availableClasses={availableClasses}
+              onChange={(blockedWeeks) =>
+                setEditedPlan({ ...editedPlan, blockedWeeks })
+              }
+            />
+          )}
+        </div>
       </div>
     </div>
   );

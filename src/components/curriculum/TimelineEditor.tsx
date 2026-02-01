@@ -196,7 +196,7 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
                     addGoalForWeek(weekNumber);
                   }}
                 >
-                  + Leerdoel
+                  + Weekdoel
                 </Button>
                 <span className="text-gray-400">{isExpanded ? "▼" : "▶"}</span>
               </div>
@@ -207,9 +207,9 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
               <div className="space-y-3 border-t p-3 dark:border-gray-700">
                 {goals.length === 0 ? (
                   <div className="py-4 text-center text-sm text-gray-500">
-                    Nog geen leerdoelen voor deze week.
+                    Nog geen doelen voor deze week.
                     <br />
-                    Klik op "+ Leerdoel" om er een toe te voegen.
+                    Klik op "+ Weekdoel" om er een toe te voegen.
                   </div>
                 ) : (
                   goals.map((goal) => (

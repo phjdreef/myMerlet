@@ -134,7 +134,7 @@ export function CurriculumTimelineReadMode({
           </div>
         )}
         {goals.length === 0 ? (
-          <div className="group flex items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50/80 p-4 text-sm text-gray-500 italic dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-400">
+          <div className="group flex items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50/80 px-3 py-2 text-xs text-gray-500 italic dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-400">
             <span>{t("emptyWeek", "Geen planning")}</span>
             {onAddGoal && !blockedWeekInfo && (
               <Button
@@ -181,6 +181,7 @@ export function CurriculumTimelineReadMode({
                           (p) => p.id === paragraphId,
                         );
                         if (!paragraph) return null;
+
                         return (
                           <div
                             key={paragraph.id}
@@ -192,6 +193,16 @@ export function CurriculumTimelineReadMode({
                                 § {paragraph.number} {paragraph.title}
                               </span>
                             </div>
+
+                            {/* Show study goals for this paragraph */}
+                            {paragraph.studyGoals && (
+                              <div
+                                className="mt-2 border-t border-blue-200 pt-2 text-sm text-blue-900 dark:border-blue-800 dark:text-blue-100"
+                                dangerouslySetInnerHTML={{
+                                  __html: paragraph.studyGoals,
+                                }}
+                              />
+                            )}
                           </div>
                         );
                       })}
@@ -226,7 +237,7 @@ export function CurriculumTimelineReadMode({
                     </div>
                   )}
 
-                  {(goal.experiment || goal.skills || goal.details) && (
+                  {(goal.experiment || goal.details) && (
                     <div className="space-y-2 border-t pt-3 dark:border-gray-700">
                       {goal.experiment && (
                         <div className="text-sm">
@@ -235,16 +246,6 @@ export function CurriculumTimelineReadMode({
                           </span>
                           <span className="ml-2 whitespace-pre-line text-gray-600 dark:text-gray-400">
                             {goal.experiment}
-                          </span>
-                        </div>
-                      )}
-                      {goal.skills && (
-                        <div className="text-sm">
-                          <span className="font-semibold text-gray-700 dark:text-gray-300">
-                            {t("skills", "Vaardigheden")}:
-                          </span>
-                          <span className="ml-2 whitespace-pre-line text-gray-600 dark:text-gray-400">
-                            {goal.skills}
                           </span>
                         </div>
                       )}

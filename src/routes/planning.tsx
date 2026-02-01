@@ -6,7 +6,7 @@ function PlanningPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="container mx-auto flex h-full flex-col gap-6 px-6 py-8">
+    <div className="container mx-auto flex h-full flex-col gap-4 px-4 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">{t("planning")}</h1>
@@ -16,7 +16,7 @@ function PlanningPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pr-4">
         <CurriculumPlanner />
       </div>
     </div>

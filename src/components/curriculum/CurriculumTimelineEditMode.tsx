@@ -185,6 +185,21 @@ export function CurriculumTimelineEditMode({
       </div>
 
       <div className="flex-1 space-y-3">
+        {/* Done editing button at the top */}
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onAddGoal?.()}
+            disabled={!!blockedWeekInfo}
+          >
+            + {t("addStudyGoal", "Weekdoel")}
+          </Button>
+          <Button size="sm" variant="outline" onClick={onDoneEditing}>
+            {t("doneEditing", "Klaar met bewerken")}
+          </Button>
+        </div>
+
         {blockedWeekInfo && (
           <div className="rounded-lg border border-dashed bg-white/50 p-3 text-sm dark:bg-gray-900/30">
             <div className="mb-1 font-medium text-orange-700 dark:text-orange-400">
@@ -317,6 +332,40 @@ export function CurriculumTimelineEditMode({
                               );
                             })}
                           </div>
+
+                          {/* Show study goals for selected paragraphs */}
+                          {goal.paragraphIds.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                                {t("paragraphGoals") ||
+                                  "Leerdoelen voor geselecteerde paragrafen"}
+                              </label>
+                              {goal.paragraphIds.map((paragraphId) => {
+                                const paragraph = plan.paragraphs.find(
+                                  (p) => p.id === paragraphId,
+                                );
+                                if (!paragraph) return null;
+                                if (!paragraph.studyGoals) return null;
+
+                                return (
+                                  <div
+                                    key={paragraphId}
+                                    className="rounded-lg border border-blue-200/60 bg-blue-50/50 p-3 dark:border-blue-800/40 dark:bg-blue-900/20"
+                                  >
+                                    <div className="mb-2 text-xs font-medium text-blue-700 dark:text-blue-300">
+                                      § {paragraph.number} {paragraph.title}
+                                    </div>
+                                    <div
+                                      className="text-sm text-blue-900 dark:text-blue-100"
+                                      dangerouslySetInnerHTML={{
+                                        __html: paragraph.studyGoals,
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -372,25 +421,6 @@ export function CurriculumTimelineEditMode({
 
                       <div className="space-y-2">
                         <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                          {t("skills", "Vaardigheden")}
-                        </label>
-                        <textarea
-                          className="min-h-16 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                          value={goal.skills ?? ""}
-                          onChange={(e) =>
-                            onUpdateGoal(goal.id, {
-                              skills: e.target.value,
-                            })
-                          }
-                          placeholder={t(
-                            "skillsPlaceholder",
-                            "Vaardigheden (optioneel)",
-                          )}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                           {t("details", "Details")}
                         </label>
                         <textarea
@@ -424,12 +454,6 @@ export function CurriculumTimelineEditMode({
                 </div>
               );
             })}
-
-            <div className="flex justify-end">
-              <Button size="sm" variant="outline" onClick={onDoneEditing}>
-                {t("doneEditing", "Klaar met bewerken")}
-              </Button>
-            </div>
           </div>
         )}
       </div>

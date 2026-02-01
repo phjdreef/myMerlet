@@ -23,11 +23,12 @@ export interface Paragraph {
   title: string;
   topicId?: string; // Optional link to a topic
   order: number;
+  studyGoals?: string; // Rich text HTML content for study goals
 }
 
 export interface StudyGoal {
   id: string; // unique ID for the goal
-  title: string; // e.g., "Paragraaf 3.2: Fotosynthese"
+  title: string; // e.g., "Week goal title"
   description?: string;
   weekStart: number; // week number (e.g., 1, 2, 3...)
   weekEnd: number; // week number for multi-week goals

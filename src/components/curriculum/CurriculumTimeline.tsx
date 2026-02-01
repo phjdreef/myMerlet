@@ -100,6 +100,8 @@ export function CurriculumTimeline({
   );
 
   const sortedGoals = useMemo(() => {
+    // All goals in studyGoals array are week goals
+    // Paragraph goals are now stored in paragraph.studyGoals field
     return [...plan.studyGoals].sort((a, b) => {
       const orderA = typeof a.order === "number" ? a.order : 0;
       const orderB = typeof b.order === "number" ? b.order : 0;

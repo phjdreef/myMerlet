@@ -242,7 +242,7 @@ export function CurriculumPlanner() {
   // Timeline view for selected plan
   if (selectedPlan && !isEditing) {
     return (
-      <div className="container mx-auto flex h-full flex-col p-4">
+      <div className="container mx-auto flex h-full flex-col">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
@@ -299,8 +299,8 @@ export function CurriculumPlanner() {
   }
 
   return (
-    <div className="container mx-auto flex h-full flex-col p-4">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">{t("curriculumPlanning")}</h1>
         {activeTab === "plans" && (
           <Button onClick={handleCreateNew}>+ {t("newPlan")}</Button>
@@ -358,7 +358,7 @@ export function CurriculumPlanner() {
               </div>
 
               {/* Curriculum overview */}
-              <div className="flex-1 space-y-6 overflow-y-auto">
+              <div className="flex-1 space-y-6 overflow-y-auto pr-4">
                 {Array.from(plansBySubjectAndYear.entries()).map(
                   ([subject, yearLevelGroups]) => (
                     <div key={subject} className="space-y-4">
@@ -446,6 +446,18 @@ export function CurriculumPlanner() {
                                           {effectivePlan.schoolYear}
                                         </div>
                                       </div>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedPlan(plan);
+                                          setIsEditing(true);
+                                        }}
+                                        className="ml-2"
+                                      >
+                                        {t("edit")}
+                                      </Button>
                                     </div>
 
                                     {plan.classNames.length > 0 && (

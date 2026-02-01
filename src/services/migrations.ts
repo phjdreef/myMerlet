@@ -256,6 +256,76 @@ export function migrateSeatingPositionsSchoolYear(
 }
 
 /**
+ * Migration: Move paragraph study goals from studyGoals array to paragraph.studyGoals field
+ */
+async function migrateParagraphStudyGoals(): Promise<void> {
+  const migrationName = "paragraph_study_goals_v1";
+
+  if (isMigrationComplete(migrationName)) {
+    logger.debug(`Migration ${migrationName} already completed, skipping`);
+    return;
+  }
+
+  const userDataPath = app.getPath("userData");
+  const curriculumPath = path.join(userDataPath, "curriculum_plans.json");
+
+  if (!fs.existsSync(curriculumPath)) {
+    logger.debug("Curriculum plans file does not exist, skipping migration");
+    markMigrationComplete(migrationName);
+    return;
+  }
+
+  try {
+    const content = fs.readFileSync(curriculumPath, "utf-8");
+    const data = JSON.parse(content);
+    let migrated = 0;
+
+    if (data.plans && Array.isArray(data.plans)) {
+      for (const plan of data.plans) {
+        if (!plan.paragraphs || !plan.studyGoals) continue;
+
+        // For each paragraph, find studyGoals that reference it
+        for (const paragraph of plan.paragraphs) {
+          const paragraphGoals = plan.studyGoals.filter(
+            (goal: any) =>
+              goal.paragraphIds &&
+              goal.paragraphIds.includes(paragraph.id) &&
+              (!goal.title || goal.title.trim() === ""),
+          );
+
+          if (paragraphGoals.length > 0) {
+            // Combine all paragraph goals into one rich text field
+            const combinedGoals = paragraphGoals
+              .map((goal: any) => goal.description || "")
+              .filter((desc: string) => desc.trim() !== "")
+              .join("<br><br>");
+
+            if (combinedGoals) {
+              paragraph.studyGoals = combinedGoals;
+              migrated++;
+            }
+
+            // Remove these goals from the studyGoals array
+            plan.studyGoals = plan.studyGoals.filter(
+              (goal: any) => !paragraphGoals.includes(goal),
+            );
+          }
+        }
+      }
+
+      fs.writeFileSync(curriculumPath, JSON.stringify(data, null, 2));
+      logger.log(
+        `Migrated ${migrated} paragraph study goals to paragraph.studyGoals field`,
+      );
+    }
+
+    markMigrationComplete(migrationName);
+  } catch (error) {
+    logger.error("Failed to migrate paragraph study goals:", error);
+  }
+}
+
+/**
  * Run all pending migrations
  */
 export async function runMigrations(): Promise<void> {
@@ -264,6 +334,7 @@ export async function runMigrations(): Promise<void> {
   await migrateStudentsSchoolYear();
   await migrateTestsSchoolYear();
   await migrateGradesSchoolYear();
+  await migrateParagraphStudyGoals();
 
   logger.log("All migrations completed");
 }

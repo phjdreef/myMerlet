@@ -352,7 +352,7 @@ export function ClassGradesTab({
                           event.stopPropagation();
                           navigate({
                             to: "/tests",
-                            state: { editTestId: test.id } as any,
+                            search: { editTestId: test.id },
                           });
                         }}
                       >
