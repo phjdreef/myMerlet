@@ -14,7 +14,8 @@ export default function App() {
   useEffect(() => {
     syncThemeWithLocal();
     updateAppLanguage(i18n);
-  }, [i18n]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount, not when i18n changes
 
   return (
     <SchoolYearProvider>

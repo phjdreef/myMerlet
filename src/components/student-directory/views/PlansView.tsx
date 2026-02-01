@@ -63,11 +63,11 @@ export function PlansView({
           onReloadPlans();
         }
       } else {
-        console.error("Failed to update plan:", result.error);
+        logger.error("Failed to update plan:", result.error);
         alert(t("planUpdateError") || "Failed to update plan.");
       }
     } catch (error) {
-      console.error("Failed to update plan:", error);
+      logger.error("Failed to update plan:", error);
       alert(t("planUpdateError") || "Failed to update plan.");
     }
   };
@@ -100,6 +100,30 @@ export function PlansView({
     }
   };
 
+  const handleDeletePlan = async (plan: CurriculumPlan) => {
+    if (!confirm(t("confirmDeletePlan"))) {
+      return;
+    }
+
+    try {
+      const result = await window.curriculumAPI.deletePlan(plan.id);
+      if (result.success) {
+        logger.log("Plan deleted successfully:", plan.id);
+
+        // Reload plans to update the UI
+        if (onReloadPlans) {
+          onReloadPlans();
+        }
+      } else {
+        logger.error("Failed to delete plan:", result.error);
+        alert(t("planUpdateError") || "Failed to delete plan.");
+      }
+    } catch (error) {
+      logger.error("Error deleting plan:", error);
+      alert(t("planUpdateError") || "Failed to delete plan.");
+    }
+  };
+
   if (classPlans.length === 0) {
     return (
       <div className="py-8 text-center">
@@ -128,18 +152,32 @@ export function PlansView({
             ))}
           </TabsList>
           {selectedPlanTab && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const selectedPlan = classPlans.find(
-                  (p) => p.id === selectedPlanTab,
-                );
-                if (selectedPlan) handleExportPlan(selectedPlan);
-              }}
-            >
-              {t("exportPlan")}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const selectedPlan = classPlans.find(
+                    (p) => p.id === selectedPlanTab,
+                  );
+                  if (selectedPlan) handleDeletePlan(selectedPlan);
+                }}
+              >
+                {t("delete")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const selectedPlan = classPlans.find(
+                    (p) => p.id === selectedPlanTab,
+                  );
+                  if (selectedPlan) handleExportPlan(selectedPlan);
+                }}
+              >
+                {t("exportPlan")}
+              </Button>
+            </div>
           )}
         </div>
       </div>

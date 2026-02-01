@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useSchoolYear } from "@/contexts/SchoolYearContext";
 import { generateSchoolYears } from "@/utils/school-year";
 import { CalendarIcon } from "@phosphor-icons/react";
+import { logger } from "@/utils/logger";
 
 export function SchoolYearSelector() {
   const { t } = useTranslation();
@@ -18,7 +19,7 @@ export function SchoolYearSelector() {
     try {
       await setSchoolYear(newYear);
     } catch (error) {
-      console.error("Failed to change school year:", error);
+      logger.error("Failed to change school year:", error);
     } finally {
       setSaving(false);
     }

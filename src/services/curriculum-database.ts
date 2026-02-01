@@ -268,6 +268,15 @@ class CurriculumDatabase {
 
     try {
       const data = this.readDatabase();
+
+      // Find the plan to be deleted
+      const planToDelete = data.plans.find((p) => p.id === planId);
+
+      // If this is a class-specific copy (has sourceTemplateId), we don't need to do anything special
+      // The template tracks copies by searching for plans with sourceTemplateId === template.id
+      // When we delete this plan, it will automatically not appear in future searches
+
+      // Delete the plan
       data.plans = data.plans.filter((p) => p.id !== planId);
 
       data.metadata = {
@@ -276,7 +285,14 @@ class CurriculumDatabase {
       };
 
       this.writeDatabase(data);
-      logger.debug(`Successfully deleted curriculum plan ${planId}`);
+
+      if (planToDelete?.sourceTemplateId) {
+        logger.debug(
+          `Successfully deleted class-specific copy ${planId} (template: ${planToDelete.sourceTemplateId})`,
+        );
+      } else {
+        logger.debug(`Successfully deleted curriculum plan ${planId}`);
+      }
     } catch (error) {
       logger.error("Failed to delete curriculum plan:", error);
       throw new Error("Failed to delete curriculum plan");

@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 interface ErrorBannerProps {
   error: string | null;
   onDismiss?: () => void;
@@ -9,6 +11,7 @@ export function ErrorBanner({
   onDismiss,
   variant = "error",
 }: ErrorBannerProps) {
+  const { t } = useTranslation();
   if (!error) return null;
 
   const variantStyles = {
@@ -30,7 +33,7 @@ export function ErrorBanner({
             onClick={onDismiss}
             className="text-muted-foreground text-xs underline-offset-4 hover:underline"
           >
-            Dismiss
+            {t("dismiss")}
           </button>
         )}
       </div>

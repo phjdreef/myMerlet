@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface RichTextEditorProps {
   content: string;
@@ -13,9 +14,11 @@ interface RichTextEditorProps {
 export function RichTextEditor({
   content,
   onChange,
-  placeholder = "Begin met typen...",
+  placeholder,
   className = "",
 }: RichTextEditorProps) {
+  const { t } = useTranslation();
+  const defaultPlaceholder = placeholder || t("beginTyping");
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -24,7 +27,7 @@ export function RichTextEditor({
         },
       }),
       Placeholder.configure({
-        placeholder,
+        placeholder: defaultPlaceholder,
       }),
     ],
     content,
@@ -63,7 +66,7 @@ export function RichTextEditor({
               ? "bg-gray-300 font-bold dark:bg-gray-600"
               : ""
           }`}
-          title="Vet (Ctrl+B)"
+          title={t("bold")}
         >
           <strong>B</strong>
         </button>
@@ -76,7 +79,7 @@ export function RichTextEditor({
               ? "bg-gray-300 italic dark:bg-gray-600"
               : ""
           }`}
-          title="Cursief (Ctrl+I)"
+          title={t("italic")}
         >
           <em>I</em>
         </button>
@@ -89,7 +92,7 @@ export function RichTextEditor({
               ? "bg-gray-300 line-through dark:bg-gray-600"
               : ""
           }`}
-          title="Doorhalen"
+          title={t("strikethrough")}
         >
           <s>S</s>
         </button>
@@ -104,7 +107,7 @@ export function RichTextEditor({
               ? "bg-gray-300 font-bold dark:bg-gray-600"
               : ""
           }`}
-          title="Kop 2"
+          title={t("heading2")}
         >
           H2
         </button>
@@ -118,7 +121,7 @@ export function RichTextEditor({
               ? "bg-gray-300 font-bold dark:bg-gray-600"
               : ""
           }`}
-          title="Kop 3"
+          title={t("heading3")}
         >
           H3
         </button>
@@ -158,7 +161,7 @@ export function RichTextEditor({
           type="button"
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
           className="rounded px-3 py-1 text-sm hover:bg-gray-200 dark:hover:bg-gray-700"
-          title="Horizontale lijn"
+          title={t("horizontalLine")}
         >
           ―
         </button>
@@ -168,7 +171,7 @@ export function RichTextEditor({
           onClick={() => editor.chain().focus().undo().run()}
           disabled={!editor.can().chain().focus().undo().run()}
           className="rounded px-3 py-1 text-sm hover:bg-gray-200 disabled:opacity-30 dark:hover:bg-gray-700"
-          title="Ongedaan maken (Ctrl+Z)"
+          title={t("undo")}
         >
           ↶
         </button>
@@ -177,7 +180,7 @@ export function RichTextEditor({
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().chain().focus().redo().run()}
           className="rounded px-3 py-1 text-sm hover:bg-gray-200 disabled:opacity-30 dark:hover:bg-gray-700"
-          title="Opnieuw (Ctrl+Y)"
+          title={t("redo")}
         >
           ↷
         </button>

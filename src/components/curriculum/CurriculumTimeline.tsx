@@ -22,6 +22,7 @@ import {
 } from "../../utils/curriculum-week";
 import { CurriculumTimelineReadMode } from "./CurriculumTimelineReadMode";
 import { CurriculumTimelineEditMode } from "./CurriculumTimelineEditMode";
+import { logger } from "../../utils/logger";
 
 interface CurriculumTimelineProps {
   plan: CurriculumPlan;
@@ -53,7 +54,7 @@ export function CurriculumTimeline({
         const weeks = await window.settingsAPI.getGlobalBlockedWeeks();
         setGlobalBlockedWeeks(weeks);
       } catch (error) {
-        console.error("Failed to load global blocked weeks:", error);
+        logger.error("Failed to load global blocked weeks:", error);
       }
     };
     loadGlobalBlockedWeeks();
@@ -565,6 +566,9 @@ export function CurriculumTimeline({
               onToggleParagraph={toggleParagraphInGoal}
               onToggleTopic={toggleTopicInGoal}
               onDoneEditing={handleDoneEditing}
+              onAddGoal={
+                onUpdate ? () => addGoalForWeek(weekNumber) : undefined
+              }
             />
           ) : (
             <CurriculumTimelineReadMode

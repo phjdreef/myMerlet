@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Button } from "../ui/button";
 import { getCurrentWeekNumber, formatWeekRange } from "../../utils/week-utils";
+import { useTranslation } from "react-i18next";
 import type {
   CurriculumPlan,
   StudyGoal,
@@ -18,6 +19,7 @@ interface TimelineEditorProps {
 }
 
 export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
+  const { t } = useTranslation();
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set());
   const currentYear = new Date().getFullYear();
   const currentWeek = getCurrentWeekNumber();
@@ -226,7 +228,7 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
                           onChange={(e) =>
                             updateGoal(goal.id, { title: e.target.value })
                           }
-                          placeholder="Titel van het leerdoel"
+                          placeholder={t("weekGoalTitlePlaceholder")}
                         />
                         <Button
                           size="sm"
@@ -245,7 +247,7 @@ export function TimelineEditor({ plan, onUpdate }: TimelineEditorProps) {
                         onChange={(e) =>
                           updateGoal(goal.id, { description: e.target.value })
                         }
-                        placeholder="Beschrijving (optioneel)"
+                        placeholder={t("weekGoalDescriptionPlaceholder")}
                       />
 
                       {/* Week Range */}

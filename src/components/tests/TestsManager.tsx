@@ -17,6 +17,7 @@ import type {
 import { Button } from "../ui/button";
 import { TestForm } from "./TestForm";
 import type { TestFormState } from "./types";
+import { logger } from "@/utils/logger";
 
 interface TestsManagerProps {
   classGroup?: string | null;
@@ -110,7 +111,7 @@ export function TestsManager({
         setStatistics(statsMap);
       }
     } catch (error) {
-      console.error("Failed to load tests:", error);
+      logger.error("Failed to load tests:", error);
     } finally {
       setLoading(false);
     }
@@ -184,7 +185,7 @@ export function TestsManager({
         }
       }
     } catch (error) {
-      console.error("Failed to save test:", error);
+      logger.error("Failed to save test:", error);
     }
   };
 
@@ -217,7 +218,7 @@ export function TestsManager({
         await loadTests();
       }
     } catch (error) {
-      console.error("Failed to delete test:", error);
+      logger.error("Failed to delete test:", error);
     }
   };
 

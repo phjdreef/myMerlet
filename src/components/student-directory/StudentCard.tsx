@@ -4,6 +4,7 @@ import type { Student } from "@/services/student-database";
 import { StudentPhoto } from "./StudentPhoto";
 import type { StudentGrade, Test } from "@/services/test-database";
 import { formatStudentName } from "@/helpers/student_helpers";
+import { logger } from "@/utils/logger";
 
 interface StudentCardProps {
   student: Student;
@@ -48,7 +49,7 @@ export function StudentCard({ student, selectedClass }: StudentCardProps) {
         setTests(testsMap);
       }
     } catch (error) {
-      console.error("Failed to load student grades:", error);
+      logger.error("Failed to load student grades:", error);
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { PlusIcon, XIcon } from "@phosphor-icons/react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
+import { CvTEChart } from "./CvTEChart";
 import type { CompositeElement, TestType } from "@/services/test-database";
 import { Button } from "../ui/button";
 import type { TestFormState } from "./types";
@@ -29,6 +30,12 @@ export function TestForm({
 }: TestFormProps) {
   const { t } = useTranslation();
   const formulaInputRef = useRef<HTMLInputElement>(null);
+
+  // Chart data: show current n-term and two reference lines
+  const chartNTerms = useMemo(
+    () => [0, formData.nTerm, 2.0],
+    [formData.nTerm],
+  );
 
   const updateField = <Key extends keyof TestFormState>(
     key: Key,
@@ -268,6 +275,16 @@ export function TestForm({
                 <option value="main">{t("cvteCalculationMain")}</option>
               </select>
             </div>
+
+            {formData.maxPoints > 0 && (
+              <div className="col-span-2">
+                <CvTEChart
+                  maxPoints={formData.maxPoints}
+                  nTerms={chartNTerms}
+                  mode={formData.cvteCalculationMode}
+                />
+              </div>
+            )}
           </>
         )}
 

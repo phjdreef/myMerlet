@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { CvTEChart } from "./CvTEChart";
 import { ChartBarIcon, FloppyDiskIcon } from "@phosphor-icons/react";
 import {
   calculateCvTEGrade,
@@ -15,6 +16,7 @@ import {
 } from "@/helpers/student_helpers";
 import { StudentPhoto } from "@/components/student-directory/StudentPhoto";
 import { Button } from "../ui/button";
+import { logger } from "@/utils/logger";
 
 interface GradeEntryProps {
   test: Test;
@@ -32,6 +34,13 @@ export function GradeEntry({
   readOnly = false,
 }: GradeEntryProps) {
   const { t } = useTranslation();
+
+  // Chart data: show three reference n-term lines
+  const chartNTerms = useMemo(() => [0, 1.0, 2.0], []);
+  
+  // Chart modal state
+  const [showChart, setShowChart] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -113,7 +122,7 @@ export function GradeEntry({
         setEntries(entriesMap);
       }
     } catch (error) {
-      console.error("Failed to load grades:", error);
+      logger.error("Failed to load grades:", error);
     } finally {
       setLoading(false);
     }
@@ -167,7 +176,7 @@ export function GradeEntry({
         formula = formula.replace(/,/g, ".");
 
         if (!/^[\d\s+\-*/().]+$/.test(formula)) {
-          console.error("Invalid formula", formula);
+          logger.error("Invalid formula", formula);
           return null;
         }
 
@@ -177,10 +186,10 @@ export function GradeEntry({
           return Math.round(result * 100) / 100;
         }
 
-        console.error("Formula did not evaluate to a number", formula);
+        logger.error("Formula did not evaluate to a number", formula);
         return null;
       } catch (error) {
-        console.error("Error evaluating formula:", error);
+        logger.error("Error evaluating formula:", error);
         return null;
       }
     }
@@ -321,7 +330,7 @@ export function GradeEntry({
       onSave?.();
       onClose();
     } catch (error) {
-      console.error("Failed to save grades:", error);
+      logger.error("Failed to save grades:", error);
     } finally {
       setSaving(false);
     }
@@ -357,6 +366,34 @@ export function GradeEntry({
 
   return (
     <div className="flex h-full flex-col gap-4">
+      {/* Chart Modal */}
+      {showChart && test.testType === "cvte" && test.maxPoints && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setShowChart(false)}
+        >
+          <div
+            className="mx-4 max-h-[90vh] w-full max-w-4xl overflow-auto rounded-lg bg-background p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">{t("cvteChart")}</h3>
+              <button
+                onClick={() => setShowChart(false)}
+                className="rounded-lg p-2 hover:bg-muted"
+              >
+                ✕
+              </button>
+            </div>
+            <CvTEChart
+              maxPoints={test.maxPoints}
+              nTerms={chartNTerms}
+              mode={test.cvteCalculationMode ?? "legacy"}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Live Statistics Banner */}
       {liveStatistics.totalGraded > 0 && (
         <div className="bg-muted/50 flex flex-wrap gap-4 rounded-lg border p-3 text-sm">
@@ -385,9 +422,10 @@ export function GradeEntry({
       {/* Header */}
       <div>
         {test.testType === "cvte" ? (
-          <p className="text-muted-foreground text-sm">
-            {t("maxPoints")}: {test.maxPoints} | {t("formula")}:{" "}
-            {(() => {
+          <div className="flex items-center justify-between">
+            <p className="text-muted-foreground text-sm">
+              {t("maxPoints")}: {test.maxPoints} | {t("formula")}:{" "}
+              {(() => {
               const nTerm = test.nTerm ?? 1;
               const mode = test.cvteCalculationMode ?? "legacy";
               if (mode === "legacy") {
@@ -398,7 +436,17 @@ export function GradeEntry({
               }
               return `9 × (${t("points")} / ${test.maxPoints}) + ${nTerm} ${t("cvteFormulaSuffixOfficial")}`;
             })()}
-          </p>
+            </p>
+            {test.maxPoints && (
+              <button
+                onClick={() => setShowChart(true)}
+                className="flex items-center gap-1 rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground hover:bg-primary/90"
+              >
+                <ChartBarIcon className="h-4 w-4" />
+                {t("showChart", "Toon Grafiek")}
+              </button>
+            )}
+          </div>
         ) : (
           <div className="text-muted-foreground space-y-1 text-sm">
             <p>
@@ -630,7 +678,7 @@ export function GradeEntry({
                             )
                           }
                           className="w-20 rounded border px-2 py-1"
-                          placeholder="auto"
+                          placeholder={t("autoPlaceholder")}
                         />
                       )}
                     </td>

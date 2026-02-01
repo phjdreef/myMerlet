@@ -5,6 +5,7 @@ import {
 } from "@/helpers/window_helpers";
 import { isMacOS } from "@/utils/platform";
 import type { ReactNode, ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 interface DragWindowRegionProps {
   title?: ReactNode;
@@ -13,6 +14,8 @@ interface DragWindowRegionProps {
 export default function DragWindowRegion({
   title,
 }: DragWindowRegionProps): ReactElement {
+  const { t } = useTranslation();
+  
   return (
     <div className="flex w-screen items-stretch justify-between">
       <div className="draglayer flex w-full items-center">
@@ -28,16 +31,16 @@ export default function DragWindowRegion({
         )}
         {/* ThemeSelector moved to NavigationMenu */}
       </div>
-      {!isMacOS() && <WindowButtons />}
+      {!isMacOS() && <WindowButtons t={t} />}
     </div>
   );
 }
 
-function WindowButtons(): ReactElement {
+function WindowButtons({ t }: { t: (key: string) => string }): ReactElement {
   return (
     <div className="flex">
       <button
-        title="Minimize"
+        title={t("minimize")}
         type="button"
         className="p-2 hover:bg-slate-300"
         onClick={minimizeWindow}
@@ -53,7 +56,7 @@ function WindowButtons(): ReactElement {
         </svg>
       </button>
       <button
-        title="Maximize"
+        title={t("maximize")}
         type="button"
         className="p-2 hover:bg-slate-300"
         onClick={maximizeWindow}
@@ -77,7 +80,7 @@ function WindowButtons(): ReactElement {
       </button>
       <button
         type="button"
-        title="Close"
+        title={t("close")}
         className="p-2 hover:bg-red-300"
         onClick={closeWindow}
       >

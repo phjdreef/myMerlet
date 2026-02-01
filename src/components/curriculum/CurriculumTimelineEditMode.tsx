@@ -21,6 +21,7 @@ interface CurriculumTimelineEditModeProps {
   onToggleParagraph: (goalId: string, paragraphId: string) => void;
   onToggleTopic: (goalId: string, topicId: string) => void;
   onDoneEditing: () => void;
+  onAddGoal?: () => void;
 }
 
 export function CurriculumTimelineEditMode({
@@ -36,6 +37,7 @@ export function CurriculumTimelineEditMode({
   onToggleParagraph,
   onToggleTopic,
   onDoneEditing,
+  onAddGoal,
 }: CurriculumTimelineEditModeProps) {
   const { t } = useTranslation();
   const [localTitles, setLocalTitles] = useState<Record<string, string>>({});
@@ -187,6 +189,11 @@ export function CurriculumTimelineEditMode({
       <div className="flex-1 space-y-3">
         {/* Done editing button at the top */}
         <div className="flex items-center justify-end gap-2">
+          {onAddGoal && !blockedWeekInfo && (
+            <Button size="sm" onClick={onAddGoal}>
+              + {t("addStudyGoal", "Weekdoel")}
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={onDoneEditing}>
             {t("doneEditing", "Klaar met bewerken")}
           </Button>
