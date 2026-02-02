@@ -3,5 +3,5 @@ export const CURRICULUM_CHANNELS = {
   GET_PLAN_BY_CLASS: "curriculum:getPlanByClass",
   SAVE_PLAN: "curriculum:savePlan",
   DELETE_PLAN: "curriculum:deletePlan",
-  EXPORT_PLAN_DOCX: "curriculum:exportPlanDocx",
+  EXPORT_PLAN_PDF: "curriculum:exportPlanPdf",
 } as const;

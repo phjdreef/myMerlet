@@ -9,9 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { GlobalBlockedWeeksManager } from "./settings/GlobalBlockedWeeksManager";
 import { useSchoolYear } from "../contexts/SchoolYearContext";
 import type { CurriculumPlan } from "../services/curriculum-database";
+import { DownloadIcon } from "@phosphor-icons/react";
 
 export function CurriculumPlanner() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { currentSchoolYear } = useSchoolYear();
   const [plans, setPlans] = useState<CurriculumPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<CurriculumPlan | null>(null);
@@ -178,6 +179,34 @@ export function CurriculumPlanner() {
     setIsEditing(true);
   };
 
+  const handleExportPlan = async (plan: CurriculumPlan) => {
+    try {
+      const result = await window.curriculumAPI.exportPlanToPdf(
+        plan.id,
+        i18n.language as "nl" | "en",
+        undefined, // No specific class for template export
+      );
+      if (result.success) {
+        const data = result.data as { filePath?: string } | undefined;
+        const filePath = data?.filePath;
+        if (filePath) {
+          alert(t("exportPlanSuccessWithPath", { filePath }));
+        } else {
+          alert(t("exportPlanSuccess"));
+        }
+        logger.log("Template plan exported", filePath);
+      } else if (result.error !== "cancelled") {
+        const errorMessage = result.error || t("unknownError");
+        alert(t("exportPlanError", { error: errorMessage }));
+        logger.error("Failed to export plan:", result.error);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(t("exportPlanError", { error: message }));
+      logger.error("Error exporting plan:", error);
+    }
+  };
+
   const handleUpdatePlan = async (updatedPlan: CurriculumPlan) => {
     // Optimistically update local state so UI reflects changes immediately
     setSelectedPlan(updatedPlan);
@@ -210,21 +239,7 @@ export function CurriculumPlanner() {
 
   if (isEditing && selectedPlan) {
     return (
-      <div className="container mx-auto flex h-full flex-col p-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
-            {selectedPlan.id ? t("editPlan") : t("newPlan")}
-          </h2>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setIsEditing(false);
-              setSelectedPlan(null);
-            }}
-          >
-            {t("cancel")}
-          </Button>
-        </div>
+      <div className="container mx-auto flex h-full flex-col">
         <div className="flex-1 overflow-hidden">
           <PlanEditor
             plan={selectedPlan}
@@ -253,7 +268,14 @@ export function CurriculumPlanner() {
               ← {t("back") || "Terug"}
             </Button>
             <div>
-              <h2 className="text-xl font-semibold">{selectedPlan.subject}</h2>
+              <h2 className="text-xl font-semibold">
+                {selectedPlan.subject}
+                {selectedPlan.yearLevel && (
+                  <span className="ml-2 text-base font-normal text-gray-600 dark:text-gray-400">
+                    {selectedPlan.yearLevel}
+                  </span>
+                )}
+              </h2>
               {selectedPlan.description && (
                 <div className="text-base text-gray-700 dark:text-gray-300">
                   {selectedPlan.description}
@@ -268,6 +290,14 @@ export function CurriculumPlanner() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleExportPlan(selectedPlan)}
+            >
+              <DownloadIcon className="mr-1 h-4 w-4" />
+              {t("exportPlan")}
+            </Button>
             <Button
               size="sm"
               variant="outline"

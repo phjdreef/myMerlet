@@ -459,7 +459,7 @@ export function TestForm({
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex justify-end gap-2">
         <Button type="submit">{t("save")}</Button>
         <Button type="button" variant="outline" onClick={onCancel}>
           {t("cancel")}

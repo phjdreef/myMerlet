@@ -37,12 +37,15 @@ const CANCELLED_ERROR_CODE = "cancelled";
 
 // Font styles for Word document
 const FONT_STYLES = {
-  normal: { font: "Arial", size: 20 } as const, // 10pt
-  bold: { font: "Arial", size: 20, bold: true } as const, // 10pt bold
-  title: { font: "Arial", size: 28, bold: true } as const, // 14pt bold
-  small: { font: "Arial", size: 18 } as const, // 9pt
-  weekNumber: { font: "Arial", size: 28, bold: true } as const, // 14pt bold
-  weekDate: { font: "Arial", size: 18, color: "808080" } as const, // 9pt gray
+  normal: { font: "Calibri", size: 22 } as const, // 11pt
+  bold: { font: "Calibri", size: 22, bold: true } as const, // 11pt bold
+  title: { font: "Calibri", size: 36, bold: true, color: "1f3864" } as const, // 18pt bold dark blue
+  subtitle: { font: "Calibri", size: 24, color: "5b9bd5", italics: true } as const, // 12pt blue italic
+  metadata: { font: "Calibri", size: 20, color: "7f7f7f" } as const, // 10pt gray
+  small: { font: "Calibri", size: 18 } as const, // 9pt
+  weekNumber: { font: "Calibri", size: 24, bold: true, color: "1f3864" } as const, // 12pt bold dark blue
+  weekDate: { font: "Calibri", size: 18, color: "7f7f7f" } as const, // 9pt gray
+  tableHeader: { font: "Calibri", size: 22, bold: true, color: "ffffff" } as const, // 11pt bold white
 };
 
 function sanitizeFileName(input: string): string {
@@ -122,35 +125,80 @@ async function buildPlanDocument(
   const parsedYears = parseSchoolYear(plan.schoolYear);
   const startYear = plan.schoolYearStart ?? parsedYears.startYear ?? undefined;
   const endYear = plan.schoolYearEnd ?? parsedYears.endYear ?? undefined;
+  // Determine if this is a class-specific plan
+  const isClassSpecific = plan.isTemplate === false && plan.classNames.length === 1;
+  
   const headerParagraphs: DocParagraph[] = [
     new DocParagraph({
       children: [
         new TextRun({
-          text: plan.subject?.trim()
+          text: isClassSpecific && plan.classNames[0]
+            ? `Curriculum planner klas ${plan.classNames[0]}`
+            : plan.subject?.trim()
             ? `${plan.subject.trim()} – ${t.curriculumOverview}`
             : t.curriculumOverview,
           ...FONT_STYLES.title,
         }),
       ],
       heading: HeadingLevel.TITLE,
+      spacing: { after: 100 },
     }),
+  ];
+  
+  // Subtitle for class-specific plans
+  if (isClassSpecific) {
+    const subtitleParts: string[] = [];
+    if (plan.subject?.trim()) subtitleParts.push(plan.subject.trim());
+    if (plan.yearLevel?.trim()) subtitleParts.push(plan.yearLevel.trim());
+    if (plan.description?.trim()) subtitleParts.push(plan.description.trim());
+    
+    if (subtitleParts.length > 0) {
+      headerParagraphs.push(
+        new DocParagraph({
+          children: [
+            new TextRun({
+              text: subtitleParts.join(" - "),
+              ...FONT_STYLES.subtitle,
+            }),
+          ],
+          spacing: { after: 200 },
+        }),
+      );
+    }
+  }
+  
+  headerParagraphs.push(
     new DocParagraph({
       children: [
         new TextRun({
           text: `${t.schoolYear}: ${plan.schoolYear || "n/a"}`,
-          ...FONT_STYLES.normal,
+          ...FONT_STYLES.metadata,
         }),
       ],
     }),
-  ];
+  );
 
-  if (plan.classNames.length > 0) {
+  if (plan.yearLevel?.trim()) {
+    const yearLevelLabel = language === "nl" ? "Leerjaar" : "Year level";
+    headerParagraphs.push(
+      new DocParagraph({
+        children: [
+          new TextRun({
+            text: `${yearLevelLabel}: ${plan.yearLevel.trim()}`,
+            ...FONT_STYLES.metadata,
+          }),
+        ],
+      }),
+    );
+  }
+  
+  if (!isClassSpecific && plan.classNames.length > 0) {
     headerParagraphs.push(
       new DocParagraph({
         children: [
           new TextRun({
             text: `${t.classes}: ${plan.classNames.join(", ")}`,
-            ...FONT_STYLES.normal,
+            ...FONT_STYLES.metadata,
           }),
         ],
       }),
@@ -165,7 +213,7 @@ async function buildPlanDocument(
             text: endYear
               ? `${t.startYear}: ${startYear} → ${endYear}`
               : `${t.startYear}: ${startYear}`,
-            ...FONT_STYLES.normal,
+            ...FONT_STYLES.metadata,
           }),
         ],
       }),
@@ -178,7 +226,7 @@ async function buildPlanDocument(
       children: [
         new TextRun({
           text: `${t.weeksCovered}: ${plan.weekRangeStart} – ${plan.weekRangeEnd}${wrapsYear ? ` ${t.wrapsOverNewYear}` : ""}`,
-          ...FONT_STYLES.normal,
+          ...FONT_STYLES.metadata,
         }),
       ],
     }),
@@ -189,9 +237,10 @@ async function buildPlanDocument(
       children: [
         new TextRun({
           text: `${t.generatedOn} ${formatDateShort(new Date(), language)}`,
-          ...FONT_STYLES.normal,
+          ...FONT_STYLES.metadata,
         }),
       ],
+      spacing: { after: 300 },
     }),
   );
 
@@ -204,25 +253,12 @@ async function buildPlanDocument(
     paragraphMap.set(paragraph.id, paragraph);
   });
 
-  const tableRows: TableRow[] = [
-    new TableRow({
-      tableHeader: true,
-      children: [
-        new TableCell({ children: [createBoldParagraph(t.week)] }),
-        new TableCell({
-          children: [createBoldParagraph(t.goalParagraphSubject)],
-        }),
-        new TableCell({ children: [createBoldParagraph(t.experiment)] }),
-        new TableCell({ children: [createBoldParagraph(t.skills)] }),
-        new TableCell({ children: [createBoldParagraph(t.details)] }),
-      ],
-    }),
-  ];
-
   const topicMap = new Map<string, string>();
   plan.topics.forEach((topic) => {
     topicMap.set(topic.id, topic.name?.trim() || "Topic");
   });
+
+  const contentParagraphs: DocParagraph[] = [...headerParagraphs];
 
   weekSequence.forEach((weekNumber) => {
     const goals = plan.studyGoals.filter((goal) =>
@@ -236,24 +272,64 @@ async function buildPlanDocument(
       startYear ?? new Date().getFullYear(),
     );
 
-    // Build combined cell content: Goal, Paragraphs, and Subject
-    const combinedContentParagraphs: DocParagraph[] = [];
+    // Week header
+    contentParagraphs.push(
+      new DocParagraph({
+        children: [
+          new TextRun({
+            text: `WEEK ${weekNumber}  `,
+            ...FONT_STYLES.weekNumber,
+          }),
+          new TextRun({
+            text: formatWeekRange(weekNumber, yearForWeek),
+            ...FONT_STYLES.weekDate,
+          }),
+        ],
+        spacing: { before: 400, after: 200 },
+        border: {
+          bottom: {
+            color: "4472C4",
+            space: 1,
+            style: "single",
+            size: 6,
+          },
+        },
+      }),
+    );
 
     if (goals.length === 0) {
-      combinedContentParagraphs.push(createNormalParagraph(t.noGoalsPlanned));
+      contentParagraphs.push(
+        new DocParagraph({
+          children: [
+            new TextRun({
+              text: t.noGoalsPlanned,
+              ...FONT_STYLES.normal,
+              italics: true,
+              color: "999999",
+            }),
+          ],
+          spacing: { after: 200 },
+        }),
+      );
     } else {
       goals.forEach((goal, goalIndex) => {
+        // Collect all paragraphs for this goal first
+        const goalParagraphs: DocParagraph[] = [];
+        
         // Goal title
         const goalTitle = goal.title?.trim() || "Study goal";
-
-        combinedContentParagraphs.push(
+        goalParagraphs.push(
           new DocParagraph({
             children: [
               new TextRun({
-                text: `${goalTitle}`,
+                text: goalTitle,
                 ...FONT_STYLES.bold,
+                size: 24, // 12pt
               }),
             ],
+            spacing: { before: goalIndex > 0 ? 300 : 100, after: 100 },
+            keepNext: true,
+            keepLines: true,
           }),
         );
 
@@ -261,18 +337,18 @@ async function buildPlanDocument(
         if (goal.description) {
           const description = stripHtml(goal.description);
           if (description) {
-            // Split by newlines and create separate paragraphs for each line
             const lines = description.split("\n");
-            lines.forEach((line) => {
-              // Create paragraph even for empty lines to preserve spacing
-              combinedContentParagraphs.push(
+            lines.forEach((line, lineIndex) => {
+              goalParagraphs.push(
                 new DocParagraph({
                   children: [
                     new TextRun({
-                      text: line || " ", // Use space for empty lines
+                      text: line || " ",
                       ...FONT_STYLES.normal,
                     }),
                   ],
+                  keepNext: true,
+                  keepLines: true,
                 }),
               );
             });
@@ -286,122 +362,178 @@ async function buildPlanDocument(
             if (paragraph) {
               const number = paragraph.number ? `§${paragraph.number}` : "§?";
               const title = paragraph.title?.trim() || "Paragraph";
-              combinedContentParagraphs.push(
+              goalParagraphs.push(
                 new DocParagraph({
                   children: [
                     new TextRun({
                       text: `${number} ${title}`,
                       ...FONT_STYLES.normal,
+                      color: "4472C4",
                     }),
                   ],
+                  indent: { left: 360 },
+                  keepNext: true,
+                  keepLines: true,
                 }),
               );
             }
           });
         }
 
-        // Subject (topics)
+        // Topics
         if (goal.topicIds && goal.topicIds.length > 0) {
           goal.topicIds.forEach((topicId) => {
             const topicName = topicMap.get(topicId);
             if (topicName) {
-              combinedContentParagraphs.push(
+              goalParagraphs.push(
                 new DocParagraph({
                   children: [
                     new TextRun({
                       text: topicName,
                       ...FONT_STYLES.normal,
+                      color: "5b9bd5",
                     }),
                   ],
+                  indent: { left: 360 },
+                  keepNext: true,
+                  keepLines: true,
                 }),
               );
             }
           });
         }
 
-        // Add spacing between goals
-        if (goalIndex < goals.length - 1) {
-          combinedContentParagraphs.push(new DocParagraph({ text: "" }));
+        // Experiment
+        if (goal.experiment?.trim()) {
+          const lines = goal.experiment.trim().split("\n");
+          if (lines.length > 0) {
+            goalParagraphs.push(
+              new DocParagraph({
+                children: [
+                  new TextRun({
+                    text: "Experiment: ",
+                    ...FONT_STYLES.bold,
+                    size: 20,
+                  }),
+                ],
+                spacing: { before: 100 },
+                keepNext: true,
+                keepLines: true,
+              }),
+            );
+            lines.forEach((line, lineIndex) => {
+              if (line) {
+                goalParagraphs.push(
+                  new DocParagraph({
+                    children: [
+                      new TextRun({
+                        text: line,
+                        ...FONT_STYLES.normal,
+                      }),
+                    ],
+                    indent: { left: 360 },
+                    keepNext: true,
+                    keepLines: true,
+                  }),
+                );
+              }
+            });
+          }
         }
+
+        // Skills
+        if (goal.skills?.trim()) {
+          const lines = goal.skills.trim().split("\n");
+          if (lines.length > 0) {
+            goalParagraphs.push(
+              new DocParagraph({
+                children: [
+                  new TextRun({
+                    text: "Vaardigheden: ",
+                    ...FONT_STYLES.bold,
+                    size: 20,
+                  }),
+                ],
+                spacing: { before: 100 },
+                keepNext: true,
+                keepLines: true,
+              }),
+            );
+            lines.forEach((line, lineIndex) => {
+              if (line) {
+                goalParagraphs.push(
+                  new DocParagraph({
+                    children: [
+                      new TextRun({
+                        text: line,
+                        ...FONT_STYLES.normal,
+                      }),
+                    ],
+                    indent: { left: 360 },
+                    keepNext: true,
+                    keepLines: true,
+                  }),
+                );
+              }
+            });
+          }
+        }
+
+        // Details
+        if (goal.details?.trim()) {
+          const lines = goal.details.trim().split("\n");
+          const filteredLines = lines.filter((line) => line);
+          if (filteredLines.length > 0) {
+            goalParagraphs.push(
+              new DocParagraph({
+                children: [
+                  new TextRun({
+                    text: "Details: ",
+                    ...FONT_STYLES.bold,
+                    size: 20,
+                  }),
+                ],
+                spacing: { before: 100 },
+                keepNext: true,
+                keepLines: true,
+              }),
+            );
+            filteredLines.forEach((line, lineIndex) => {
+              const isLastLine = lineIndex === filteredLines.length - 1;
+              goalParagraphs.push(
+                new DocParagraph({
+                  children: [
+                    new TextRun({
+                      text: line,
+                      ...FONT_STYLES.normal,
+                    }),
+                  ],
+                  indent: { left: 360 },
+                  keepNext: !isLastLine,
+                  keepLines: true,
+                }),
+              );
+            });
+          }
+        }
+        
+        // Remove keepNext from last paragraph of goal to allow page break after complete goal
+        if (goalParagraphs.length > 0) {
+          const lastParagraph = goalParagraphs[goalParagraphs.length - 1];
+          // Create new paragraph without keepNext
+          goalParagraphs[goalParagraphs.length - 1] = new DocParagraph({
+            children: lastParagraph.root[0].children,
+            indent: lastParagraph.root[0].indent,
+            spacing: lastParagraph.root[0].spacing,
+            keepLines: true,
+            keepNext: false,
+          });
+        }
+        
+        // Add all goal paragraphs to content
+        contentParagraphs.push(...goalParagraphs);
       });
     }
-
-    // Collect experiment, skills, and details from all goals for this week
-    const experiments: string[] = [];
-    const skills: string[] = [];
-    const details: string[] = [];
-
-    goals.forEach((goal) => {
-      if (goal.experiment?.trim()) {
-        // Split by newlines to preserve line breaks
-        const lines = goal.experiment.trim().split("\n");
-        // Filter out completely empty lines but keep lines with spaces
-        experiments.push(...lines.filter((line) => line !== ""));
-      }
-      if (goal.skills?.trim()) {
-        // Split by newlines to preserve line breaks
-        const lines = goal.skills.trim().split("\n");
-        // Filter out completely empty lines but keep lines with spaces
-        skills.push(...lines.filter((line) => line !== ""));
-      }
-      if (goal.details?.trim()) {
-        // Split by newlines to preserve line breaks
-        const lines = goal.details.trim().split("\n");
-        // Filter out completely empty lines but keep lines with spaces
-        details.push(...lines.filter((line) => line !== ""));
-      }
-    });
-
-    const experimentParagraphs =
-      experiments.length > 0
-        ? experiments.map((exp) => createNormalParagraph(exp))
-        : [createNormalParagraph("")];
-
-    const skillsParagraphs =
-      skills.length > 0
-        ? skills.map((skill) => createNormalParagraph(skill))
-        : [createNormalParagraph("")];
-
-    const detailsParagraphs =
-      details.length > 0
-        ? details.map((detail) => createNormalParagraph(detail))
-        : [createNormalParagraph("")];
-
-    tableRows.push(
-      new TableRow({
-        children: [
-          new TableCell({
-            children: [
-              new DocParagraph({
-                children: [
-                  new TextRun({
-                    text: `${weekNumber}`,
-                    ...FONT_STYLES.weekNumber,
-                  }),
-                ],
-              }),
-              new DocParagraph({
-                children: [
-                  new TextRun({
-                    text: formatWeekRange(weekNumber, yearForWeek),
-                    ...FONT_STYLES.weekDate,
-                  }),
-                ],
-              }),
-            ],
-          }),
-          new TableCell({ children: combinedContentParagraphs }),
-          new TableCell({ children: experimentParagraphs }),
-          new TableCell({ children: skillsParagraphs }),
-          new TableCell({ children: detailsParagraphs }),
-        ],
-      }),
-    );
-  });
-
-  const table = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: tableRows,
   });
 
   // Load Merlet icon for header
@@ -462,7 +594,7 @@ async function buildPlanDocument(
         footers: {
           default: footer,
         },
-        children: [...headerParagraphs, new DocParagraph({ text: "" }), table],
+        children: contentParagraphs,
       },
     ],
   });
@@ -524,7 +656,7 @@ export function registerCurriculumListeners() {
   });
 
   ipcMain.handle(
-    CURRICULUM_CHANNELS.EXPORT_PLAN_DOCX,
+    CURRICULUM_CHANNELS.EXPORT_PLAN_PDF,
     async (
       _,
       planId: string,
@@ -537,18 +669,40 @@ export function registerCurriculumListeners() {
           return { success: false, error: "Plan not found" };
         }
 
-        const document = await buildPlanDocument(plan, language);
-        const buffer = await Packer.toBuffer(document);
+        const doc = await buildPlanDocument(plan, language);
+        const buffer = await Packer.toBuffer(doc);
+
+        // Build filename: subject-yearLevel-schoolYear-className-description.docx
+        const parts: string[] = [];
+
+        if (plan.subject?.trim()) {
+          parts.push(plan.subject.trim());
+        }
+
+        if (plan.yearLevel?.trim()) {
+          parts.push(plan.yearLevel.trim());
+        }
+
+        if (plan.schoolYear?.trim()) {
+          parts.push(plan.schoolYear.trim());
+        }
 
         // Use provided className or fall back to plan's className
-        const classNamePart = className
-          ? `-${className}`
-          : plan.classNames && plan.classNames.length > 0
-            ? `-${plan.classNames[0]}`
-            : "";
-        const defaultName = `${sanitizeFileName(
-          `${plan.subject || "curriculum-plan"}-${plan.schoolYear || "plan"}${classNamePart}`,
-        )}.docx`;
+        const effectiveClassName =
+          className ||
+          (plan.classNames && plan.classNames.length > 0
+            ? plan.classNames[0]
+            : null);
+        if (effectiveClassName) {
+          parts.push(effectiveClassName);
+        }
+
+        if (plan.description?.trim()) {
+          parts.push(plan.description.trim());
+        }
+
+        const baseName = parts.length > 0 ? parts.join("-") : "curriculum-plan";
+        const defaultName = `${sanitizeFileName(baseName)}.docx`;
 
         const { canceled, filePath } = await dialog.showSaveDialog({
           title: "Save curriculum overview",

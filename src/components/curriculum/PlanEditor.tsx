@@ -284,8 +284,8 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
     <div className="container mx-auto h-full p-4">
       <div className="flex h-full flex-col">
         {/* Header with title and buttons */}
-        <div className="mb-6 shrink-0">
-          <h1 className="mb-3 text-3xl font-bold">{t("editPlan")}</h1>
+        <div className="mb-6 flex shrink-0 items-center justify-between">
+          <h1 className="text-3xl font-bold">{t("editPlan")}</h1>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onCancel}>
               {t("cancel")}

@@ -98,7 +98,7 @@ interface CurriculumAPI {
     plan: import("./services/curriculum-database").CurriculumPlan,
   ) => Promise<APIResult>;
   deletePlan: (planId: string) => Promise<APIResult>;
-  exportPlanToDocx: (
+  exportPlanToPdf: (
     planId: string,
     language: "nl" | "en",
     className?: string,

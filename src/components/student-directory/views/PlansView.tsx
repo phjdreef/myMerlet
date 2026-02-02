@@ -74,7 +74,7 @@ export function PlansView({
 
   const handleExportPlan = async (plan: CurriculumPlan) => {
     try {
-      const result = await window.curriculumAPI.exportPlanToDocx(
+      const result = await window.curriculumAPI.exportPlanToPdf(
         plan.id,
         i18n.language as "nl" | "en",
         selectedClass || undefined,
