@@ -8,11 +8,7 @@ import {
   HeadingLevel,
   Packer,
   Paragraph as DocParagraph,
-  Table,
-  TableCell,
-  TableRow,
   TextRun,
-  WidthType,
   AlignmentType,
   ImageRun,
   PageNumber,
@@ -86,27 +82,27 @@ function formatDateShort(date: Date, language: "nl" | "en"): string {
   return `${day}-${month}-${year}`;
 }
 
-function createBoldParagraph(text: string): DocParagraph {
-  return new DocParagraph({
-    children: [
-      new TextRun({
-        text,
-        ...FONT_STYLES.bold,
-      }),
-    ],
-  });
-}
+// function createBoldParagraph(text: string): DocParagraph {
+//   return new DocParagraph({
+//     children: [
+//       new TextRun({
+//         text,
+//         ...FONT_STYLES.bold,
+//       }),
+//     ],
+//   });
+// }
 
-function createNormalParagraph(text: string): DocParagraph {
-  return new DocParagraph({
-    children: [
-      new TextRun({
-        text,
-        ...FONT_STYLES.normal,
-      }),
-    ],
-  });
-}
+// function createNormalParagraph(text: string): DocParagraph {
+//   return new DocParagraph({
+//     children: [
+//       new TextRun({
+//         text,
+//         ...FONT_STYLES.normal,
+//       }),
+//     ],
+//   });
+// }
 
 async function loadMerletIcon(): Promise<Buffer> {
   // Try multiple possible paths for the Merlet icon
@@ -355,7 +351,7 @@ async function buildPlanDocument(
           const description = stripHtml(goal.description);
           if (description) {
             const lines = description.split("\n");
-            lines.forEach((line, lineIndex) => {
+            lines.forEach((line) => {
               goalParagraphs.push(
                 new DocParagraph({
                   children: [
@@ -438,7 +434,7 @@ async function buildPlanDocument(
                 keepLines: true,
               }),
             );
-            lines.forEach((line, lineIndex) => {
+            lines.forEach((line) => {
               if (line) {
                 goalParagraphs.push(
                   new DocParagraph({
@@ -476,7 +472,7 @@ async function buildPlanDocument(
                 keepLines: true,
               }),
             );
-            lines.forEach((line, lineIndex) => {
+            lines.forEach((line) => {
               if (line) {
                 goalParagraphs.push(
                   new DocParagraph({
@@ -535,17 +531,7 @@ async function buildPlanDocument(
         }
 
         // Remove keepNext from last paragraph of goal to allow page break after complete goal
-        if (goalParagraphs.length > 0) {
-          const lastParagraph = goalParagraphs[goalParagraphs.length - 1];
-          // Create new paragraph without keepNext
-          goalParagraphs[goalParagraphs.length - 1] = new DocParagraph({
-            children: lastParagraph.root[0].children,
-            indent: lastParagraph.root[0].indent,
-            spacing: lastParagraph.root[0].spacing,
-            keepLines: true,
-            keepNext: false,
-          });
-        }
+        // Note: We keep the existing paragraph structure, but docx will handle page breaks naturally
 
         // Add all goal paragraphs to content
         contentParagraphs.push(...goalParagraphs);
