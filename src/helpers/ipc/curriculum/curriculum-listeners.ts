@@ -40,12 +40,27 @@ const FONT_STYLES = {
   normal: { font: "Calibri", size: 22 } as const, // 11pt
   bold: { font: "Calibri", size: 22, bold: true } as const, // 11pt bold
   title: { font: "Calibri", size: 36, bold: true, color: "1f3864" } as const, // 18pt bold dark blue
-  subtitle: { font: "Calibri", size: 24, color: "5b9bd5", italics: true } as const, // 12pt blue italic
+  subtitle: {
+    font: "Calibri",
+    size: 24,
+    color: "5b9bd5",
+    italics: true,
+  } as const, // 12pt blue italic
   metadata: { font: "Calibri", size: 20, color: "7f7f7f" } as const, // 10pt gray
   small: { font: "Calibri", size: 18 } as const, // 9pt
-  weekNumber: { font: "Calibri", size: 24, bold: true, color: "1f3864" } as const, // 12pt bold dark blue
+  weekNumber: {
+    font: "Calibri",
+    size: 24,
+    bold: true,
+    color: "1f3864",
+  } as const, // 12pt bold dark blue
   weekDate: { font: "Calibri", size: 18, color: "7f7f7f" } as const, // 9pt gray
-  tableHeader: { font: "Calibri", size: 22, bold: true, color: "ffffff" } as const, // 11pt bold white
+  tableHeader: {
+    font: "Calibri",
+    size: 22,
+    bold: true,
+    color: "ffffff",
+  } as const, // 11pt bold white
 };
 
 function sanitizeFileName(input: string): string {
@@ -126,17 +141,19 @@ async function buildPlanDocument(
   const startYear = plan.schoolYearStart ?? parsedYears.startYear ?? undefined;
   const endYear = plan.schoolYearEnd ?? parsedYears.endYear ?? undefined;
   // Determine if this is a class-specific plan
-  const isClassSpecific = plan.isTemplate === false && plan.classNames.length === 1;
-  
+  const isClassSpecific =
+    plan.isTemplate === false && plan.classNames.length === 1;
+
   const headerParagraphs: DocParagraph[] = [
     new DocParagraph({
       children: [
         new TextRun({
-          text: isClassSpecific && plan.classNames[0]
-            ? `Curriculum planner klas ${plan.classNames[0]}`
-            : plan.subject?.trim()
-            ? `${plan.subject.trim()} – ${t.curriculumOverview}`
-            : t.curriculumOverview,
+          text:
+            isClassSpecific && plan.classNames[0]
+              ? `Curriculum planner klas ${plan.classNames[0]}`
+              : plan.subject?.trim()
+                ? `${plan.subject.trim()} – ${t.curriculumOverview}`
+                : t.curriculumOverview,
           ...FONT_STYLES.title,
         }),
       ],
@@ -144,14 +161,14 @@ async function buildPlanDocument(
       spacing: { after: 100 },
     }),
   ];
-  
+
   // Subtitle for class-specific plans
   if (isClassSpecific) {
     const subtitleParts: string[] = [];
     if (plan.subject?.trim()) subtitleParts.push(plan.subject.trim());
     if (plan.yearLevel?.trim()) subtitleParts.push(plan.yearLevel.trim());
     if (plan.description?.trim()) subtitleParts.push(plan.description.trim());
-    
+
     if (subtitleParts.length > 0) {
       headerParagraphs.push(
         new DocParagraph({
@@ -166,7 +183,7 @@ async function buildPlanDocument(
       );
     }
   }
-  
+
   headerParagraphs.push(
     new DocParagraph({
       children: [
@@ -191,7 +208,7 @@ async function buildPlanDocument(
       }),
     );
   }
-  
+
   if (!isClassSpecific && plan.classNames.length > 0) {
     headerParagraphs.push(
       new DocParagraph({
@@ -315,7 +332,7 @@ async function buildPlanDocument(
       goals.forEach((goal, goalIndex) => {
         // Collect all paragraphs for this goal first
         const goalParagraphs: DocParagraph[] = [];
-        
+
         // Goal title
         const goalTitle = goal.title?.trim() || "Study goal";
         goalParagraphs.push(
@@ -516,7 +533,7 @@ async function buildPlanDocument(
             });
           }
         }
-        
+
         // Remove keepNext from last paragraph of goal to allow page break after complete goal
         if (goalParagraphs.length > 0) {
           const lastParagraph = goalParagraphs[goalParagraphs.length - 1];
@@ -529,7 +546,7 @@ async function buildPlanDocument(
             keepNext: false,
           });
         }
-        
+
         // Add all goal paragraphs to content
         contentParagraphs.push(...goalParagraphs);
       });
