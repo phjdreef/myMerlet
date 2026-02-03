@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Student } from "../../services/student-database";
+import { formatClassName } from "../../utils/class-utils";
 
 interface ClassFilterProps {
   students: Student[];
@@ -21,18 +22,6 @@ export function ClassFilter({
       <h2 className="mb-4 text-lg font-semibold">{t("classes")}</h2>
 
       <div className="space-y-2">
-        {/* All Students Option */}
-        <button
-          onClick={() => onClassSelect(null)}
-          className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
-            selectedClass === null
-              ? "bg-primary text-primary-foreground"
-              : "hover:bg-accent hover:text-accent-foreground"
-          }`}
-        >
-          {t("allClasses")} ({students.length})
-        </button>
-
         {/* Individual Classes */}
         {availableClasses.map((className) => {
           const classStudentCount = students.filter(
@@ -49,7 +38,7 @@ export function ClassFilter({
                   : "hover:bg-accent hover:text-accent-foreground"
               }`}
             >
-              {className} ({classStudentCount})
+              {formatClassName(className)} ({classStudentCount})
             </button>
           );
         })}

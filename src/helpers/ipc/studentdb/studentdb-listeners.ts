@@ -3,6 +3,9 @@ import { STUDENT_DB_CHANNELS } from "./studentdb-channels";
 import {
   mainStudentDB,
   type Student,
+  type StudentPropertyDefinition,
+  type StudentPropertyValue,
+  type StudentNote,
 } from "../../../services/main-student-database";
 
 export function addStudentDBEventListeners() {
@@ -80,9 +83,9 @@ export function addStudentDBEventListeners() {
 
   ipcMain.handle(
     STUDENT_DB_CHANNELS.SAVE_PHOTO,
-    async (_, externeId: string, photoData: string) => {
+    async (_, studentId: number, photoData: string) => {
       try {
-        await mainStudentDB.savePhoto(externeId, photoData);
+        await mainStudentDB.savePhoto(studentId, photoData);
         return { success: true };
       } catch (error) {
         return {
@@ -96,14 +99,159 @@ export function addStudentDBEventListeners() {
 
   ipcMain.handle(
     STUDENT_DB_CHANNELS.GET_PHOTO,
-    async (_, externeId: string) => {
+    async (_, studentId: number) => {
       try {
-        const photo = await mainStudentDB.getPhoto(externeId);
+        const photo = await mainStudentDB.getPhoto(studentId);
         return { success: true, data: photo };
       } catch (error) {
         return {
           success: false,
           error: error instanceof Error ? error.message : "Failed to get photo",
+        };
+      }
+    },
+  );
+
+  // Property Definitions
+  ipcMain.handle(
+    STUDENT_DB_CHANNELS.GET_PROPERTY_DEFINITIONS,
+    async (_, className: string, schoolYear: string) => {
+      try {
+        const definitions = await mainStudentDB.getPropertyDefinitions(
+          className,
+          schoolYear,
+        );
+        return { success: true, data: definitions };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to get property definitions",
+        };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    STUDENT_DB_CHANNELS.SAVE_PROPERTY_DEFINITION,
+    async (_, property: StudentPropertyDefinition) => {
+      try {
+        await mainStudentDB.savePropertyDefinition(property);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to save property definition",
+        };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    STUDENT_DB_CHANNELS.DELETE_PROPERTY_DEFINITION,
+    async (_, propertyId: string) => {
+      try {
+        await mainStudentDB.deletePropertyDefinition(propertyId);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to delete property definition",
+        };
+      }
+    },
+  );
+
+  // Property Values
+  ipcMain.handle(
+    STUDENT_DB_CHANNELS.GET_PROPERTY_VALUES,
+    async (
+      _,
+      studentId: number,
+      className: string,
+      schoolYear: string,
+    ) => {
+      try {
+        const values = await mainStudentDB.getPropertyValues(
+          studentId,
+          className,
+          schoolYear,
+        );
+        return { success: true, data: values };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to get property values",
+        };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    STUDENT_DB_CHANNELS.SAVE_PROPERTY_VALUE,
+    async (_, value: StudentPropertyValue) => {
+      try {
+        await mainStudentDB.savePropertyValue(value);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to save property value",
+        };
+      }
+    },
+  );
+
+  // Notes
+  ipcMain.handle(
+    STUDENT_DB_CHANNELS.GET_NOTE,
+    async (
+      _,
+      studentId: number,
+      className: string,
+      schoolYear: string,
+    ) => {
+      try {
+        const note = await mainStudentDB.getNote(
+          studentId,
+          className,
+          schoolYear,
+        );
+        return { success: true, data: note };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Failed to get note",
+        };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    STUDENT_DB_CHANNELS.SAVE_NOTE,
+    async (_, note: StudentNote) => {
+      try {
+        await mainStudentDB.saveNote(note);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "Failed to save note",
         };
       }
     },

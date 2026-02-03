@@ -667,9 +667,9 @@ export class MagisterAPI {
   }> {
     try {
       logger.debug("Fetching all students from Magister API...");
-      // Fetch all students by setting top to a high number (the API showed totalCount: 146)
+      // Fetch all students with extended fields including studies (niveau), recent grades, etc.
       const response = await this.makeAuthenticatedRequest(
-        "/api/leerlingen/zoeken?q=**&top=200&skip=0&orderby=roepnaam%20asc&peildatum=2025-08-01&velden=stamnummer&velden=naam&velden=klassen&velden=emailadres",
+        "/api/leerlingen/zoeken?q=**&top=200&skip=0&orderby=roepnaam%20asc&peildatum=2025-08-01&velden=stamnummer&velden=naam&velden=klassen&velden=studies&velden=emailadres&velden=telefoonnummer&velden=profiel1",
       );
       const responseData = response as { items?: unknown[] };
       logger.debug(

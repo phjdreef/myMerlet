@@ -6,4 +6,14 @@ export const STUDENT_DB_CHANNELS = {
   CLEAR_ALL_DATA: "studentDB:clearAllData",
   SAVE_PHOTO: "studentDB:savePhoto",
   GET_PHOTO: "studentDB:getPhoto",
+  // Property Definitions
+  GET_PROPERTY_DEFINITIONS: "studentDB:getPropertyDefinitions",
+  SAVE_PROPERTY_DEFINITION: "studentDB:savePropertyDefinition",
+  DELETE_PROPERTY_DEFINITION: "studentDB:deletePropertyDefinition",
+  // Property Values
+  GET_PROPERTY_VALUES: "studentDB:getPropertyValues",
+  SAVE_PROPERTY_VALUE: "studentDB:savePropertyValue",
+  // Notes
+  GET_NOTE: "studentDB:getNote",
+  SAVE_NOTE: "studentDB:saveNote",
 } as const;

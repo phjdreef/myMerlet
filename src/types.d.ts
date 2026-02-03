@@ -79,8 +79,39 @@ interface StudentDBAPI {
     }>
   >;
   clearAllData: () => Promise<APIResult>;
-  savePhoto: (externeId: string, photoData: string) => Promise<APIResult>;
-  getPhoto: (externeId: string) => Promise<APIResponse<string | null>>;
+  savePhoto: (studentId: number, photoData: string) => Promise<APIResult>;
+  getPhoto: (studentId: number) => Promise<APIResponse<string | null>>;
+  // Property Definitions
+  getPropertyDefinitions: (
+    className: string,
+    schoolYear: string,
+  ) => Promise<
+    APIResponse<import("./services/student-database").StudentPropertyDefinition[]>
+  >;
+  savePropertyDefinition: (
+    property: import("./services/student-database").StudentPropertyDefinition,
+  ) => Promise<APIResult>;
+  deletePropertyDefinition: (propertyId: string) => Promise<APIResult>;
+  // Property Values
+  getPropertyValues: (
+    studentId: number,
+    className: string,
+    schoolYear: string,
+  ) => Promise<
+    APIResponse<import("./services/student-database").StudentPropertyValue[]>
+  >;
+  savePropertyValue: (
+    value: import("./services/student-database").StudentPropertyValue,
+  ) => Promise<APIResult>;
+  // Notes
+  getNote: (
+    studentId: number,
+    className: string,
+    schoolYear: string,
+  ) => Promise<APIResponse<import("./services/student-database").StudentNote | null>>;
+  saveNote: (
+    note: import("./services/student-database").StudentNote,
+  ) => Promise<APIResult>;
 }
 
 interface CurriculumAPI {
