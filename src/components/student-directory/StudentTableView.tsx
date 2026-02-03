@@ -71,7 +71,9 @@ export function StudentTableView({
           selectedClass,
           currentSchoolYear,
         );
-        logger.debug(`Loaded ${definitions.length} property definitions for ${selectedClass}`);
+        logger.debug(
+          `Loaded ${definitions.length} property definitions for ${selectedClass}`,
+        );
         if (!isCancelled) {
           setPropertyDefinitions(definitions.sort((a, b) => a.order - b.order));
         }
@@ -96,7 +98,9 @@ export function StudentTableView({
         selectedClass,
         currentSchoolYear,
       );
-      logger.debug(`Reloading property definitions: ${definitions.length} found`);
+      logger.debug(
+        `Reloading property definitions: ${definitions.length} found`,
+      );
       setPropertyDefinitions(definitions.sort((a, b) => a.order - b.order));
       // The useEffect with propertyDefinitions dependency will trigger reload of student data
     } catch (error) {
@@ -142,26 +146,38 @@ export function StudentTableView({
     if (student.profiel1) {
       return formatClassName(student.profiel1);
     }
-    
+
     // Extract niveau from studies array (e.g., "MAVO", "HAVO", "VWO", etc.)
     if (student.studies && student.studies.length > 0) {
-      return student.studies.map(s => formatClassName(s)).join(", ");
+      return student.studies.map((s) => formatClassName(s)).join(", ");
     }
-    
+
     // Fallback: try to extract niveau from class name
     if (selectedClass) {
       const className = selectedClass.toLowerCase();
-      if (className.includes("vwo") || className.startsWith("ctv") || className.startsWith("v")) {
+      if (
+        className.includes("vwo") ||
+        className.startsWith("ctv") ||
+        className.startsWith("v")
+      ) {
         return "VWO";
-      } else if (className.includes("havo") || className.startsWith("ch") || className.startsWith("h")) {
+      } else if (
+        className.includes("havo") ||
+        className.startsWith("ch") ||
+        className.startsWith("h")
+      ) {
         return "HAVO";
-      } else if (className.includes("mavo") || className.startsWith("cm") || className.startsWith("m")) {
+      } else if (
+        className.includes("mavo") ||
+        className.startsWith("cm") ||
+        className.startsWith("m")
+      ) {
         return "MAVO";
       } else if (className.includes("vmbo")) {
         return "VMBO";
       }
     }
-    
+
     return "-";
   };
 
@@ -170,7 +186,7 @@ export function StudentTableView({
     .filter((student) => {
       for (const [column, filterValue] of filters.entries()) {
         const lowerFilter = filterValue.toLowerCase();
-        
+
         if (column === "name") {
           const fullName = getFullName(student).toLowerCase();
           if (!fullName.includes(lowerFilter)) return false;
@@ -188,10 +204,10 @@ export function StudentTableView({
     })
     .sort((a, b) => {
       if (!sortColumn) return 0;
-      
+
       let aValue: any;
       let bValue: any;
-      
+
       if (sortColumn === "name") {
         aValue = getFullName(a);
         bValue = getFullName(b);
@@ -208,7 +224,7 @@ export function StudentTableView({
       } else {
         return 0;
       }
-      
+
       if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
       if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
       return 0;
@@ -220,7 +236,10 @@ export function StudentTableView({
 
     // Log first student raw data for debugging
     if (students.length > 0) {
-      console.log("Raw student data example:", JSON.stringify(students[0], null, 2));
+      console.log(
+        "Raw student data example:",
+        JSON.stringify(students[0], null, 2),
+      );
     }
 
     let isCancelled = false;
@@ -229,15 +248,13 @@ export function StudentTableView({
       // First load recent tests for this class
       let tests: Test[] = [];
       try {
-        const testsResponse = await window.testAPI.getTestsForClassGroup(
-          selectedClass,
-        );
+        const testsResponse =
+          await window.testAPI.getTestsForClassGroup(selectedClass);
         if (testsResponse.success && testsResponse.data) {
           // Get the 2 most recent tests
           tests = testsResponse.data
             .sort(
-              (a, b) =>
-                new Date(b.date).getTime() - new Date(a.date).getTime(),
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
             )
             .slice(0, 2);
           if (!isCancelled) {
@@ -257,10 +274,7 @@ export function StudentTableView({
               .getPhoto(student.id)
               .then((res) => (res.success ? res.data || null : null));
           } catch (error) {
-            logger.error(
-              `Failed to load photo for ${student.id}:`,
-              error,
-            );
+            logger.error(`Failed to load photo for ${student.id}:`, error);
           }
 
           // Load property values
@@ -291,15 +305,14 @@ export function StudentTableView({
             );
             note = noteData?.note || "";
           } catch (error) {
-            logger.error(
-              `Failed to load note for ${student.id}:`,
-              error,
-            );
+            logger.error(`Failed to load note for ${student.id}:`, error);
           }
 
           // Load recent grades
-          const recentGrades: Array<{ test: Test; grade: StudentGrade } | null> =
-            [];
+          const recentGrades: Array<{
+            test: Test;
+            grade: StudentGrade;
+          } | null> = [];
           let totalGrade = 0;
           let gradeCount = 0;
 
@@ -410,9 +423,7 @@ export function StudentTableView({
 
       // Update local state
       setStudentsWithExtras((prev) =>
-        prev.map((s) =>
-          s.id === student.id ? { ...s, note: newNote } : s,
-        ),
+        prev.map((s) => (s.id === student.id ? { ...s, note: newNote } : s)),
       );
       setEditingNoteId(null);
     } catch (error) {
@@ -428,7 +439,10 @@ export function StudentTableView({
   };
 
   if (students.length > 0 && studentsWithExtras.length > 0) {
-    logger.debug(`Rendering table with ${propertyDefinitions.length} property definitions:`, propertyDefinitions);
+    logger.debug(
+      `Rendering table with ${propertyDefinitions.length} property definitions:`,
+      propertyDefinitions,
+    );
     return (
       <div className="space-y-4">
         {/* Statistics Bar */}
@@ -436,8 +450,12 @@ export function StudentTableView({
           <div className="flex flex-wrap gap-4 text-sm">
             <span className="font-medium">
               {t("currentlyShowing")}: {filteredAndSortedStudents.length}
-              {filteredAndSortedStudents.length !== studentsWithExtras.length && (
-                <span className="text-muted-foreground"> / {studentsWithExtras.length}</span>
+              {filteredAndSortedStudents.length !==
+                studentsWithExtras.length && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  / {studentsWithExtras.length}
+                </span>
               )}
             </span>
             {selectedClass && (
@@ -467,7 +485,9 @@ export function StudentTableView({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{t("manageProperties")}</h3>
+                <h3 className="text-lg font-semibold">
+                  {t("manageProperties")}
+                </h3>
                 <button
                   onClick={() => setShowPropertyManager(false)}
                   className="hover:bg-muted rounded-lg p-2"
@@ -485,7 +505,7 @@ export function StudentTableView({
           </div>
         )}
 
-        <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-hidden rounded-lg border">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -495,7 +515,7 @@ export function StudentTableView({
                     <div className="space-y-1">
                       <button
                         onClick={() => handleSort("name")}
-                        className="flex items-center gap-1 hover:text-foreground"
+                        className="hover:text-foreground flex items-center gap-1"
                       >
                         {t("studentName")}
                         {sortColumn === "name" && (
@@ -507,8 +527,10 @@ export function StudentTableView({
                       <Input
                         placeholder={t("filter")}
                         value={filters.get("name") || ""}
-                        onChange={(e) => handleFilterChange("name", e.target.value)}
-                        className="h-7 text-xs mb-2"
+                        onChange={(e) =>
+                          handleFilterChange("name", e.target.value)
+                        }
+                        className="mb-2 h-7 text-xs"
                       />
                     </div>
                   </TableHead>
@@ -516,7 +538,7 @@ export function StudentTableView({
                     <div className="space-y-1">
                       <button
                         onClick={() => handleSort("level")}
-                        className="flex items-center gap-1 hover:text-foreground"
+                        className="hover:text-foreground flex items-center gap-1"
                       >
                         {t("level")}
                         {sortColumn === "level" && (
@@ -528,8 +550,10 @@ export function StudentTableView({
                       <Input
                         placeholder={t("filter")}
                         value={filters.get("level") || ""}
-                        onChange={(e) => handleFilterChange("level", e.target.value)}
-                        className="h-7 text-xs mb-2"
+                        onChange={(e) =>
+                          handleFilterChange("level", e.target.value)
+                        }
+                        className="mb-2 h-7 text-xs"
                       />
                     </div>
                   </TableHead>
@@ -538,7 +562,7 @@ export function StudentTableView({
                       {recentTests.map((test, idx) => (
                         <TableHead key={test.id} className="w-32 text-center">
                           <div className="flex flex-col">
-                            <span className="text-xs font-normal text-muted-foreground">
+                            <span className="text-muted-foreground text-xs font-normal">
                               {test.name}
                             </span>
                           </div>
@@ -547,7 +571,7 @@ export function StudentTableView({
                       <TableHead className="w-24 text-center">
                         <button
                           onClick={() => handleSort("average")}
-                          className="flex items-center gap-1 hover:text-foreground mx-auto"
+                          className="hover:text-foreground mx-auto flex items-center gap-1"
                         >
                           {t("studentAverage")}
                           {sortColumn === "average" && (
@@ -572,14 +596,16 @@ export function StudentTableView({
                     </>
                   )}
                   {propertyDefinitions.map((prop) => (
-                    <TableHead 
-                      key={prop.id} 
-                      className={prop.type === "boolean" ? "w-16" : "min-w-[120px]"}
+                    <TableHead
+                      key={prop.id}
+                      className={
+                        prop.type === "boolean" ? "w-16" : "min-w-[120px]"
+                      }
                     >
                       <div className="space-y-1">
                         <button
                           onClick={() => handleSort(`prop_${prop.id}`)}
-                          className="flex items-center gap-1 hover:text-foreground"
+                          className="hover:text-foreground flex items-center gap-1"
                         >
                           {prop.name}
                           {sortColumn === `prop_${prop.id}` && (
@@ -592,8 +618,13 @@ export function StudentTableView({
                           <Input
                             placeholder={t("filter")}
                             value={filters.get(`prop_${prop.id}`) || ""}
-                            onChange={(e) => handleFilterChange(`prop_${prop.id}`, e.target.value)}
-                            className="h-7 text-xs mb-2"
+                            onChange={(e) =>
+                              handleFilterChange(
+                                `prop_${prop.id}`,
+                                e.target.value,
+                              )
+                            }
+                            className="mb-2 h-7 text-xs"
                           />
                         )}
                       </div>
@@ -611,7 +642,7 @@ export function StudentTableView({
                           <img
                             src={student.photoUrl}
                             alt={getFullName(student)}
-                            className="h-10 w-10 rounded-full object-cover transition-transform group-hover/photo:scale-[2.5] group-hover/photo:z-100 group-hover/photo:shadow-xl group-hover/photo:relative"
+                            className="h-10 w-10 rounded-full object-cover transition-transform group-hover/photo:relative group-hover/photo:z-100 group-hover/photo:scale-[2.5] group-hover/photo:shadow-xl"
                           />
                         </div>
                       ) : (
@@ -635,10 +666,7 @@ export function StudentTableView({
                     {recentTests.length > 0 ? (
                       <>
                         {student.recentGrades.map((gradeInfo, idx) => (
-                          <TableCell
-                            key={idx}
-                            className="text-center"
-                          >
+                          <TableCell key={idx} className="text-center">
                             {gradeInfo ? (
                               <span
                                 className={getGradeColor(
@@ -668,13 +696,13 @@ export function StudentTableView({
                       </>
                     ) : (
                       <>
-                        <TableCell className="text-center text-sm text-muted-foreground">
+                        <TableCell className="text-muted-foreground text-center text-sm">
                           -
                         </TableCell>
-                        <TableCell className="text-center text-sm text-muted-foreground">
+                        <TableCell className="text-muted-foreground text-center text-sm">
                           -
                         </TableCell>
-                        <TableCell className="text-center text-sm text-muted-foreground">
+                        <TableCell className="text-muted-foreground text-center text-sm">
                           -
                         </TableCell>
                       </>
@@ -686,8 +714,9 @@ export function StudentTableView({
                         {prop.type === "boolean" ? (
                           <Checkbox
                             checked={
-                              (student.propertyValues.get(prop.id) as boolean) ||
-                              false
+                              (student.propertyValues.get(
+                                prop.id,
+                              ) as boolean) || false
                             }
                             onCheckedChange={(checked: boolean) =>
                               handlePropertyValueChange(

@@ -43,11 +43,7 @@ export const studentDBAPI = {
   savePropertyValue: (value: unknown) =>
     ipcRenderer.invoke(STUDENT_DB_CHANNELS.SAVE_PROPERTY_VALUE, value),
   // Notes
-  getNote: (
-    studentId: number,
-    className: string,
-    schoolYear: string,
-  ) =>
+  getNote: (studentId: number, className: string, schoolYear: string) =>
     ipcRenderer.invoke(
       STUDENT_DB_CHANNELS.GET_NOTE,
       studentId,

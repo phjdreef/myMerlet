@@ -17,7 +17,7 @@ export interface ClassInfo {
  */
 export function parseClassName(fullName: string): ClassInfo {
   const parts = fullName.split(" - ");
-  
+
   if (parts.length >= 2) {
     return {
       code: parts[0].trim(),
@@ -25,7 +25,7 @@ export function parseClassName(fullName: string): ClassInfo {
       fullName: fullName,
     };
   }
-  
+
   // Geen streep gevonden, gebruik hele naam als code
   return {
     code: fullName.trim(),
@@ -37,13 +37,16 @@ export function parseClassName(fullName: string): ClassInfo {
 /**
  * Format a class name for display (shows only code by default)
  */
-export function formatClassName(fullName: string, showDescription = false): string {
+export function formatClassName(
+  fullName: string,
+  showDescription = false,
+): string {
   const info = parseClassName(fullName);
-  
+
   if (showDescription && info.description) {
     return `${info.code} - ${info.description}`;
   }
-  
+
   return info.code;
 }
 
@@ -52,12 +55,12 @@ export function formatClassName(fullName: string, showDescription = false): stri
  */
 export function getClassInfoList(classNames: string[]): ClassInfo[] {
   const uniqueClasses = new Map<string, ClassInfo>();
-  
+
   for (const className of classNames) {
     if (!uniqueClasses.has(className)) {
       uniqueClasses.set(className, parseClassName(className));
     }
   }
-  
+
   return Array.from(uniqueClasses.values());
 }

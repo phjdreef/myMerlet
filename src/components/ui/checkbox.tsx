@@ -2,7 +2,10 @@ import * as React from "react";
 import { cn } from "@/utils/tailwind";
 
 interface CheckboxProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "onCheckedChange"> {
+  extends Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    "type" | "onCheckedChange"
+  > {
   onCheckedChange?: (checked: boolean) => void;
 }
 
@@ -20,7 +23,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         checked={checked as boolean}
         onChange={handleChange}
         className={cn(
-          "h-4 w-4 shrink-0 rounded border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 accent-primary cursor-pointer",
+          "border-primary ring-offset-background focus-visible:ring-ring accent-primary h-4 w-4 shrink-0 cursor-pointer rounded border focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         {...props}

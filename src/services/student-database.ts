@@ -107,22 +107,17 @@ class StudentDatabase {
   async savePropertyDefinition(
     property: StudentPropertyDefinition,
   ): Promise<void> {
-    const response = await window.studentDBAPI.savePropertyDefinition(
-      property,
-    );
+    const response = await window.studentDBAPI.savePropertyDefinition(property);
     if (!response.success) {
       throw new Error(response.error || "Failed to save property definition");
     }
   }
 
   async deletePropertyDefinition(propertyId: string): Promise<void> {
-    const response = await window.studentDBAPI.deletePropertyDefinition(
-      propertyId,
-    );
+    const response =
+      await window.studentDBAPI.deletePropertyDefinition(propertyId);
     if (!response.success) {
-      throw new Error(
-        response.error || "Failed to delete property definition",
-      );
+      throw new Error(response.error || "Failed to delete property definition");
     }
   }
 

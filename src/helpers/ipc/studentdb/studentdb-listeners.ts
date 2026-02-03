@@ -173,12 +173,7 @@ export function addStudentDBEventListeners() {
   // Property Values
   ipcMain.handle(
     STUDENT_DB_CHANNELS.GET_PROPERTY_VALUES,
-    async (
-      _,
-      studentId: number,
-      className: string,
-      schoolYear: string,
-    ) => {
+    async (_, studentId: number, className: string, schoolYear: string) => {
       try {
         const values = await mainStudentDB.getPropertyValues(
           studentId,
@@ -219,12 +214,7 @@ export function addStudentDBEventListeners() {
   // Notes
   ipcMain.handle(
     STUDENT_DB_CHANNELS.GET_NOTE,
-    async (
-      _,
-      studentId: number,
-      className: string,
-      schoolYear: string,
-    ) => {
+    async (_, studentId: number, className: string, schoolYear: string) => {
       try {
         const note = await mainStudentDB.getNote(
           studentId,
@@ -250,8 +240,7 @@ export function addStudentDBEventListeners() {
       } catch (error) {
         return {
           success: false,
-          error:
-            error instanceof Error ? error.message : "Failed to save note",
+          error: error instanceof Error ? error.message : "Failed to save note",
         };
       }
     },

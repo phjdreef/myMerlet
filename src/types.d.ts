@@ -86,7 +86,9 @@ interface StudentDBAPI {
     className: string,
     schoolYear: string,
   ) => Promise<
-    APIResponse<import("./services/student-database").StudentPropertyDefinition[]>
+    APIResponse<
+      import("./services/student-database").StudentPropertyDefinition[]
+    >
   >;
   savePropertyDefinition: (
     property: import("./services/student-database").StudentPropertyDefinition,
@@ -108,7 +110,9 @@ interface StudentDBAPI {
     studentId: number,
     className: string,
     schoolYear: string,
-  ) => Promise<APIResponse<import("./services/student-database").StudentNote | null>>;
+  ) => Promise<
+    APIResponse<import("./services/student-database").StudentNote | null>
+  >;
   saveNote: (
     note: import("./services/student-database").StudentNote,
   ) => Promise<APIResult>;

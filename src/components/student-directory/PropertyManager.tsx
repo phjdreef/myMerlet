@@ -59,7 +59,10 @@ export function PropertyManager({
     }
   };
 
-  const handleMoveProperty = async (property: StudentPropertyDefinition, direction: "up" | "down") => {
+  const handleMoveProperty = async (
+    property: StudentPropertyDefinition,
+    direction: "up" | "down",
+  ) => {
     const currentIndex = properties.findIndex((p) => p.id === property.id);
     if (
       (direction === "up" && currentIndex === 0) ||
@@ -91,7 +94,7 @@ export function PropertyManager({
     <div className="space-y-4">
       <div className="space-y-2">
         <h3 className="text-sm font-medium">{t("customProperties")}</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {t("customPropertiesDescription")}
         </p>
       </div>
@@ -104,11 +107,11 @@ export function PropertyManager({
             {properties.map((property, index) => (
               <div
                 key={property.id}
-                className="flex items-center gap-2 bg-background rounded-md border p-2"
+                className="bg-background flex items-center gap-2 rounded-md border p-2"
               >
-                <div className="flex-1 flex items-center gap-2">
+                <div className="flex flex-1 items-center gap-2">
                   <span className="text-sm font-medium">{property.name}</span>
-                  <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
+                  <span className="text-muted-foreground bg-muted rounded px-2 py-0.5 text-xs">
                     {t(`propertyType_${property.type}`)}
                   </span>
                 </div>
@@ -135,7 +138,7 @@ export function PropertyManager({
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDeleteProperty(property.id)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive h-8 w-8 p-0"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -168,14 +171,17 @@ export function PropertyManager({
                 e.target.value as "boolean" | "text" | "letter" | "number",
               )
             }
-            className="px-3 py-2 border rounded-md bg-background text-sm"
+            className="bg-background rounded-md border px-3 py-2 text-sm"
           >
             <option value="text">{t("propertyType_text")}</option>
             <option value="boolean">{t("propertyType_boolean")}</option>
             <option value="letter">{t("propertyType_letter")}</option>
             <option value="number">{t("propertyType_number")}</option>
           </select>
-          <Button onClick={handleAddProperty} disabled={!newPropertyName.trim()}>
+          <Button
+            onClick={handleAddProperty}
+            disabled={!newPropertyName.trim()}
+          >
             <Plus className="mr-2 h-4 w-4" />
             {t("add")}
           </Button>
