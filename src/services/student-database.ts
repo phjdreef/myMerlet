@@ -20,7 +20,7 @@ interface StudentPropertyDefinition {
   className: string;
   schoolYear: string;
   name: string; // e.g., "Extra tijd", "Bijles"
-  type: "boolean" | "text" | "number" | "letter";
+  type: "boolean" | "text" | "number" | "letter" | "longtext";
   order: number;
 }
 

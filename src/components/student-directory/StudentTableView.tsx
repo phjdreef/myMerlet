@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Settings2 } from "lucide-react";
 import { logger } from "@/utils/logger";
 import { PropertyManager } from "./PropertyManager";
+import { StudentPhoto } from "./StudentPhoto";
 import { formatClassName } from "@/utils/class-utils";
 
 interface StudentTableViewProps {
@@ -31,7 +32,6 @@ interface StudentTableViewProps {
 }
 
 interface StudentWithExtras extends Student {
-  photoUrl: string | null;
   propertyValues: Map<string, string | number | boolean>;
   note: string;
   recentGrades: Array<{ test: Test; grade: StudentGrade } | null>;
@@ -267,16 +267,6 @@ export function StudentTableView({
 
       const studentsWithData = await Promise.all(
         students.map(async (student) => {
-          // Load photo
-          let photoUrl: string | null = null;
-          try {
-            photoUrl = await window.studentDBAPI
-              .getPhoto(student.id)
-              .then((res) => (res.success ? res.data || null : null));
-          } catch (error) {
-            logger.error(`Failed to load photo for ${student.id}:`, error);
-          }
-
           // Load property values
           const propertyValues = new Map<string, string | number | boolean>();
           try {
@@ -353,7 +343,6 @@ export function StudentTableView({
 
           return {
             ...student,
-            photoUrl,
             propertyValues,
             note,
             recentGrades,
@@ -381,6 +370,19 @@ export function StudentTableView({
   ) => {
     if (!selectedClass) return;
 
+    // Update local state immediately (optimistic update)
+    setStudentsWithExtras((prev) =>
+      prev.map((s) => {
+        if (s.id === student.id) {
+          const newPropertyValues = new Map(s.propertyValues);
+          newPropertyValues.set(propertyId, value);
+          return { ...s, propertyValues: newPropertyValues };
+        }
+        return s;
+      }),
+    );
+
+    // Save in background
     try {
       await studentDB.savePropertyValue({
         studentId: student.id,
@@ -389,21 +391,22 @@ export function StudentTableView({
         propertyId,
         value,
       });
-
-      // Update local state
-      setStudentsWithExtras((prev) =>
-        prev.map((s) => {
-          if (s.id === student.id) {
-            const newPropertyValues = new Map(s.propertyValues);
-            newPropertyValues.set(propertyId, value);
-            return { ...s, propertyValues: newPropertyValues };
-          }
-          return s;
-        }),
-      );
     } catch (error) {
       logger.error("Failed to save property value:", error);
     }
+  };
+
+  const handleTextareaChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+    student: StudentWithExtras,
+    propertyId: string,
+  ) => {
+    // Auto-resize
+    e.target.style.height = "auto";
+    e.target.style.height = `${e.target.scrollHeight}px`;
+    
+    // Update value
+    handlePropertyValueChange(student, propertyId, e.target.value);
   };
 
   const handleNoteChange = async (
@@ -637,19 +640,9 @@ export function StudentTableView({
                   <TableRow key={student.id} className="group/row">
                     {/* Photo */}
                     <TableCell className="relative">
-                      {student.photoUrl ? (
-                        <div className="group/photo relative h-10 w-10">
-                          <img
-                            src={student.photoUrl}
-                            alt={getFullName(student)}
-                            className="h-10 w-10 rounded-full object-cover transition-transform group-hover/photo:relative group-hover/photo:z-100 group-hover/photo:scale-[2.5] group-hover/photo:shadow-xl"
-                          />
-                        </div>
-                      ) : (
-                        <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium">
-                          {student.voorletters}
-                        </div>
-                      )}
+                      <div className="h-10 w-10">
+                        <StudentPhoto student={student} size="small" />
+                      </div>
                     </TableCell>
 
                     {/* Name */}
@@ -764,6 +757,20 @@ export function StudentTableView({
                               )
                             }
                             className="h-8 w-12 text-center"
+                          />
+                        ) : prop.type === "longtext" ? (
+                          <textarea
+                            value={
+                              (student.propertyValues.get(prop.id) as string) ||
+                              ""
+                            }
+                            onChange={(e) => handleTextareaChange(e, student, prop.id)}
+                            placeholder="..."
+                            className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full resize-none overflow-hidden rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            rows={1}
+                            style={{
+                              minHeight: "2.5rem",
+                            }}
                           />
                         ) : (
                           <Input

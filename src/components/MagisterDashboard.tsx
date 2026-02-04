@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSchoolYear } from "../contexts/SchoolYearContext";
 import { logger } from "../utils/logger";
-import StudentDirectory from "./StudentDirectory";
 import { Button } from "./ui/button";
 import { ErrorBanner } from "./ui/error-banner";
 import LoadingSpinner from "./LoadingSpinner";
@@ -14,15 +13,25 @@ export default function MagisterDashboard({
 } = {}) {
   const { t } = useTranslation();
   const { currentSchoolYear } = useSchoolYear();
-  const [activeTab, setActiveTab] = useState<"overview" | "students">(
-    "overview",
-  );
-  const [data, setData] = useState<unknown | null>(null);
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [cancelRequested, setCancelRequested] = useState(false);
+
+  const handleCancel = () => {
+    setCancelRequested(true);
+    setLoading(false);
+    setIsAuthenticating(false);
+    setError(t("operationCancelled"));
+    setTimeout(() => {
+      setError(null);
+      setCancelRequested(false);
+    }, 3000);
+  };
 
   const loadAllStudents = async (skipAuth = false) => {
+    setCancelRequested(false);
     try {
       setLoading(true);
       setError(null);
@@ -53,35 +62,32 @@ export default function MagisterDashboard({
         });
 
         // Automatically download photos after loading students
-        if (items.length > 0) {
+        if (items.length > 0 && !cancelRequested) {
           setError(t("downloadingPhotos"));
           let successCount = 0;
           let failCount = 0;
 
           for (const student of items) {
+            if (cancelRequested) {
+              break;
+            }
             try {
               const photoResponse = await window.magisterAPI.fetchStudentPhoto(
                 student.id,
               );
               if (photoResponse.success && photoResponse.data) {
-                // Use externeId as the key for storing photos
-                const externeId = student.externeId as string;
-                if (externeId) {
-                  await window.studentDBAPI.savePhoto(
-                    externeId,
-                    photoResponse.data,
-                  );
-                  successCount++;
-                  setError(
-                    t("downloadedPhotos", {
-                      count: successCount,
-                      total: items.length,
-                    }),
-                  );
-                } else {
-                  logger.error(`Student ${student.id} has no externeId`);
-                  failCount++;
-                }
+                // Use student.id for storing photos
+                await window.studentDBAPI.savePhoto(
+                  student.id,
+                  photoResponse.data,
+                );
+                successCount++;
+                setError(
+                  t("downloadedPhotos", {
+                    count: successCount,
+                    total: items.length,
+                  }),
+                );
               } else {
                 failCount++;
               }
@@ -173,7 +179,7 @@ export default function MagisterDashboard({
   };
 
   return (
-    <div className="flex h-full flex-col p-4">
+    <div className="flex flex-col">
       <div className="mb-6">
         <h1 className="mb-2 text-2xl font-bold">
           {t("magisterDashboardTitle")}
@@ -182,84 +188,56 @@ export default function MagisterDashboard({
           {t("magisterDashboardSubtitle")}
         </p>
 
-        {/* Tab Navigation */}
-        <div className="mb-4 flex gap-1">
+        {/* Controls */}
+        <div className="flex flex-wrap gap-2">
+          {/* Student API Controls */}
           <Button
-            onClick={() => setActiveTab("overview")}
-            variant={activeTab === "overview" ? "default" : "outline"}
+            onClick={() => loadAllStudents(false)}
+            disabled={loading}
             size="sm"
           >
-            {t("magisterOverviewTab")}
+            {t("refreshFromAPI")}
           </Button>
+
           <Button
-            onClick={() => setActiveTab("students")}
-            variant={activeTab === "students" ? "default" : "outline"}
+            onClick={handleLogout}
+            variant="outline"
             size="sm"
+            className="ml-auto"
           >
-            {t("magisterStudentsTab")}
+            {t("logout")}
           </Button>
         </div>
-
-        {/* Controls for Overview tab */}
-        {activeTab === "overview" && (
-          <div className="flex flex-wrap gap-2">
-            {/* Student API Controls */}
-            <Button
-              onClick={() => loadAllStudents(false)}
-              disabled={loading}
-              size="sm"
-            >
-              {t("refreshFromAPI")}
-            </Button>
-
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className="ml-auto"
-            >
-              {t("logout")}
-            </Button>
-          </div>
-        )}
       </div>
 
-      {/* Content based on active tab */}
-      {activeTab === "overview" && (
-        <>
-          <ErrorBanner
-            error={error}
-            variant={
-              error?.startsWith("✅") || error?.startsWith("📸")
-                ? "success"
-                : error?.startsWith("⚠️")
-                  ? "warning"
-                  : "error"
-            }
-          />
+      <ErrorBanner
+        error={error}
+        variant={
+          error?.startsWith("✅") || error?.startsWith("📸")
+            ? "success"
+            : error?.startsWith("⚠️")
+              ? "warning"
+              : "error"
+        }
+      />
 
-          {loading && (
-            <div className="flex items-center justify-center py-8">
-              <LoadingSpinner text={t("loading")} />
-            </div>
-          )}
-
-          {data && (
-            <div className="flex-1 overflow-auto">
-              <div className="bg-card rounded-lg border p-4">
-                <h2 className="mb-3 text-lg font-semibold">{t("apiData")}</h2>
-                <pre className="bg-muted overflow-auto rounded p-3 text-sm">
-                  {JSON.stringify(data, null, 2)}
-                </pre>
-              </div>
-            </div>
-          )}
-        </>
+      {loading && (
+        <div className="flex flex-col items-center justify-center gap-4 py-8">
+          <LoadingSpinner text={t("loading")} />
+          <Button onClick={handleCancel} variant="outline" size="sm">
+            {t("cancel")}
+          </Button>
+        </div>
       )}
 
-      {activeTab === "students" && (
-        <div className="flex-1 overflow-hidden">
-          <StudentDirectory />
+      {data && (
+        <div className="overflow-auto">
+          <div className="bg-card rounded-lg border p-4">
+            <h2 className="mb-3 text-lg font-semibold">{t("apiData")}</h2>
+            <pre className="bg-muted overflow-auto rounded p-3 text-sm">
+              {JSON.stringify(data, null, 2)}
+            </pre>
+          </div>
         </div>
       )}
     </div>

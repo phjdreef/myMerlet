@@ -38,17 +38,6 @@ export default function NavigationMenu() {
                 "h-7 py-0.5 leading-none",
               )}
             >
-              <Link to="/koppelingen">{t("koppelingen")}</Link>
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <NavigationMenuLink
-              asChild
-              className={cn(
-                navigationMenuTriggerStyle(),
-                "h-7 py-0.5 leading-none",
-              )}
-            >
               <Link to="/planning">{t("planning")}</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>

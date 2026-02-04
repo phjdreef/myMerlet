@@ -23,7 +23,7 @@ export function PropertyManager({
   const { t } = useTranslation();
   const [newPropertyName, setNewPropertyName] = useState("");
   const [newPropertyType, setNewPropertyType] = useState<
-    "boolean" | "text" | "letter" | "number"
+    "boolean" | "text" | "letter" | "number" | "longtext"
   >("text");
 
   const handleAddProperty = async () => {
@@ -168,7 +168,7 @@ export function PropertyManager({
             value={newPropertyType}
             onChange={(e) =>
               setNewPropertyType(
-                e.target.value as "boolean" | "text" | "letter" | "number",
+                e.target.value as "boolean" | "text" | "letter" | "number" | "longtext",
               )
             }
             className="bg-background rounded-md border px-3 py-2 text-sm"
@@ -177,6 +177,7 @@ export function PropertyManager({
             <option value="boolean">{t("propertyType_boolean")}</option>
             <option value="letter">{t("propertyType_letter")}</option>
             <option value="number">{t("propertyType_number")}</option>
+            <option value="longtext">{t("propertyType_longtext")}</option>
           </select>
           <Button
             onClick={handleAddProperty}

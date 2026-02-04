@@ -66,7 +66,9 @@ function sanitizeFileName(input: string): string {
 
 function stripHtml(input: string): string {
   return input
-    .replace(/<[^>]+>/g, "")
+    .replace(/<br\s*\/?>/gi, "\n") // Convert <br> and <br/> to newlines
+    .replace(/<\/p>/gi, "\n") // Convert closing </p> to newline
+    .replace(/<[^>]+>/g, "") // Remove all remaining HTML tags
     .replace(/[ \t]+/g, " ") // Only collapse spaces and tabs, preserve newlines
     .trim();
 }
@@ -373,15 +375,18 @@ async function buildPlanDocument(
           goal.paragraphIds.forEach((paragraphId) => {
             const paragraph = paragraphMap.get(paragraphId);
             if (paragraph) {
-              const number = paragraph.number ? `§${paragraph.number}` : "§?";
+              const number = paragraph.number ? `§${paragraph.number}` : "";
               const title = paragraph.title?.trim() || "Paragraph";
+              const displayText = number ? `${number} ${title}` : title;
+              
               goalParagraphs.push(
                 new DocParagraph({
                   children: [
                     new TextRun({
-                      text: `${number} ${title}`,
+                      text: displayText,
                       ...FONT_STYLES.normal,
                       color: "4472C4",
+                      bold: true,
                     }),
                   ],
                   indent: { left: 360 },
@@ -389,6 +394,32 @@ async function buildPlanDocument(
                   keepLines: true,
                 }),
               );
+              
+              // Add study goals if present
+              if (paragraph.studyGoals) {
+                const studyGoalsText = stripHtml(paragraph.studyGoals);
+                if (studyGoalsText) {
+                  const lines = studyGoalsText.split("\n");
+                  lines.forEach((line) => {
+                    if (line.trim()) {
+                      goalParagraphs.push(
+                        new DocParagraph({
+                          children: [
+                            new TextRun({
+                              text: line.trim(),
+                              ...FONT_STYLES.normal,
+                              color: "666666",
+                            }),
+                          ],
+                          indent: { left: 720 },
+                          keepNext: true,
+                          keepLines: true,
+                        }),
+                      );
+                    }
+                  });
+                }
+              }
             }
           });
         }
@@ -396,15 +427,16 @@ async function buildPlanDocument(
         // Topics
         if (goal.topicIds && goal.topicIds.length > 0) {
           goal.topicIds.forEach((topicId) => {
-            const topicName = topicMap.get(topicId);
-            if (topicName) {
+            const topic = plan.topics?.find(t => t.id === topicId);
+            if (topic) {
               goalParagraphs.push(
                 new DocParagraph({
                   children: [
                     new TextRun({
-                      text: topicName,
+                      text: topic.name,
                       ...FONT_STYLES.normal,
                       color: "5b9bd5",
+                      bold: true,
                     }),
                   ],
                   indent: { left: 360 },
@@ -412,46 +444,35 @@ async function buildPlanDocument(
                   keepLines: true,
                 }),
               );
+              
+              // Add topic description if present
+              if (topic.description) {
+                const descText = stripHtml(topic.description);
+                if (descText) {
+                  const lines = descText.split("\n");
+                  lines.forEach((line) => {
+                    if (line.trim()) {
+                      goalParagraphs.push(
+                        new DocParagraph({
+                          children: [
+                            new TextRun({
+                              text: line.trim(),
+                              ...FONT_STYLES.normal,
+                              color: "666666",
+                              italics: true,
+                            }),
+                          ],
+                          indent: { left: 720 },
+                          keepNext: true,
+                          keepLines: true,
+                        }),
+                      );
+                    }
+                  });
+                }
+              }
             }
           });
-        }
-
-        // Experiment
-        if (goal.experiment?.trim()) {
-          const lines = goal.experiment.trim().split("\n");
-          if (lines.length > 0) {
-            goalParagraphs.push(
-              new DocParagraph({
-                children: [
-                  new TextRun({
-                    text: "Experiment: ",
-                    ...FONT_STYLES.bold,
-                    size: 20,
-                  }),
-                ],
-                spacing: { before: 100 },
-                keepNext: true,
-                keepLines: true,
-              }),
-            );
-            lines.forEach((line) => {
-              if (line) {
-                goalParagraphs.push(
-                  new DocParagraph({
-                    children: [
-                      new TextRun({
-                        text: line,
-                        ...FONT_STYLES.normal,
-                      }),
-                    ],
-                    indent: { left: 360 },
-                    keepNext: true,
-                    keepLines: true,
-                  }),
-                );
-              }
-            });
-          }
         }
 
         // Skills

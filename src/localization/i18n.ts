@@ -12,6 +12,7 @@ i18n.use(initReactI18next).init({
       translation: {
         appName: "myMerlet",
         settings: "Instellingen",
+        generalSettings: "Algemeen",
         settingsDescription: "Beheer taal-, thema- en interfacevoorkeuren.",
         schoolYear: "Schooljaar",
         schoolYearDescription:
@@ -28,6 +29,9 @@ i18n.use(initReactI18next).init({
         studentsNotSeated: "Leerlingen nog niet geplaatst",
         classroomLayout: "Klaslokaal Indeling",
         classroomFront: "Positie Docent",
+        teacher: "Docent",
+        printClassroom: "Print Plattegrond",
+        exportJPG: "Exporteer als JPG",
         addRow: "Rij toevoegen",
         addColumn: "Kolom toevoegen",
         left: "Links",
@@ -137,6 +141,7 @@ i18n.use(initReactI18next).init({
         confirmDeletePlan: "Weet je zeker dat je dit plan wilt verwijderen?",
         editPlan: "Plan Bewerken",
         cancel: "Annuleren",
+        operationCancelled: "Bewerking geannuleerd",
         save: "Opslaan",
         planInfo: "Plan Info",
         topics: "Onderwerpen",
@@ -271,6 +276,7 @@ i18n.use(initReactI18next).init({
         propertyType_boolean: "Ja/Nee",
         propertyType_letter: "Letter (1 karakter)",
         propertyType_number: "Getal",
+        propertyType_longtext: "Lange tekst (meerdere regels)",
         // Tests and Grades
         tests: "Toetsen",
         grades: "Cijfers",
@@ -429,6 +435,7 @@ i18n.use(initReactI18next).init({
       translation: {
         appName: "myMerlet",
         settings: "Settings",
+        generalSettings: "General",
         settingsDescription:
           "Manage language, theme, and interface preferences.",
         schoolYear: "School Year",
@@ -446,6 +453,9 @@ i18n.use(initReactI18next).init({
         studentsNotSeated: "Students not yet seated",
         classroomLayout: "Classroom Layout",
         classroomFront: "Teacher Position",
+        teacher: "Teacher",
+        printClassroom: "Print Layout",
+        exportJPG: "Export as JPG",
         addRow: "Add Row",
         addColumn: "Add Column",
         left: "Left",
@@ -552,6 +562,7 @@ i18n.use(initReactI18next).init({
         confirmDeletePlan: "Are you sure you want to delete this plan?",
         editPlan: "Edit Plan",
         cancel: "Cancel",
+        operationCancelled: "Operation cancelled",
         save: "Save",
         planInfo: "Plan Info",
         topics: "Topics",
@@ -683,6 +694,7 @@ i18n.use(initReactI18next).init({
         propertyType_boolean: "Yes/No",
         propertyType_letter: "Letter (1 character)",
         propertyType_number: "Number",
+        propertyType_longtext: "Long text (multiple lines)",
         // Tests and Grades
         tests: "Tests",
         grades: "Grades",

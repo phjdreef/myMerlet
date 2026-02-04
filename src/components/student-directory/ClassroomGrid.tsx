@@ -1,9 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { domToJpeg } from "modern-screenshot";
 import {
   UsersThreeIcon,
   ChalkboardTeacherIcon,
   PlusIcon,
+  PrinterIcon,
+  DownloadIcon,
 } from "@phosphor-icons/react";
 import type { Student } from "@/services/student-database";
 import { StudentPhoto } from "./StudentPhoto";
@@ -42,7 +45,11 @@ export function ClassroomGrid({
 }: ClassroomGridProps) {
   const { t } = useTranslation();
   const [draggedStudentId, setDraggedStudentId] = useState<number | null>(null);
+  const [printMode, setPrintMode] = useState(false);
+  const [exportMode, setExportMode] = useState(false);
   const gridContainerRef = useRef<HTMLDivElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   // Memoize extra rows/cols based on selected class
   const currentExtraRows = useMemo(() => {
@@ -132,6 +139,53 @@ export function ClassroomGrid({
       `classroom_teacher_position_${selectedClass}`,
       validPosition,
     );
+  };
+
+  // Handle print mode
+  const handlePrint = () => {
+    setPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      setPrintMode(false);
+    }, 100);
+  };
+
+  // Handle export to JPG
+  const handleExportJPG = async () => {
+    if (!selectedClass) return;
+    
+    setExportMode(true);
+    
+    // Wait for the mode to take effect and render
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    try {
+      // Find the export area
+      const exportArea = document.getElementById('classroom-export-area');
+      if (!exportArea) {
+        console.error('Export area not found');
+        setExportMode(false);
+        return;
+      }
+      
+      // Use modern-screenshot to convert to data URL
+      const dataUrl = await domToJpeg(exportArea, {
+        quality: 0.95,
+        backgroundColor: '#ffffff',
+        scale: 2,
+      });
+      
+      // Download the image
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `klasindeling-${selectedClass}-${new Date().toISOString().split('T')[0]}.jpg`;
+      link.click();
+      
+      setExportMode(false);
+    } catch (error) {
+      console.error('Failed to export:', error);
+      setExportMode(false);
+    }
   };
 
   // Scroll to bottom when class changes
@@ -228,9 +282,30 @@ export function ClassroomGrid({
   const unpositionedStudents = getUnpositionedStudents(selectedClass);
 
   return (
-    <div className="space-y-6">
+    <>
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #classroom-print-area,
+          #classroom-print-area * {
+            visibility: visible;
+          }
+          #classroom-print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+      <div className="space-y-6">
       {/* Unpositioned Students - Sticky */}
-      {unpositionedStudents.length > 0 && (
+      {!printMode && !exportMode && unpositionedStudents.length > 0 && (
         <div className="border-border bg-card/70 sticky top-0 z-10 rounded-lg border p-4 shadow-md backdrop-blur-sm">
           <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
             <UsersThreeIcon className="h-5 w-5" weight="duotone" />
@@ -271,19 +346,20 @@ export function ClassroomGrid({
 
       {/* Classroom Grid */}
       <div
+        id={exportMode ? "classroom-export-area" : "classroom-print-area"}
         ref={gridContainerRef}
         className="border-border bg-card rounded-lg border p-4"
       >
-        <div className="mb-4 flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-3">
           {Array.from({ length: requiredRows }, (_, row) => (
-            <div key={`row-${row}`} className="flex w-full gap-4">
+            <div key={`row-${row}`} className="flex w-full gap-3">
               {Array.from({ length: requiredCols }, (_, col) => {
                 const student = getStudentAtPosition(row, col, selectedClass);
 
                 return (
                   <div
                     key={`${row}-${col}`}
-                    className={`border-border flex size-[140px] shrink-0 items-center justify-center rounded-lg border-2 p-2 text-center transition-all duration-200 ${
+                    className={`border-border flex size-[110px] shrink-0 items-center justify-center rounded-lg border p-1.5 text-center transition-all duration-200 ${
                       student
                         ? "border-primary bg-primary/10 border-solid"
                         : "hover:border-primary/50 hover:bg-accent/50 border-dashed"
@@ -300,7 +376,7 @@ export function ClassroomGrid({
                   >
                     {student ? (
                       <div
-                        className={`flex h-full w-full cursor-grab flex-col items-center justify-between overflow-hidden py-2 transition-opacity select-none active:cursor-grabbing ${
+                        className={`flex h-full w-full cursor-grab flex-col items-center justify-between overflow-hidden py-1 transition-opacity select-none active:cursor-grabbing ${
                           draggedStudentId === student.id
                             ? "opacity-50"
                             : "opacity-100"
@@ -322,10 +398,10 @@ export function ClassroomGrid({
                         }}
                         title={t("dragToMove")}
                       >
-                        <div className="pointer-events-none flex w-full flex-1 items-center justify-center">
+                        <div className="flex w-full flex-1 items-center justify-center">
                           <StudentPhoto student={student} size="large" />
                         </div>
-                        <span className="pointer-events-none mt-1 w-full truncate px-1 text-center text-xs font-medium">
+                        <span className="mt-0.5 w-full truncate px-0.5 text-center text-[10px] font-medium leading-tight">
                           {formatStudentName(student)}
                         </span>
                       </div>
@@ -337,8 +413,20 @@ export function ClassroomGrid({
           ))}
         </div>
 
+        {/* Teacher Position Visual */}
+        <div
+          className={`mt-4 flex ${teacherPosition === "left" ? "justify-start" : teacherPosition === "right" ? "justify-end" : "justify-center"}`}
+        >
+          <div className="bg-primary/10 text-primary flex items-center gap-2 rounded-lg border border-primary/30 px-4 py-2 font-medium shadow-sm">
+            <ChalkboardTeacherIcon className="h-5 w-5" weight="fill" />
+            <span>{t("teacher")}</span>
+          </div>
+        </div>
+
         {/* Controls for adding rows and columns - sticky at bottom */}
-        <div className="border-border bg-card/95 sticky bottom-0 z-10 -mx-4 -mb-4 flex items-center justify-between gap-4 border-t p-4 backdrop-blur-sm">
+        {!printMode && !exportMode && (
+        <div className="border-border bg-card/95 no-print sticky bottom-0 z-10 -mx-4 -mb-4 flex items-center justify-between gap-4 border-t p-4 backdrop-blur-sm">
+          {/* Left: Row and Column Controls */}
           <div className="flex gap-2">
             <div className="flex items-center gap-1">
               <Button
@@ -386,54 +474,61 @@ export function ClassroomGrid({
             </div>
           </div>
 
-          {/* Teacher position indicator and selector */}
-          <div className="flex flex-1 items-center gap-4">
-            <div
-              className={`flex flex-1 ${
-                teacherPosition === "left"
-                  ? "justify-start"
-                  : teacherPosition === "right"
-                    ? "justify-end"
-                    : "justify-center"
-              }`}
+          {/* Center: Teacher position selector */}
+          <ToggleGroup
+            type="single"
+            value={teacherPosition}
+            onValueChange={handleTeacherPositionChange}
+            className="shrink-0 gap-1"
+          >
+            <ToggleGroupItem
+              value="left"
+              aria-label="Left position"
+              size="sm"
             >
-              <div className="bg-primary/10 text-primary flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium">
-                <ChalkboardTeacherIcon className="h-4 w-4" weight="bold" />
-                <span>{t("classroomFront")}</span>
-              </div>
-            </div>
+              {t("left")}
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="center"
+              aria-label="Center position"
+              size="sm"
+            >
+              {t("center")}
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="right"
+              aria-label="Right position"
+              size="sm"
+            >
+              {t("right")}
+            </ToggleGroupItem>
+          </ToggleGroup>
 
-            <ToggleGroup
-              type="single"
-              value={teacherPosition}
-              onValueChange={handleTeacherPositionChange}
-              className="shrink-0 gap-1"
+          {/* Right: Export and Print Buttons */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportJPG}
+              className="gap-2"
             >
-              <ToggleGroupItem
-                value="left"
-                aria-label="Left position"
-                size="sm"
-              >
-                {t("left")}
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="center"
-                aria-label="Center position"
-                size="sm"
-              >
-                {t("center")}
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="right"
-                aria-label="Right position"
-                size="sm"
-              >
-                {t("right")}
-              </ToggleGroupItem>
-            </ToggleGroup>
+              <DownloadIcon className="h-4 w-4" />
+              {t("exportJPG")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrint}
+              className="gap-2"
+            >
+              <PrinterIcon className="h-4 w-4" />
+              {t("printClassroom")}
+            </Button>
           </div>
         </div>
+        )}
       </div>
     </div>
+    </>
   );
 }

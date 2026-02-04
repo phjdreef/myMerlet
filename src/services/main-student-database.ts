@@ -24,7 +24,7 @@ interface StudentPropertyDefinition {
   className: string;
   schoolYear: string;
   name: string;
-  type: "boolean" | "text" | "number" | "letter";
+  type: "boolean" | "text" | "number" | "letter" | "longtext";
   order: number;
 }
 
@@ -468,7 +468,6 @@ class MainStudentDatabase {
 
       const photo = photos[studentId.toString()];
       if (photo) {
-        logger.debug(`Retrieved cached photo for student ${studentId}`);
         return photo.data;
       }
 

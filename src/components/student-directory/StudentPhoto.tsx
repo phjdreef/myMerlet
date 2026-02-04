@@ -33,49 +33,28 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
         setImageError(false);
         setImageSrc(null);
 
-        const externeId = student.externeId;
-        if (!externeId) {
+        const studentId = student.id;
+        if (!studentId) {
           logger.debug(
-            `⚠️ Student ${student.id} has no externeId, cannot load photo`,
+            `⚠️ Student has no id, cannot load photo`,
           );
           setImageError(true);
           setImageLoading(false);
           return;
         }
 
-        logger.debug(`🖼️ Loading photo for student ${externeId}`);
+        logger.debug(`🖼️ Loading photo for student ${studentId}`);
 
-        // First, try to get from persistent cache
-        const cachedResponse = await window.studentDBAPI.getPhoto(externeId);
+        // Get from persistent cache only
+        const cachedResponse = await window.studentDBAPI.getPhoto(studentId);
         if (cachedResponse.success && cachedResponse.data && mounted) {
-          logger.debug(`📦 Using cached photo for student ${externeId}`);
+          logger.debug(`📦 Using cached photo for student ${studentId}`);
           setImageSrc(cachedResponse.data);
           setImageLoading(false);
-          return;
-        }
-
-        // If not in cache, fetch from API
-        let photoPromise = photoCache.get(externeId);
-        if (!photoPromise) {
-          photoPromise = window.magisterAPI.fetchStudentPhoto(student.id);
-          photoCache.set(externeId, photoPromise);
-        }
-
-        const response = await photoPromise;
-
-        if (response.success && response.data && mounted) {
-          const dataUrl = response.data as string;
-          setImageSrc(dataUrl);
-
-          // Save to persistent cache using externeId
-          await window.studentDBAPI.savePhoto(externeId, dataUrl);
-          logger.debug(`✅ Photo fetched and cached for student ${externeId}`);
         } else if (mounted) {
-          logger.debug(
-            `❌ No photo data for student ${externeId}:`,
-            response.error,
-          );
+          logger.debug(`❌ No cached photo for student ${studentId}`);
           setImageError(true);
+          setImageLoading(false);
         }
       } catch (err) {
         logger.debug(
@@ -103,7 +82,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
     size === "small"
       ? "h-8 w-8 text-xs"
       : size === "large"
-        ? "h-20 w-20 text-base"
+        ? "h-16 w-16 text-sm"
         : "h-16 w-16 text-sm";
 
   if (imageError) {
@@ -123,7 +102,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
     logger.debug(`⏳ Waiting for image source for student ${student.id}`);
     return (
       <div
-        className={`bg-muted border-muted ${sizeClasses} animate-pulse rounded-full border-2`}
+        className={`bg-white border-muted ${sizeClasses} animate-pulse rounded-full border-2`}
       ></div>
     );
   }
@@ -132,30 +111,38 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
     `🖼️ Rendering image for student ${student.id}: ${imageSrc.substring(0, 50)}...`,
   );
   return (
-    <div className="relative">
+    <div className="group relative">
       {imageLoading && (
         <div
-          className={`bg-muted border-muted ${sizeClasses} animate-pulse rounded-full border-2`}
+          className={`bg-white border-muted ${sizeClasses} animate-pulse rounded-full border-2`}
         ></div>
       )}
-      <img
-        src={imageSrc}
-        alt={formatStudentName(student)}
-        className={`border-muted ${sizeClasses} rounded-full border-2 object-cover shadow-sm transition-opacity ${imageLoading ? "opacity-0" : "opacity-100"}`}
-        onLoad={() => {
-          logger.debug(
-            `✅ Image loaded successfully for student ${student.id}`,
-          );
-          setImageLoading(false);
-        }}
-        onError={(e) => {
-          logger.debug(
-            `❌ Image failed to load for student ${student.id}:`,
-            e.currentTarget.src,
-          );
-          setImageError(true);
-        }}
-      />
+      <div className={`bg-white ${sizeClasses} rounded-full`}>
+        <img
+          src={imageSrc}
+          alt={formatStudentName(student)}
+          className={`border-muted ${sizeClasses} rounded-full border-2 object-cover shadow-sm transition-all duration-200 ${imageLoading ? "opacity-0" : "opacity-100"} ${
+            size === "small" 
+              ? "group-hover:scale-[4] group-hover:z-50 group-hover:shadow-2xl" 
+              : size === "large"
+                ? "group-hover:scale-150 group-hover:z-50 group-hover:shadow-2xl"
+                : ""
+          }`}
+          onLoad={() => {
+            logger.debug(
+              `✅ Image loaded successfully for student ${student.id}`,
+            );
+            setImageLoading(false);
+          }}
+          onError={(e) => {
+            logger.debug(
+              `❌ Image failed to load for student ${student.id}:`,
+              e.currentTarget.src,
+            );
+            setImageError(true);
+          }}
+        />
+      </div>
     </div>
   );
 }
