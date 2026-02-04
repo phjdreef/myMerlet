@@ -35,9 +35,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
 
         const studentId = student.id;
         if (!studentId) {
-          logger.debug(
-            `⚠️ Student has no id, cannot load photo`,
-          );
+          logger.debug(`⚠️ Student has no id, cannot load photo`);
           setImageError(true);
           setImageLoading(false);
           return;
@@ -102,7 +100,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
     logger.debug(`⏳ Waiting for image source for student ${student.id}`);
     return (
       <div
-        className={`bg-white border-muted ${sizeClasses} animate-pulse rounded-full border-2`}
+        className={`border-muted bg-white ${sizeClasses} animate-pulse rounded-full border-2`}
       ></div>
     );
   }
@@ -114,7 +112,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
     <div className="group relative">
       {imageLoading && (
         <div
-          className={`bg-white border-muted ${sizeClasses} animate-pulse rounded-full border-2`}
+          className={`border-muted bg-white ${sizeClasses} animate-pulse rounded-full border-2`}
         ></div>
       )}
       <div className={`bg-white ${sizeClasses} rounded-full`}>
@@ -122,10 +120,10 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
           src={imageSrc}
           alt={formatStudentName(student)}
           className={`border-muted ${sizeClasses} rounded-full border-2 object-cover shadow-sm transition-all duration-200 ${imageLoading ? "opacity-0" : "opacity-100"} ${
-            size === "small" 
-              ? "group-hover:scale-[4] group-hover:z-50 group-hover:shadow-2xl" 
+            size === "small"
+              ? "group-hover:z-50 group-hover:scale-[4] group-hover:shadow-2xl"
               : size === "large"
-                ? "group-hover:scale-150 group-hover:z-50 group-hover:shadow-2xl"
+                ? "group-hover:z-50 group-hover:scale-150 group-hover:shadow-2xl"
                 : ""
           }`}
           onLoad={() => {

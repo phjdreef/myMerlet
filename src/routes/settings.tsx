@@ -44,7 +44,9 @@ function SettingsPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <section className="border-border/60 bg-card/80 flex flex-col gap-4 rounded-2xl border p-6 shadow-sm backdrop-blur">
                 <div>
-                  <h2 className="text-xl font-semibold">{t("currentSchoolYear")}</h2>
+                  <h2 className="text-xl font-semibold">
+                    {t("currentSchoolYear")}
+                  </h2>
                   <p className="text-muted-foreground text-sm">
                     {t("schoolYearDescription")}
                   </p>
@@ -92,4 +94,3 @@ function SettingsPage() {
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
-

@@ -378,7 +378,7 @@ async function buildPlanDocument(
               const number = paragraph.number ? `§${paragraph.number}` : "";
               const title = paragraph.title?.trim() || "Paragraph";
               const displayText = number ? `${number} ${title}` : title;
-              
+
               goalParagraphs.push(
                 new DocParagraph({
                   children: [
@@ -394,7 +394,7 @@ async function buildPlanDocument(
                   keepLines: true,
                 }),
               );
-              
+
               // Add study goals if present
               if (paragraph.studyGoals) {
                 const studyGoalsText = stripHtml(paragraph.studyGoals);
@@ -427,7 +427,7 @@ async function buildPlanDocument(
         // Topics
         if (goal.topicIds && goal.topicIds.length > 0) {
           goal.topicIds.forEach((topicId) => {
-            const topic = plan.topics?.find(t => t.id === topicId);
+            const topic = plan.topics?.find((t) => t.id === topicId);
             if (topic) {
               goalParagraphs.push(
                 new DocParagraph({
@@ -444,7 +444,7 @@ async function buildPlanDocument(
                   keepLines: true,
                 }),
               );
-              
+
               // Add topic description if present
               if (topic.description) {
                 const descText = stripHtml(topic.description);

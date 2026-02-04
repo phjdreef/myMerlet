@@ -83,7 +83,7 @@ export function ClassFilter({
       {/* Resize handle */}
       <div
         onMouseDown={handleMouseDown}
-        className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-primary/30 active:bg-primary/50"
+        className="hover:bg-primary/30 active:bg-primary/50 absolute top-0 right-0 h-full w-2 cursor-col-resize"
         style={{
           background: isResizing ? "var(--primary)" : "transparent",
           pointerEvents: "auto",

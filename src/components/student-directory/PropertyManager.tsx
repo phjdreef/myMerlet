@@ -168,7 +168,12 @@ export function PropertyManager({
             value={newPropertyType}
             onChange={(e) =>
               setNewPropertyType(
-                e.target.value as "boolean" | "text" | "letter" | "number" | "longtext",
+                e.target.value as
+                  | "boolean"
+                  | "text"
+                  | "letter"
+                  | "number"
+                  | "longtext",
               )
             }
             className="bg-background rounded-md border px-3 py-2 text-sm"
