@@ -9,7 +9,12 @@ interface ClassroomViewProps {
   onDragStart: (event: DragEvent<Element>, student: Student) => void;
   onDragEnd: () => void;
   onDragOver: (event: DragEvent<Element>) => void;
-  onDrop: (event: DragEvent<Element>, row: number, col: number) => void;
+  onDrop: (
+    event: DragEvent<Element>,
+    row: number,
+    col: number,
+    classroomKey: string,
+  ) => void;
 }
 
 export function ClassroomView({

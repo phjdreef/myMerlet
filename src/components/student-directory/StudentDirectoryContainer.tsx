@@ -139,10 +139,10 @@ export function StudentDirectoryContainer() {
     studentId: number,
     row: number,
     col: number,
-    className: string,
+    classroomKey: string,
   ) => {
     const updatedPositions = new Map(seatingPositions);
-    let classPositions = updatedPositions.get(className) || [];
+    let classPositions = updatedPositions.get(classroomKey) || [];
 
     classPositions = classPositions.filter(
       (pos) => pos.studentId !== studentId,
@@ -151,12 +151,12 @@ export function StudentDirectoryContainer() {
       studentId,
       row,
       col,
-      className,
+      className: classroomKey,
       schoolYear: currentSchoolYear,
     });
 
     // No compacting - students stay exactly where you drop them
-    updatedPositions.set(className, classPositions);
+    updatedPositions.set(classroomKey, classPositions);
     setSeatingPositions(updatedPositions);
     saveSeatingPositions(updatedPositions);
   };
@@ -164,10 +164,10 @@ export function StudentDirectoryContainer() {
   const getStudentAtPosition = (
     row: number,
     col: number,
-    className: string,
+    classroomKey: string,
   ): Student | null => {
-    if (!className) return null;
-    const classPositions = seatingPositions.get(className);
+    if (!classroomKey) return null;
+    const classPositions = seatingPositions.get(classroomKey);
     if (!classPositions) return null;
 
     const position = classPositions.find(
@@ -192,25 +192,30 @@ export function StudentDirectoryContainer() {
     event.dataTransfer.dropEffect = "move";
   };
 
-  const handleDrop = (event: DragEvent<Element>, row: number, col: number) => {
+  const handleDrop = (
+    event: DragEvent<Element>,
+    row: number,
+    col: number,
+    classroomKey: string,
+  ) => {
     event.preventDefault();
 
     if (!draggedStudent || !selectedClass) {
       return;
     }
 
-    const existingStudent = getStudentAtPosition(row, col, selectedClass);
+    const existingStudent = getStudentAtPosition(row, col, classroomKey);
 
     if (existingStudent && existingStudent.id !== draggedStudent.id) {
       // Swapping two students - don't compact
-      const classPositions = seatingPositions.get(selectedClass) || [];
+      const classPositions = seatingPositions.get(classroomKey) || [];
       const draggedPosition = classPositions.find(
         (pos) => pos.studentId === draggedStudent.id,
       );
 
       if (draggedPosition) {
         const updatedPositions = new Map(seatingPositions);
-        let positions = updatedPositions.get(selectedClass) || [];
+        let positions = updatedPositions.get(classroomKey) || [];
 
         const draggedOldRow = draggedPosition.row;
         const draggedOldCol = draggedPosition.col;
@@ -225,36 +230,36 @@ export function StudentDirectoryContainer() {
           studentId: draggedStudent.id,
           row,
           col,
-          className: selectedClass,
+          className: classroomKey,
           schoolYear: currentSchoolYear,
         });
         positions.push({
           studentId: existingStudent.id,
           row: draggedOldRow,
           col: draggedOldCol,
-          className: selectedClass,
+          className: classroomKey,
           schoolYear: currentSchoolYear,
         });
 
         // Don't compact on swap - preserve positions
-        updatedPositions.set(selectedClass, positions);
+        updatedPositions.set(classroomKey, positions);
         setSeatingPositions(updatedPositions);
         saveSeatingPositions(updatedPositions);
       } else {
-        setStudentPosition(draggedStudent.id, row, col, selectedClass);
+        setStudentPosition(draggedStudent.id, row, col, classroomKey);
 
         const updatedPositions = new Map(seatingPositions);
-        let positions = updatedPositions.get(selectedClass) || [];
+        let positions = updatedPositions.get(classroomKey) || [];
         positions = positions.filter(
           (pos) => pos.studentId !== existingStudent.id,
         );
-        updatedPositions.set(selectedClass, positions);
+        updatedPositions.set(classroomKey, positions);
         setSeatingPositions(updatedPositions);
         saveSeatingPositions(updatedPositions);
       }
     } else {
       // Dropping into empty cell
-      setStudentPosition(draggedStudent.id, row, col, selectedClass);
+      setStudentPosition(draggedStudent.id, row, col, classroomKey);
     }
 
     // Reset extra columns and rows to 0 after drop
@@ -300,17 +305,6 @@ export function StudentDirectoryContainer() {
 
     return "error";
   }, [error]);
-
-  const statusMessageStyles = useMemo(() => {
-    switch (statusMessageVariant) {
-      case "success":
-        return "border border-green-200 bg-green-50 text-green-800";
-      case "error":
-        return "bg-destructive/10 border-destructive/20 text-destructive border";
-      default:
-        return "border border-blue-200 bg-blue-50 text-blue-800";
-    }
-  }, [statusMessageVariant]);
 
   let content: ReactNode;
   switch (viewMode) {

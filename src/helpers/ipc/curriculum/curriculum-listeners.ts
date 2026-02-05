@@ -343,8 +343,6 @@ async function buildPlanDocument(
               }),
             ],
             spacing: { before: goalIndex > 0 ? 300 : 100, after: 100 },
-            keepNext: true,
-            keepLines: true,
           }),
         );
 
@@ -362,8 +360,6 @@ async function buildPlanDocument(
                       ...FONT_STYLES.normal,
                     }),
                   ],
-                  keepNext: true,
-                  keepLines: true,
                 }),
               );
             });
@@ -390,8 +386,6 @@ async function buildPlanDocument(
                     }),
                   ],
                   indent: { left: 360 },
-                  keepNext: true,
-                  keepLines: true,
                 }),
               );
 
@@ -412,8 +406,6 @@ async function buildPlanDocument(
                             }),
                           ],
                           indent: { left: 720 },
-                          keepNext: true,
-                          keepLines: true,
                         }),
                       );
                     }
@@ -440,8 +432,6 @@ async function buildPlanDocument(
                     }),
                   ],
                   indent: { left: 360 },
-                  keepNext: true,
-                  keepLines: true,
                 }),
               );
 
@@ -463,8 +453,6 @@ async function buildPlanDocument(
                             }),
                           ],
                           indent: { left: 720 },
-                          keepNext: true,
-                          keepLines: true,
                         }),
                       );
                     }
@@ -504,8 +492,6 @@ async function buildPlanDocument(
                       }),
                     ],
                     indent: { left: 360 },
-                    keepNext: true,
-                    keepLines: true,
                   }),
                 );
               }
@@ -528,8 +514,6 @@ async function buildPlanDocument(
                   }),
                 ],
                 spacing: { before: 100 },
-                keepNext: true,
-                keepLines: true,
               }),
             );
             filteredLines.forEach((line, lineIndex) => {
@@ -543,8 +527,6 @@ async function buildPlanDocument(
                     }),
                   ],
                   indent: { left: 360 },
-                  keepNext: !isLastLine,
-                  keepLines: true,
                 }),
               );
             });

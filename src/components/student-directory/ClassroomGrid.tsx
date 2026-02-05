@@ -7,12 +7,24 @@ import {
   PlusIcon,
   PrinterIcon,
   DownloadIcon,
+  XIcon,
+  PencilIcon,
+  CheckIcon,
+  BuildingsIcon,
+  TrashIcon,
 } from "@phosphor-icons/react";
 import type { Student } from "@/services/student-database";
 import { StudentPhoto } from "./StudentPhoto";
 import { formatStudentName } from "@/helpers/student_helpers";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type TeacherPosition = "left" | "center" | "right";
 
@@ -31,7 +43,12 @@ interface ClassroomGridProps {
   onDragStart: (e: React.DragEvent, student: Student) => void;
   onDragEnd: () => void;
   onDragOver: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent, row: number, col: number) => void;
+  onDrop: (
+    e: React.DragEvent,
+    row: number,
+    col: number,
+    classroomKey: string,
+  ) => void;
 }
 
 export function ClassroomGrid({
@@ -48,8 +65,22 @@ export function ClassroomGrid({
   const [printMode, setPrintMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const gridContainerRef = useRef<HTMLDivElement>(null);
-  const printRef = useRef<HTMLDivElement>(null);
-  const exportRef = useRef<HTMLDivElement>(null);
+
+  // Classroom management
+  const [classrooms, setClassrooms] = useState<string[]>(() => {
+    if (!selectedClass) return ["Lokaal 1"];
+    const saved = localStorage.getItem(`classrooms_${selectedClass}`);
+    return saved ? JSON.parse(saved) : ["Lokaal 1"];
+  });
+  const [selectedClassroom, setSelectedClassroom] = useState<string>(() => {
+    if (!selectedClass) return "Lokaal 1";
+    const saved = localStorage.getItem(`selected_classroom_${selectedClass}`);
+    return saved || classrooms[0] || "Lokaal 1";
+  });
+  const [editingClassroom, setEditingClassroom] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [showClassroomSelector, setShowClassroomSelector] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Memoize extra rows/cols based on selected class
   const currentExtraRows = useMemo(() => {
@@ -82,29 +113,6 @@ export function ClassroomGrid({
       setExtraColsState(0);
     }
   }, [selectedClass]);
-
-  // Helper functions to update and save extra rows/cols
-  const setExtraRows = (value: number | ((prev: number) => number)) => {
-    const newValue = typeof value === "function" ? value(extraRows) : value;
-    setExtraRowsState(newValue);
-    if (selectedClass) {
-      localStorage.setItem(
-        `classroom_extra_rows_${selectedClass}`,
-        newValue.toString(),
-      );
-    }
-  };
-
-  const setExtraCols = (value: number | ((prev: number) => number)) => {
-    const newValue = typeof value === "function" ? value(extraCols) : value;
-    setExtraColsState(newValue);
-    if (selectedClass) {
-      localStorage.setItem(
-        `classroom_extra_cols_${selectedClass}`,
-        newValue.toString(),
-      );
-    }
-  };
 
   // Memoize position based on selected class
   const currentTeacherPosition = useMemo<TeacherPosition>(() => {
@@ -188,6 +196,81 @@ export function ClassroomGrid({
     }
   };
 
+  // Load classrooms when class changes
+  useEffect(() => {
+    if (selectedClass) {
+      const saved = localStorage.getItem(`classrooms_${selectedClass}`);
+      const loadedClassrooms = saved ? JSON.parse(saved) : ["Lokaal 1"];
+      setClassrooms(loadedClassrooms);
+
+      const savedSelected = localStorage.getItem(
+        `selected_classroom_${selectedClass}`,
+      );
+      setSelectedClassroom(savedSelected || loadedClassrooms[0]);
+    }
+  }, [selectedClass]);
+
+  // Save classrooms to localStorage
+  const saveClassrooms = (newClassrooms: string[]) => {
+    if (selectedClass) {
+      localStorage.setItem(
+        `classrooms_${selectedClass}`,
+        JSON.stringify(newClassrooms),
+      );
+      setClassrooms(newClassrooms);
+    }
+  };
+
+  // Add new classroom
+  const handleAddClassroom = () => {
+    const newNumber = classrooms.length + 1;
+    const newName = `Lokaal ${newNumber}`;
+    const updated = [...classrooms, newName];
+    saveClassrooms(updated);
+    setSelectedClassroom(newName);
+    if (selectedClass) {
+      localStorage.setItem(`selected_classroom_${selectedClass}`, newName);
+    }
+  };
+
+  // Delete classroom
+  const handleDeleteClassroom = (name: string) => {
+    if (classrooms.length <= 1) return; // Don't delete last classroom
+    const updated = classrooms.filter((c) => c !== name);
+    saveClassrooms(updated);
+    if (selectedClassroom === name) {
+      setSelectedClassroom(updated[0]);
+      if (selectedClass) {
+        localStorage.setItem(`selected_classroom_${selectedClass}`, updated[0]);
+      }
+    }
+  };
+
+  // Rename classroom
+  const handleRenameClassroom = (oldName: string, newName: string) => {
+    if (!newName.trim() || newName === oldName) {
+      setEditingClassroom(null);
+      return;
+    }
+    const updated = classrooms.map((c) => (c === oldName ? newName : c));
+    saveClassrooms(updated);
+    if (selectedClassroom === oldName) {
+      setSelectedClassroom(newName);
+      if (selectedClass) {
+        localStorage.setItem(`selected_classroom_${selectedClass}`, newName);
+      }
+    }
+    setEditingClassroom(null);
+  };
+
+  // Change selected classroom
+  const handleSelectClassroom = (name: string) => {
+    setSelectedClassroom(name);
+    if (selectedClass) {
+      localStorage.setItem(`selected_classroom_${selectedClass}`, name);
+    }
+  };
+
   // Scroll to bottom when class changes
   useEffect(() => {
     if (selectedClass && gridContainerRef.current) {
@@ -209,13 +292,19 @@ export function ClassroomGrid({
     );
   }
 
+  // Get classroom-specific key for storage
+  const getClassroomKey = (className: string) => {
+    return `${className}::${selectedClassroom}`;
+  };
+
   const getStudentAtPosition = (
     row: number,
     col: number,
     className: string,
   ): Student | null => {
     if (!className) return null;
-    const classPositions = seatingPositions.get(className);
+    const key = getClassroomKey(className);
+    const classPositions = seatingPositions.get(key);
     if (!classPositions) return null;
 
     const position = classPositions.find(
@@ -230,35 +319,36 @@ export function ClassroomGrid({
 
   // Calculate the number of rows needed based on occupied seats
   const getRequiredRows = (className: string): number => {
-    const classPositions = seatingPositions.get(className) || [];
+    const key = getClassroomKey(className);
+    const classPositions = seatingPositions.get(key) || [];
 
-    // If no students positioned, only show extra rows (minimum 1)
+    // If no students positioned, show at least 1 row, or 2 when dragging
     if (classPositions.length === 0) {
-      return Math.max(1, extraRows);
+      return isDragging ? 2 : 1;
     }
 
     // Find the highest row number that has a student (0-indexed)
     const maxRow = Math.max(...classPositions.map((pos) => pos.row));
 
-    // Total rows = positions needed + extra rows
-    return maxRow + 1 + extraRows;
+    // Total rows = positions needed + 1 extra row when dragging
+    return maxRow + 1 + (isDragging ? 1 : 0) + extraRows;
   };
 
   // Calculate the number of columns needed
   const getRequiredCols = (className: string): number => {
-    const classPositions = seatingPositions.get(className) || [];
+    const key = getClassroomKey(className);
+    const classPositions = seatingPositions.get(key) || [];
 
-    // If no students positioned, only show extra columns (minimum 1 for dragging)
+    // If no students positioned, show at least 1 column, or 2 when dragging
     if (classPositions.length === 0) {
-      return Math.max(1, extraCols);
+      return isDragging ? 2 : 1;
     }
 
     // Find the highest column number that has a student (0-indexed)
     const maxCol = Math.max(...classPositions.map((pos) => pos.col));
 
-    // Show occupied columns + any extra columns user added
-    // Don't automatically add an extra empty column - users can click "Add Column" if needed
-    return maxCol + 1 + extraCols;
+    // Total cols = positions needed + 1 extra column when dragging
+    return maxCol + 1 + (isDragging ? 1 : 0) + extraCols;
   };
 
   const requiredRows = getRequiredRows(selectedClass);
@@ -269,7 +359,8 @@ export function ClassroomGrid({
     const classStudents = students.filter(
       (student) => student.klassen && student.klassen.includes(className),
     );
-    const classPositions = seatingPositions.get(className) || [];
+    const key = getClassroomKey(className);
+    const classPositions = seatingPositions.get(key) || [];
     const positionedStudentIds = new Set(
       classPositions.map((pos) => pos.studentId),
     );
@@ -304,6 +395,29 @@ export function ClassroomGrid({
         }
       `}</style>
       <div className="space-y-6">
+        {/* Classroom Tabs - Simple tabs without edit mode */}
+        {!printMode && !exportMode && selectedClass && (
+          <div className="no-print flex items-center gap-2">
+            <span className="text-muted-foreground text-sm font-medium">
+              {t("classroom")}:
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {classrooms.map((classroom) => (
+                <Button
+                  key={classroom}
+                  variant={
+                    selectedClassroom === classroom ? "default" : "outline"
+                  }
+                  size="sm"
+                  onClick={() => handleSelectClassroom(classroom)}
+                >
+                  {classroom}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Unpositioned Students - Sticky */}
         {!printMode && !exportMode && unpositionedStudents.length > 0 && (
           <div className="border-border bg-card/70 sticky top-0 z-10 rounded-lg border p-4 shadow-md backdrop-blur-sm">
@@ -321,10 +435,12 @@ export function ClassroomGrid({
                   draggable
                   onDragStart={(e) => {
                     setDraggedStudentId(student.id);
+                    setIsDragging(true);
                     onDragStart(e, student);
                   }}
                   onDragEnd={() => {
                     setDraggedStudentId(null);
+                    setIsDragging(false);
                     onDragEnd();
                   }}
                   title={t("dragToSeat")}
@@ -366,8 +482,10 @@ export function ClassroomGrid({
                       }`}
                       onDragOver={onDragOver}
                       onDrop={(e) => {
-                        onDrop(e, row, col);
-                        // Reset extra columns and rows after drop
+                        const classroomKey = getClassroomKey(selectedClass);
+                        onDrop(e, row, col, classroomKey);
+                        // Reset drag state and extra columns/rows after drop
+                        setIsDragging(false);
                         setExtraRowsState(0);
                         setExtraColsState(0);
                         // Force reset drag state after drop
@@ -385,16 +503,14 @@ export function ClassroomGrid({
                           onDragStart={(e) => {
                             e.dataTransfer.effectAllowed = "move";
                             setDraggedStudentId(student.id);
+                            setIsDragging(true);
                             onDragStart(e, student);
                           }}
                           onDragEnd={() => {
                             // Reset immediately
                             setDraggedStudentId(null);
+                            setIsDragging(false);
                             onDragEnd();
-                          }}
-                          onDrop={() => {
-                            // Also reset on drop to ensure it clears
-                            setDraggedStudentId(null);
                           }}
                           title={t("dragToMove")}
                         >
@@ -425,113 +541,166 @@ export function ClassroomGrid({
 
           {/* Controls for adding rows and columns - sticky at bottom */}
           {!printMode && !exportMode && (
-            <div className="border-border bg-card/95 no-print sticky bottom-0 z-10 -mx-4 -mb-4 flex items-center justify-between gap-4 border-t p-4 backdrop-blur-sm">
-              {/* Left: Row and Column Controls */}
-              <div className="flex gap-2">
-                <div className="flex items-center gap-1">
+            <div className="border-border bg-card/80 no-print sticky bottom-0 z-20 -mx-4 mt-6 -mb-4 border-t shadow-lg backdrop-blur-sm">
+              {/* Classroom Selector - Collapsible with edit functionality */}
+              {showClassroomSelector && (
+                <div className="border-border flex items-center gap-2 border-b p-4">
+                  <span className="text-muted-foreground text-sm font-medium">
+                    {t("manageClassrooms")}:
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {classrooms.map((classroom) => (
+                      <div key={classroom} className="flex items-center gap-1">
+                        {editingClassroom === classroom ? (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              autoFocus
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleRenameClassroom(classroom, editingName);
+                                } else if (e.key === "Escape") {
+                                  setEditingClassroom(null);
+                                }
+                              }}
+                              className="h-8 w-32"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handleRenameClassroom(classroom, editingName)
+                              }
+                              className="h-8 w-8 p-0"
+                            >
+                              <CheckIcon className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingClassroom(null)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <XIcon className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <Button
+                              variant={
+                                selectedClassroom === classroom
+                                  ? "default"
+                                  : "outline"
+                              }
+                              size="sm"
+                              onClick={() => handleSelectClassroom(classroom)}
+                            >
+                              {classroom}
+                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingClassroom(classroom);
+                                  setEditingName(classroom);
+                                }}
+                                className="h-8 w-8 p-0"
+                                title={t("rename")}
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </Button>
+                              {classrooms.length > 1 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleDeleteClassroom(classroom)
+                                  }
+                                  className="text-destructive h-8 w-8 p-0"
+                                  title={t("delete")}
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddClassroom}
+                      className="gap-2"
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                      {t("addClassroom")}
+                    </Button>
+                  </div>
+
+                  {/* Teacher Position Selector */}
+                  <div className="border-border flex items-center gap-2 border-l pl-4">
+                    <label className="text-muted-foreground text-sm font-medium">
+                      {t("classroomFront")}:
+                    </label>
+                    <Select
+                      value={teacherPosition}
+                      onValueChange={handleTeacherPositionChange}
+                    >
+                      <SelectTrigger className="h-8 w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="left">{t("left")}</SelectItem>
+                        <SelectItem value="center">{t("center")}</SelectItem>
+                        <SelectItem value="right">{t("right")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* Main Controls */}
+              <div className="flex items-center justify-between gap-4 p-4">
+                {/* Left: Classroom Toggle */}
+                <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant={showClassroomSelector ? "default" : "outline"}
                     size="sm"
                     onClick={() =>
-                      setExtraRows((prev) => Math.max(0, prev - 1))
+                      setShowClassroomSelector(!showClassroomSelector)
                     }
-                    disabled={extraRows === 0}
-                    className="px-2"
-                    title={`Extra rows: ${extraRows}`}
-                  >
-                    −
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setExtraRows((prev) => prev + 1)}
                     className="gap-2"
+                    title={t("manageClassrooms")}
                   >
-                    <PlusIcon className="h-4 w-4" />
-                    {t("addRow")}
-                    {extraRows > 0 && (
-                      <span className="ml-1">({extraRows})</span>
-                    )}
+                    <BuildingsIcon className="h-4 w-4" />
+                    {t("indeling")}
                   </Button>
                 </div>
-                <div className="flex items-center gap-1">
+
+                {/* Right: Export and Print Buttons */}
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      setExtraCols((prev) => Math.max(0, prev - 1))
-                    }
-                    disabled={extraCols === 0}
-                    className="px-2"
-                    title={`Extra cols: ${extraCols}`}
-                  >
-                    −
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setExtraCols((prev) => prev + 1)}
+                    onClick={handleExportJPG}
                     className="gap-2"
                   >
-                    <PlusIcon className="h-4 w-4" />
-                    {t("addColumn")}
-                    {extraCols > 0 && (
-                      <span className="ml-1">({extraCols})</span>
-                    )}
+                    <DownloadIcon className="h-4 w-4" />
+                    {t("exportJPG")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrint}
+                    className="gap-2"
+                  >
+                    <PrinterIcon className="h-4 w-4" />
+                    {t("printClassroom")}
                   </Button>
                 </div>
-              </div>
-
-              {/* Center: Teacher position selector */}
-              <ToggleGroup
-                type="single"
-                value={teacherPosition}
-                onValueChange={handleTeacherPositionChange}
-                className="shrink-0 gap-1"
-              >
-                <ToggleGroupItem
-                  value="left"
-                  aria-label="Left position"
-                  size="sm"
-                >
-                  {t("left")}
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="center"
-                  aria-label="Center position"
-                  size="sm"
-                >
-                  {t("center")}
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="right"
-                  aria-label="Right position"
-                  size="sm"
-                >
-                  {t("right")}
-                </ToggleGroupItem>
-              </ToggleGroup>
-
-              {/* Right: Export and Print Buttons */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportJPG}
-                  className="gap-2"
-                >
-                  <DownloadIcon className="h-4 w-4" />
-                  {t("exportJPG")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePrint}
-                  className="gap-2"
-                >
-                  <PrinterIcon className="h-4 w-4" />
-                  {t("printClassroom")}
-                </Button>
               </div>
             </div>
           )}
