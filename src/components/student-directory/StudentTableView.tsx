@@ -18,6 +18,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Settings2 } from "lucide-react";
 import { logger } from "@/utils/logger";
 import { PropertyManager } from "./PropertyManager";
@@ -52,7 +59,6 @@ export function StudentTableView({
   const [studentsWithExtras, setStudentsWithExtras] = useState<
     StudentWithExtras[]
   >([]);
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [showPropertyManager, setShowPropertyManager] = useState(false);
   const [recentTests, setRecentTests] = useState<Test[]>([]);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -205,12 +211,15 @@ export function StudentTableView({
     .sort((a, b) => {
       if (!sortColumn) return 0;
 
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number;
+      let bValue: string | number;
 
       if (sortColumn === "name") {
         aValue = getFullName(a);
         bValue = getFullName(b);
+      } else if (sortColumn === "lastName") {
+        aValue = a.achternaam || "";
+        bValue = b.achternaam || "";
       } else if (sortColumn === "level") {
         aValue = getNiveau(a);
         bValue = getNiveau(b);
@@ -219,8 +228,11 @@ export function StudentTableView({
         bValue = b.average ?? -1;
       } else if (sortColumn.startsWith("prop_")) {
         const propId = sortColumn.substring(5);
-        aValue = a.propertyValues.get(propId) ?? "";
-        bValue = b.propertyValues.get(propId) ?? "";
+        const aProp = a.propertyValues.get(propId);
+        const bProp = b.propertyValues.get(propId);
+        // Convert boolean to string for comparison
+        aValue = typeof aProp === "boolean" ? String(aProp) : (aProp ?? "");
+        bValue = typeof bProp === "boolean" ? String(bProp) : (bProp ?? "");
       } else {
         return 0;
       }
@@ -409,31 +421,6 @@ export function StudentTableView({
     handlePropertyValueChange(student, propertyId, e.target.value);
   };
 
-  const handleNoteChange = async (
-    student: StudentWithExtras,
-    newNote: string,
-  ) => {
-    if (!selectedClass) return;
-
-    try {
-      await studentDB.saveNote({
-        studentId: student.id,
-        className: selectedClass,
-        schoolYear: currentSchoolYear,
-        note: newNote,
-        updatedAt: new Date().toISOString(),
-      });
-
-      // Update local state
-      setStudentsWithExtras((prev) =>
-        prev.map((s) => (s.id === student.id ? { ...s, note: newNote } : s)),
-      );
-      setEditingNoteId(null);
-    } catch (error) {
-      logger.error("Failed to save note:", error);
-    }
-  };
-
   const getGradeColor = (grade: number) => {
     if (grade >= 5.5) {
       return "text-green-600 dark:text-green-400 font-semibold";
@@ -516,17 +503,31 @@ export function StudentTableView({
                   <TableHead className="w-16">{t("photo")}</TableHead>
                   <TableHead className="min-w-[150px]">
                     <div className="space-y-1">
-                      <button
-                        onClick={() => handleSort("name")}
-                        className="hover:text-foreground flex items-center gap-1"
-                      >
-                        {t("studentName")}
-                        {sortColumn === "name" && (
-                          <span className="text-xs">
-                            {sortDirection === "asc" ? "↑" : "↓"}
-                          </span>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSort("name")}
+                          className="hover:text-foreground flex items-center gap-1"
+                        >
+                          {t("studentName")}
+                          {sortColumn === "name" && (
+                            <span className="text-xs">
+                              {sortDirection === "asc" ? "↑" : "↓"}
+                            </span>
+                          )}
+                        </button>
+                        <span className="text-muted-foreground">|</span>
+                        <button
+                          onClick={() => handleSort("lastName")}
+                          className="hover:text-foreground flex items-center gap-1 text-xs"
+                        >
+                          Achternaam
+                          {sortColumn === "lastName" && (
+                            <span className="text-xs">
+                              {sortDirection === "asc" ? "↑" : "↓"}
+                            </span>
+                          )}
+                        </button>
+                      </div>
                       <Input
                         placeholder={t("filter")}
                         value={filters.get("name") || ""}
@@ -550,19 +551,42 @@ export function StudentTableView({
                           </span>
                         )}
                       </button>
-                      <Input
-                        placeholder={t("filter")}
-                        value={filters.get("level") || ""}
-                        onChange={(e) =>
-                          handleFilterChange("level", e.target.value)
+                      <Select
+                        value={filters.get("level") || "all"}
+                        onValueChange={(value) =>
+                          handleFilterChange(
+                            "level",
+                            value === "all" ? "" : value,
+                          )
                         }
-                        className="mb-2 h-7 text-xs"
-                      />
+                      >
+                        <SelectTrigger className="mb-2 h-7 text-xs">
+                          <SelectValue placeholder={t("all")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t("all")}</SelectItem>
+                          {Array.from(
+                            new Set(
+                              studentsWithExtras.map((s) => getNiveau(s)),
+                            ),
+                          )
+                            .filter((n) => n && n !== "-")
+                            .sort()
+                            .map((niveau) => (
+                              <SelectItem
+                                key={niveau}
+                                value={niveau.toLowerCase()}
+                              >
+                                {niveau}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </TableHead>
                   {recentTests.length > 0 ? (
                     <>
-                      {recentTests.map((test, idx) => (
+                      {recentTests.map((test) => (
                         <TableHead key={test.id} className="w-32 text-center">
                           <div className="flex flex-col">
                             <span className="text-muted-foreground text-xs font-normal">
