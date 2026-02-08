@@ -2,6 +2,7 @@ import type {
   CompositeElement,
   CvTECalculationMode,
   TestType,
+  LevelNormering,
 } from "@/services/test-database";
 
 export interface TestFormState {
@@ -13,6 +14,7 @@ export interface TestFormState {
   nTerm: number;
   maxPoints: number;
   cvteCalculationMode: CvTECalculationMode;
+  levelNormerings: Record<string, LevelNormering>;
   elements: CompositeElement[];
   customFormula: string;
   classGroups: string[];

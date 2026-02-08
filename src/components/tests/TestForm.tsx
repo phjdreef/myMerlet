@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { PlusIcon, XIcon } from "@phosphor-icons/react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState, useEffect } from "react";
 import { CvTEChart } from "./CvTEChart";
-import type { CompositeElement, TestType } from "@/services/test-database";
+import type { CompositeElement, TestType, LevelNormering } from "@/services/test-database";
 import { Button } from "../ui/button";
 import type { TestFormState } from "./types";
+import { studentDB } from "@/services/student-database";
 
 interface TestFormProps {
   formData: TestFormState;
@@ -30,9 +31,86 @@ export function TestForm({
 }: TestFormProps) {
   const { t } = useTranslation();
   const formulaInputRef = useRef<HTMLInputElement>(null);
+  const [showLevelNormerings, setShowLevelNormerings] = useState(false);
+  const [availableLevels, setAvailableLevels] = useState<string[]>([]);
 
   // Chart data: show current n-term and two reference lines
   const chartNTerms = useMemo(() => [0, formData.nTerm, 2.0], [formData.nTerm]);
+
+  // Load available levels from selected class groups
+  useEffect(() => {
+    const loadLevels = async () => {
+      if (formData.classGroups.length === 0) {
+        setAvailableLevels([]);
+        return;
+      }
+
+      try {
+        // Get all students and filter by selected classes
+        const allLevels = new Set<string>();
+        
+        console.log("Loading levels for classes:", formData.classGroups);
+        
+        const allStudents = await studentDB.getAllStudents();
+        console.log("Total students in database:", allStudents.length);
+        
+        for (const classGroup of formData.classGroups) {
+          // Filter students that have this class
+          const studentsInClass = allStudents.filter(student => 
+            student.klassen && student.klassen.includes(classGroup)
+          );
+          
+          console.log(`Students for ${classGroup}:`, studentsInClass.length);
+          
+          // Extract levels from students
+          studentsInClass.forEach((student) => {
+            if (student.profiel1) {
+              const level = student.profiel1.toUpperCase();
+              console.log("Found profiel1:", level);
+              allLevels.add(level);
+            }
+            if (student.studies && student.studies.length > 0) {
+              student.studies.forEach((study) => {
+                const level = study.toUpperCase();
+                console.log("Found study:", level);
+                allLevels.add(level);
+              });
+            }
+          });
+        }
+
+        // Only use class name detection if no levels found from students
+        // and only for very obvious patterns
+        if (allLevels.size === 0) {
+          formData.classGroups.forEach((className) => {
+            const normalized = className.toLowerCase();
+            // Only match complete words or very clear patterns
+            if (/\bvwo\b/.test(normalized)) {
+              allLevels.add("VWO");
+            }
+            if (/\bhavo\b/.test(normalized)) {
+              allLevels.add("HAVO");
+            }
+            if (/\bmavo\b/.test(normalized)) {
+              allLevels.add("MAVO");
+            }
+            if (/\bvmbo\b/.test(normalized)) {
+              allLevels.add("VMBO");
+            }
+          });
+        }
+
+        const levelsArray = Array.from(allLevels).sort();
+        console.log("Final detected levels:", levelsArray);
+        setAvailableLevels(levelsArray);
+      } catch (error) {
+        console.error("Failed to load levels:", error);
+        setAvailableLevels([]);
+      }
+    };
+
+    loadLevels();
+  }, [formData.classGroups]);
 
   const updateField = <Key extends keyof TestFormState>(
     key: Key,
@@ -99,6 +177,44 @@ export function TestForm({
       const newCursorPos = start + elementName.length;
       input.setSelectionRange(newCursorPos, newCursorPos);
     }, 0);
+  };
+
+  const addLevelNormering = (level: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      levelNormerings: {
+        ...prev.levelNormerings,
+        [level]: {
+          nTerm: prev.nTerm,
+          maxPoints: prev.maxPoints,
+          cvteCalculationMode: prev.cvteCalculationMode,
+        },
+      },
+    }));
+  };
+
+  const removeLevelNormering = (level: string) => {
+    setFormData((prev) => {
+      const newLevelNormerings = { ...prev.levelNormerings };
+      delete newLevelNormerings[level];
+      return {
+        ...prev,
+        levelNormerings: newLevelNormerings,
+      };
+    });
+  };
+
+  const updateLevelNormering = (level: string, patch: Partial<LevelNormering>) => {
+    setFormData((prev) => ({
+      ...prev,
+      levelNormerings: {
+        ...prev.levelNormerings,
+        [level]: {
+          ...prev.levelNormerings[level],
+          ...patch,
+        },
+      },
+    }));
   };
 
   return (
@@ -280,6 +396,140 @@ export function TestForm({
                   nTerms={chartNTerms}
                   mode={formData.cvteCalculationMode}
                 />
+              </div>
+            )}
+
+            {/* Level-specific normerings - show debug info */}
+            <div className="col-span-2 space-y-2 rounded border bg-muted/30 p-3">
+              <div className="text-sm">
+                <strong>Debug Info:</strong>
+                <div>Selected classes: {formData.classGroups.join(", ") || "none"}</div>
+                <div>Detected levels: {availableLevels.join(", ") || "none"}</div>
+                <div>Test type: {formData.testType}</div>
+              </div>
+            </div>
+
+            {/* Level-specific normerings */}
+            {availableLevels.length > 0 && (
+              <div className="col-span-2 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">
+                    {t("levelSpecificNormerings")}
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowLevelNormerings(!showLevelNormerings)}
+                  >
+                    {showLevelNormerings ? t("hide") : t("show")}
+                  </Button>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {availableLevels.length > 1 
+                    ? t("levelSpecificNormeringsHelper")
+                    : `${t("detectedLevels")}: ${availableLevels.join(", ")} - ${t("singleLevelDetected")}`
+                  }
+                </p>
+
+                {showLevelNormerings && (
+                  <div className="space-y-3 rounded border p-3">
+                    {Object.keys(formData.levelNormerings).length === 0 ? (
+                      <div className="text-muted-foreground text-center text-sm">
+                        {t("noLevelNormeringsYet")}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {Object.entries(formData.levelNormerings).map(([level, normering]) => (
+                          <div key={level} className="rounded border bg-muted/30 p-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <h4 className="font-medium">{level}</h4>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removeLevelNormering(level)}
+                              >
+                                <XIcon className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className="mb-1 block text-xs font-medium">
+                                  {t("maxPoints")}
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={normering.maxPoints}
+                                  onChange={(e) =>
+                                    updateLevelNormering(level, {
+                                      maxPoints: parseInt(e.target.value, 10),
+                                    })
+                                  }
+                                  className="w-full rounded border px-2 py-1 text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-xs font-medium">
+                                  {t("nTerm")} (n)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.1"
+                                  value={normering.nTerm}
+                                  onChange={(e) =>
+                                    updateLevelNormering(level, {
+                                      nTerm: parseFloat(e.target.value),
+                                    })
+                                  }
+                                  className="w-full rounded border px-2 py-1 text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-xs font-medium">
+                                  {t("cvteCalculation")}
+                                </label>
+                                <select
+                                  value={normering.cvteCalculationMode}
+                                  onChange={(e) =>
+                                    updateLevelNormering(level, {
+                                      cvteCalculationMode: e.target.value as LevelNormering["cvteCalculationMode"],
+                                    })
+                                  }
+                                  className="w-full rounded border px-2 py-1 text-sm"
+                                >
+                                  <option value="legacy">{t("cvteCalculationLegacy")}</option>
+                                  <option value="official">{t("cvteCalculationOfficial")}</option>
+                                  <option value="main">{t("cvteCalculationMain")}</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add level normering buttons */}
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {availableLevels
+                        .filter((level) => !formData.levelNormerings[level])
+                        .map((level) => (
+                          <Button
+                            key={level}
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addLevelNormering(level)}
+                          >
+                            <PlusIcon className="mr-1 h-3 w-3" />
+                            {level}
+                          </Button>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>
