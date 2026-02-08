@@ -28,6 +28,11 @@ import {
 
 type TeacherPosition = "left" | "center" | "right";
 
+interface Classroom {
+  id: string;
+  name: string;
+}
+
 export interface SeatingPosition {
   studentId: number;
   row: number;
@@ -67,17 +72,47 @@ export function ClassroomGrid({
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
   // Classroom management
-  const [classrooms, setClassrooms] = useState<string[]>(() => {
-    if (!selectedClass) return ["Lokaal 1"];
+  const [classrooms, setClassrooms] = useState<Classroom[]>(() => {
+    if (!selectedClass) return [{ id: "default", name: "Lokaal 1" }];
     const saved = localStorage.getItem(`classrooms_${selectedClass}`);
-    return saved ? JSON.parse(saved) : ["Lokaal 1"];
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Migrate old format (string array) to new format (object array)
+        if (
+          Array.isArray(parsed) &&
+          parsed.length > 0 &&
+          typeof parsed[0] === "string"
+        ) {
+          return parsed.map((name: string, index: number) => ({
+            id: `migrated_${index}_${Date.now()}`,
+            name,
+          }));
+        }
+        return parsed;
+      } catch {
+        return [{ id: "default", name: "Lokaal 1" }];
+      }
+    }
+    return [{ id: "default", name: "Lokaal 1" }];
   });
-  const [selectedClassroom, setSelectedClassroom] = useState<string>(() => {
-    if (!selectedClass) return "Lokaal 1";
+
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string>(() => {
+    if (!selectedClass) return "default";
     const saved = localStorage.getItem(`selected_classroom_${selectedClass}`);
-    return saved || classrooms[0] || "Lokaal 1";
+    // Try to find matching classroom by ID or by name (for migration)
+    if (saved) {
+      const classroom = classrooms.find(
+        (c) => c.id === saved || c.name === saved,
+      );
+      return classroom?.id || classrooms[0]?.id || "default";
+    }
+    return classrooms[0]?.id || "default";
   });
-  const [editingClassroom, setEditingClassroom] = useState<string | null>(null);
+
+  const [editingClassroomId, setEditingClassroomId] = useState<string | null>(
+    null,
+  );
   const [editingName, setEditingName] = useState("");
   const [showClassroomSelector, setShowClassroomSelector] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -200,18 +235,57 @@ export function ClassroomGrid({
   useEffect(() => {
     if (selectedClass) {
       const saved = localStorage.getItem(`classrooms_${selectedClass}`);
-      const loadedClassrooms = saved ? JSON.parse(saved) : ["Lokaal 1"];
+      let loadedClassrooms: Classroom[];
+
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // Migrate old format (string array) to new format
+          if (
+            Array.isArray(parsed) &&
+            parsed.length > 0 &&
+            typeof parsed[0] === "string"
+          ) {
+            loadedClassrooms = parsed.map((name: string, index: number) => ({
+              id: `migrated_${index}_${Date.now()}`,
+              name,
+            }));
+            // Save migrated format
+            localStorage.setItem(
+              `classrooms_${selectedClass}`,
+              JSON.stringify(loadedClassrooms),
+            );
+          } else {
+            loadedClassrooms = parsed;
+          }
+        } catch {
+          loadedClassrooms = [{ id: "default", name: "Lokaal 1" }];
+        }
+      } else {
+        loadedClassrooms = [{ id: "default", name: "Lokaal 1" }];
+      }
+
       setClassrooms(loadedClassrooms);
 
-      const savedSelected = localStorage.getItem(
+      const savedSelectedId = localStorage.getItem(
         `selected_classroom_${selectedClass}`,
       );
-      setSelectedClassroom(savedSelected || loadedClassrooms[0]);
+      // Try to find by ID first, fallback to name for migration
+      const classroom = loadedClassrooms.find(
+        (c) => c.id === savedSelectedId || c.name === savedSelectedId,
+      );
+      const selectedId = classroom?.id || loadedClassrooms[0]?.id;
+      setSelectedClassroomId(selectedId);
+
+      // Save the ID if we migrated from name
+      if (selectedId && savedSelectedId !== selectedId) {
+        localStorage.setItem(`selected_classroom_${selectedClass}`, selectedId);
+      }
     }
   }, [selectedClass]);
 
   // Save classrooms to localStorage
-  const saveClassrooms = (newClassrooms: string[]) => {
+  const saveClassrooms = (newClassrooms: Classroom[]) => {
     if (selectedClass) {
       localStorage.setItem(
         `classrooms_${selectedClass}`,
@@ -223,51 +297,59 @@ export function ClassroomGrid({
 
   // Add new classroom
   const handleAddClassroom = () => {
-    const newNumber = classrooms.length + 1;
-    const newName = `Lokaal ${newNumber}`;
-    const updated = [...classrooms, newName];
+    const newId = `classroom_${Date.now()}`;
+    const newName = `Lokaal ${classrooms.length + 1}`;
+    const updated = [...classrooms, { id: newId, name: newName }];
     saveClassrooms(updated);
-    setSelectedClassroom(newName);
+    setSelectedClassroomId(newId);
     if (selectedClass) {
-      localStorage.setItem(`selected_classroom_${selectedClass}`, newName);
+      localStorage.setItem(`selected_classroom_${selectedClass}`, newId);
     }
   };
 
   // Delete classroom
-  const handleDeleteClassroom = (name: string) => {
+  const handleDeleteClassroom = (classroomId: string) => {
     if (classrooms.length <= 1) return; // Don't delete last classroom
-    const updated = classrooms.filter((c) => c !== name);
+
+    const classroom = classrooms.find((c) => c.id === classroomId);
+    if (!classroom) return;
+
+    if (!confirm(`${t("delete")} "${classroom.name}"?`)) return;
+
+    const updated = classrooms.filter((c) => c.id !== classroomId);
     saveClassrooms(updated);
-    if (selectedClassroom === name) {
-      setSelectedClassroom(updated[0]);
-      if (selectedClass) {
-        localStorage.setItem(`selected_classroom_${selectedClass}`, updated[0]);
+
+    if (selectedClassroomId === classroomId) {
+      const newSelectedId = updated[0]?.id;
+      setSelectedClassroomId(newSelectedId);
+      if (selectedClass && newSelectedId) {
+        localStorage.setItem(
+          `selected_classroom_${selectedClass}`,
+          newSelectedId,
+        );
       }
     }
   };
 
-  // Rename classroom
-  const handleRenameClassroom = (oldName: string, newName: string) => {
-    if (!newName.trim() || newName === oldName) {
-      setEditingClassroom(null);
+  // Rename classroom - now only changes the name, ID stays the same!
+  const handleRenameClassroom = (classroomId: string, newName: string) => {
+    if (!newName.trim()) {
+      setEditingClassroomId(null);
       return;
     }
-    const updated = classrooms.map((c) => (c === oldName ? newName : c));
+
+    const updated = classrooms.map((c) =>
+      c.id === classroomId ? { ...c, name: newName } : c,
+    );
     saveClassrooms(updated);
-    if (selectedClassroom === oldName) {
-      setSelectedClassroom(newName);
-      if (selectedClass) {
-        localStorage.setItem(`selected_classroom_${selectedClass}`, newName);
-      }
-    }
-    setEditingClassroom(null);
+    setEditingClassroomId(null);
   };
 
   // Change selected classroom
-  const handleSelectClassroom = (name: string) => {
-    setSelectedClassroom(name);
+  const handleSelectClassroom = (classroomId: string) => {
+    setSelectedClassroomId(classroomId);
     if (selectedClass) {
-      localStorage.setItem(`selected_classroom_${selectedClass}`, name);
+      localStorage.setItem(`selected_classroom_${selectedClass}`, classroomId);
     }
   };
 
@@ -294,7 +376,7 @@ export function ClassroomGrid({
 
   // Get classroom-specific key for storage
   const getClassroomKey = (className: string) => {
-    return `${className}::${selectedClassroom}`;
+    return `${className}::${selectedClassroomId}`;
   };
 
   const getStudentAtPosition = (
@@ -404,14 +486,14 @@ export function ClassroomGrid({
             <div className="flex flex-wrap items-center gap-2">
               {classrooms.map((classroom) => (
                 <Button
-                  key={classroom}
+                  key={classroom.id}
                   variant={
-                    selectedClassroom === classroom ? "default" : "outline"
+                    selectedClassroomId === classroom.id ? "default" : "outline"
                   }
                   size="sm"
-                  onClick={() => handleSelectClassroom(classroom)}
+                  onClick={() => handleSelectClassroom(classroom.id)}
                 >
-                  {classroom}
+                  {classroom.name}
                 </Button>
               ))}
             </div>
@@ -550,8 +632,11 @@ export function ClassroomGrid({
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
                     {classrooms.map((classroom) => (
-                      <div key={classroom} className="flex items-center gap-1">
-                        {editingClassroom === classroom ? (
+                      <div
+                        key={classroom.id}
+                        className="flex items-center gap-1"
+                      >
+                        {editingClassroomId === classroom.id ? (
                           <div className="flex items-center gap-1">
                             <Input
                               autoFocus
@@ -559,9 +644,12 @@ export function ClassroomGrid({
                               onChange={(e) => setEditingName(e.target.value)}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
-                                  handleRenameClassroom(classroom, editingName);
+                                  handleRenameClassroom(
+                                    classroom.id,
+                                    editingName,
+                                  );
                                 } else if (e.key === "Escape") {
-                                  setEditingClassroom(null);
+                                  setEditingClassroomId(null);
                                 }
                               }}
                               className="h-8 w-32"
@@ -570,7 +658,7 @@ export function ClassroomGrid({
                               variant="ghost"
                               size="sm"
                               onClick={() =>
-                                handleRenameClassroom(classroom, editingName)
+                                handleRenameClassroom(classroom.id, editingName)
                               }
                               className="h-8 w-8 p-0"
                             >
@@ -579,7 +667,7 @@ export function ClassroomGrid({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setEditingClassroom(null)}
+                              onClick={() => setEditingClassroomId(null)}
                               className="h-8 w-8 p-0"
                             >
                               <XIcon className="h-4 w-4" />
@@ -589,42 +677,41 @@ export function ClassroomGrid({
                           <>
                             <Button
                               variant={
-                                selectedClassroom === classroom
+                                selectedClassroomId === classroom.id
                                   ? "default"
                                   : "outline"
                               }
                               size="sm"
-                              onClick={() => handleSelectClassroom(classroom)}
+                              onClick={() =>
+                                handleSelectClassroom(classroom.id)
+                              }
+                              className="h-8"
                             >
-                              {classroom}
+                              {classroom.name}
                             </Button>
-                            <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingClassroomId(classroom.id);
+                                setEditingName(classroom.name);
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                            </Button>
+                            {classrooms.length > 1 && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => {
-                                  setEditingClassroom(classroom);
-                                  setEditingName(classroom);
-                                }}
+                                onClick={() =>
+                                  handleDeleteClassroom(classroom.id)
+                                }
                                 className="h-8 w-8 p-0"
-                                title={t("rename")}
                               >
-                                <PencilIcon className="h-4 w-4" />
+                                <TrashIcon className="h-4 w-4" />
                               </Button>
-                              {classrooms.length > 1 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleDeleteClassroom(classroom)
-                                  }
-                                  className="text-destructive h-8 w-8 p-0"
-                                  title={t("delete")}
-                                >
-                                  <TrashIcon className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
+                            )}
                           </>
                         )}
                       </div>
