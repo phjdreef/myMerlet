@@ -413,9 +413,7 @@ test("create cvte test with multiple levels and enter grades for a class", async
   const savedForTest = savedGrades.filter((grade) => grade.testId === "test-1");
   expect(savedForTest.length).toBeGreaterThanOrEqual(3);
 
-  const savedTests = JSON.parse(
-    fs.readFileSync(testsPath, "utf-8"),
-  ) as Array<{
+  const savedTests = JSON.parse(fs.readFileSync(testsPath, "utf-8")) as Array<{
     id: string;
     levelNormerings?: Record<string, unknown>;
   }>;
