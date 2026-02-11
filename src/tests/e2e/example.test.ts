@@ -387,33 +387,6 @@ test("create cvte test with multiple levels and enter grades for a class", async
 
   await classButton.click();
 
-  await page.evaluate(
-    async ({ schoolYear }) => {
-      const api = (window as unknown as WindowWithApis).testAPI;
-      if (!api?.getTestsForClassGroup || !api?.createTest) return;
-      const existing = await api.getTestsForClassGroup("3A");
-      if (existing?.data?.length) return;
-
-      await api.createTest({
-        classGroups: ["3A"],
-        name: "Wiskunde toets",
-        date: new Date().toISOString(),
-        description: "",
-        weight: 1,
-        testType: "cvte",
-        schoolYear,
-        nTerm: 1,
-        maxPoints: 60,
-        cvteCalculationMode: "legacy",
-        levelNormerings: {
-          A: { nTerm: 1.0, maxPoints: 60, cvteCalculationMode: "legacy" },
-          G: { nTerm: 1.5, maxPoints: 60, cvteCalculationMode: "legacy" },
-        },
-      });
-    },
-    { schoolYear },
-  );
-
   await page.evaluate(async () => {
     const api = (window as unknown as WindowWithApis).testAPI;
     if (!api?.getTestsForClassGroup || !api?.saveGrade) return;
@@ -423,7 +396,7 @@ test("create cvte test with multiple levels and enter grades for a class", async
     if (!testId) return;
 
     await api.saveGrade(testId, 1, 45);
-    await api.saveGrade(testId, 2, 50);
+    await api.saveGrade(testId, 2, 45);
     await api.saveGrade(testId, 3, 48);
   });
 
@@ -433,8 +406,22 @@ test("create cvte test with multiple levels and enter grades for a class", async
     fs.readFileSync(gradesPath, "utf-8"),
   ) as Array<{
     testId: string;
+    studentId: number;
+    calculatedGrade: number;
   }>;
 
   const savedForTest = savedGrades.filter((grade) => grade.testId === "test-1");
   expect(savedForTest.length).toBeGreaterThanOrEqual(3);
+
+  const savedTests = JSON.parse(
+    fs.readFileSync(testsPath, "utf-8"),
+  ) as Array<{
+    id: string;
+    levelNormerings?: Record<string, unknown>;
+  }>;
+
+  const testRecord = savedTests.find((test) => test.id === "test-1");
+  expect(testRecord?.levelNormerings).toBeTruthy();
+  expect(testRecord?.levelNormerings?.A).toBeTruthy();
+  expect(testRecord?.levelNormerings?.G).toBeTruthy();
 });

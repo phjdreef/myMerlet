@@ -13,6 +13,7 @@ import type { TestFormState } from "./types";
 import { studentDB } from "@/services/student-database";
 import {
   extractShortLevel,
+  isValidNiveau,
   LEVEL_OVERRIDE_PROPERTY_ID,
   LEVEL_OVERRIDE_OPTIONS,
 } from "@/helpers/student_helpers";
@@ -77,20 +78,6 @@ export function TestForm({
 
         const allStudents = await studentDB.getAllStudents();
         console.log("Total students in database:", allStudents.length);
-
-        // Helper to check if a value is a valid niveau (not a course code like "CV3")
-        const isValidNiveau = (value: string) => {
-          const normalized = value.toUpperCase();
-          const validNiveaus = [
-            "HAVO",
-            "VWO",
-            "MAVO",
-            "VMBO",
-            "ATHENEUM",
-            "GYMNASIUM",
-          ];
-          return validNiveaus.some((niveau) => normalized.includes(niveau));
-        };
 
         for (const classGroup of formData.classGroups) {
           // Filter students that have this class
@@ -500,20 +487,6 @@ export function TestForm({
                 </Dialog>
               </div>
             )}
-
-            {/* Level-specific normerings - show debug info */}
-            <div className="bg-muted/30 col-span-2 space-y-2 rounded border p-3">
-              <div className="text-sm">
-                <strong>Debug Info:</strong>
-                <div>
-                  Selected classes: {formData.classGroups.join(", ") || "none"}
-                </div>
-                <div>
-                  Detected levels: {availableLevels.join(", ") || "none"}
-                </div>
-                <div>Test type: {formData.testType}</div>
-              </div>
-            </div>
 
             {/* Level-specific normerings */}
             {availableLevels.length > 0 && (

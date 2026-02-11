@@ -32,6 +32,7 @@ import { StudentPhoto } from "./StudentPhoto";
 import { formatClassName } from "@/utils/class-utils";
 import {
   extractShortLevel,
+  isValidNiveau,
   LEVEL_OVERRIDE_OPTIONS,
   LEVEL_OVERRIDE_PROPERTY_ID,
 } from "@/helpers/student_helpers";
@@ -153,20 +154,6 @@ export function StudentTableView({
   };
 
   const getDefaultNiveau = (student: Student) => {
-    // Helper to check if a value is a valid niveau (not a course code like "CV3")
-    const isValidNiveau = (value: string) => {
-      const normalized = value.toUpperCase();
-      const validNiveaus = [
-        "HAVO",
-        "VWO",
-        "MAVO",
-        "VMBO",
-        "ATHENEUM",
-        "GYMNASIUM",
-      ];
-      return validNiveaus.some((niveau) => normalized.includes(niveau));
-    };
-
     // First try profiel1
     if (student.profiel1 && isValidNiveau(student.profiel1)) {
       return formatClassName(extractShortLevel(student.profiel1));
