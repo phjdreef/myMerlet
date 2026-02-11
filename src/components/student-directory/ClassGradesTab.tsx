@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
+import { useSchoolYear } from "@/contexts/SchoolYearContext";
 import type { Test, TestStatistics } from "../../services/test-database";
 import type { Student } from "../../services/student-database";
 import { GradeEntry } from "../tests/GradeEntry";
@@ -19,6 +20,7 @@ export function ClassGradesTab({
 }: ClassGradesTabProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { currentSchoolYear } = useSchoolYear();
   const [tests, setTests] = useState<Test[]>([]);
   const [statistics, setStatistics] = useState<Map<string, TestStatistics>>(
     new Map(),
@@ -162,6 +164,8 @@ export function ClassGradesTab({
             key={`${selectedTest.id}-${selectedTestMode}`}
             test={selectedTest}
             students={classStudents}
+            className={selectedClass}
+            schoolYear={currentSchoolYear}
             onClose={() => {
               setSelectedTest(null);
               setSelectedTestMode("view");

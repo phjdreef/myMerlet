@@ -437,12 +437,36 @@ export function TestsManager({
 
                       {/* CvTE Test Details */}
                       {test.testType === "cvte" && (
-                        <div className="text-muted-foreground mt-2 flex gap-4 text-xs">
-                          <span>
-                            {t("maxPoints")}: {test.maxPoints}
-                          </span>
-                          <span>n = {test.nTerm}</span>
-                        </div>
+                        <>
+                          {/* Standard normering - only show if no level-specific normeringen */}
+                          {(!test.levelNormerings || Object.keys(test.levelNormerings).length === 0) && (
+                            <div className="text-muted-foreground mt-2 flex gap-4 text-xs">
+                              <span>
+                                {t("maxPoints")}: {test.maxPoints}
+                              </span>
+                              <span>n = {test.nTerm}</span>
+                            </div>
+                          )}
+                          
+                          {/* Level-specific normeringen */}
+                          {test.levelNormerings && Object.keys(test.levelNormerings).length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              <div className="text-muted-foreground text-xs font-medium">
+                                {t("levelSpecificNormerings")}:
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {Object.entries(test.levelNormerings).map(([level, normering]) => (
+                                  <span
+                                    key={level}
+                                    className="bg-blue-100 dark:bg-blue-900 rounded px-2 py-1 text-xs"
+                                  >
+                                    <strong>{level}</strong>: {normering.maxPoints}p, n={normering.nTerm}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {/* Composite Test Details */}

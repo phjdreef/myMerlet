@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { PlusIcon, XIcon } from "@phosphor-icons/react";
+import { PlusIcon, XIcon, ChartLine } from "@phosphor-icons/react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { useRef, useMemo, useState, useEffect } from "react";
 import { CvTEChart } from "./CvTEChart";
@@ -7,6 +7,19 @@ import type { CompositeElement, TestType, LevelNormering } from "@/services/test
 import { Button } from "../ui/button";
 import type { TestFormState } from "./types";
 import { studentDB } from "@/services/student-database";
+import {
+  extractShortLevel,
+  LEVEL_OVERRIDE_PROPERTY_ID,
+  LEVEL_OVERRIDE_OPTIONS,
+} from "@/helpers/student_helpers";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../ui/dialog";
+import { useSchoolYear } from "@/contexts/SchoolYearContext";
 
 interface TestFormProps {
   formData: TestFormState;
@@ -30,12 +43,19 @@ export function TestForm({
   isEditing,
 }: TestFormProps) {
   const { t } = useTranslation();
+  const { currentSchoolYear } = useSchoolYear();
   const formulaInputRef = useRef<HTMLInputElement>(null);
   const [showLevelNormerings, setShowLevelNormerings] = useState(false);
   const [availableLevels, setAvailableLevels] = useState<string[]>([]);
+  const [showChartDialog, setShowChartDialog] = useState(false);
+  const [chartDialogLevel, setChartDialogLevel] = useState<string | null>(null);
 
   // Chart data: show current n-term and two reference lines
   const chartNTerms = useMemo(() => [0, formData.nTerm, 2.0], [formData.nTerm]);
+  const hasLevelNormerings = useMemo(
+    () => Object.keys(formData.levelNormerings).length > 0,
+    [formData.levelNormerings]
+  );
 
   // Load available levels from selected class groups
   useEffect(() => {
@@ -54,6 +74,13 @@ export function TestForm({
         const allStudents = await studentDB.getAllStudents();
         console.log("Total students in database:", allStudents.length);
         
+        // Helper to check if a value is a valid niveau (not a course code like "CV3")
+        const isValidNiveau = (value: string) => {
+          const normalized = value.toUpperCase();
+          const validNiveaus = ['HAVO', 'VWO', 'MAVO', 'VMBO', 'ATHENEUM', 'GYMNASIUM'];
+          return validNiveaus.some(niveau => normalized.includes(niveau));
+        };
+        
         for (const classGroup of formData.classGroups) {
           // Filter students that have this class
           const studentsInClass = allStudents.filter(student => 
@@ -61,19 +88,42 @@ export function TestForm({
           );
           
           console.log(`Students for ${classGroup}:`, studentsInClass.length);
+
+          if (currentSchoolYear) {
+            const overrideValues = await Promise.all(
+              studentsInClass.map(async (student) => {
+                const values = await studentDB.getPropertyValues(
+                  student.id,
+                  classGroup,
+                  currentSchoolYear,
+                );
+                return values.find(
+                  (value) => value.propertyId === LEVEL_OVERRIDE_PROPERTY_ID,
+                )?.value;
+              }),
+            );
+
+            overrideValues.forEach((value) => {
+              if (typeof value === "string" && value.trim().length > 0) {
+                allLevels.add(value.trim().toUpperCase());
+              }
+            });
+          }
           
           // Extract levels from students
           studentsInClass.forEach((student) => {
-            if (student.profiel1) {
-              const level = student.profiel1.toUpperCase();
+            if (student.profiel1 && isValidNiveau(student.profiel1)) {
+              const level = extractShortLevel(student.profiel1);
               console.log("Found profiel1:", level);
               allLevels.add(level);
             }
             if (student.studies && student.studies.length > 0) {
               student.studies.forEach((study) => {
-                const level = study.toUpperCase();
-                console.log("Found study:", level);
-                allLevels.add(level);
+                if (isValidNiveau(study)) {
+                  const level = extractShortLevel(study);
+                  console.log("Found study:", level);
+                  allLevels.add(level);
+                }
               });
             }
           });
@@ -334,6 +384,17 @@ export function TestForm({
 
         {formData.testType === "cvte" && (
           <>
+            {/* Standard normering - always visible */}
+            <div className="col-span-2">
+              <label className="text-sm font-medium">
+                {hasLevelNormerings ? t("defaultNormering") : t("normering")}
+              </label>
+              {hasLevelNormerings && (
+                <p className="text-muted-foreground text-xs mt-1">
+                  {t("defaultNormeringHelper")}
+                </p>
+              )}
+            </div>
             <div>
               <label className="mb-1 block text-sm font-medium">
                 {t("maxPoints")}
@@ -391,11 +452,29 @@ export function TestForm({
 
             {formData.maxPoints > 0 && (
               <div className="col-span-2">
-                <CvTEChart
-                  maxPoints={formData.maxPoints}
-                  nTerms={chartNTerms}
-                  mode={formData.cvteCalculationMode}
-                />
+                <Dialog open={showChartDialog && chartDialogLevel === null} onOpenChange={(open) => { if (!open) setShowChartDialog(false); }}>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setShowChartDialog(true); setChartDialogLevel(null); }}
+                    >
+                      <ChartLine className="mr-2 h-4 w-4" />
+                      {t("viewChart")}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                      <DialogTitle>{t("gradeCalculationChart")}</DialogTitle>
+                    </DialogHeader>
+                    <CvTEChart
+                      maxPoints={formData.maxPoints}
+                      nTerms={chartNTerms}
+                      mode={formData.cvteCalculationMode}
+                    />
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
 
@@ -440,10 +519,14 @@ export function TestForm({
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {Object.entries(formData.levelNormerings).map(([level, normering]) => (
+                        {Object.entries(formData.levelNormerings).map(([level, normering]) => {
+                          const levelLabel =
+                            LEVEL_OVERRIDE_OPTIONS.find((option) => option.code === level)
+                              ?.label ?? level;
+                          return (
                           <div key={level} className="rounded border bg-muted/30 p-3">
                             <div className="mb-2 flex items-center justify-between">
-                              <h4 className="font-medium">{level}</h4>
+                              <h4 className="font-medium">{levelLabel}</h4>
                               <Button
                                 type="button"
                                 size="sm"
@@ -468,6 +551,7 @@ export function TestForm({
                                     })
                                   }
                                   className="w-full rounded border px-2 py-1 text-sm"
+                                  required
                                 />
                               </div>
                               <div>
@@ -485,6 +569,7 @@ export function TestForm({
                                     })
                                   }
                                   className="w-full rounded border px-2 py-1 text-sm"
+                                  required
                                 />
                               </div>
                               <div>
@@ -506,8 +591,37 @@ export function TestForm({
                                 </select>
                               </div>
                             </div>
+                            {/* Chart for this level */}
+                            {normering.maxPoints > 0 && (
+                              <div className="mt-3">
+                                <Dialog open={showChartDialog && chartDialogLevel === level} onOpenChange={(open) => { if (!open) { setShowChartDialog(false); setChartDialogLevel(null); } }}>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => { setShowChartDialog(true); setChartDialogLevel(level); }}
+                                    >
+                                      <ChartLine className="mr-2 h-4 w-4" />
+                                      {t("viewChart")} ({level})
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-4xl">
+                                    <DialogHeader>
+                                      <DialogTitle>{t("gradeCalculationChart")} - {level}</DialogTitle>
+                                    </DialogHeader>
+                                    <CvTEChart
+                                      maxPoints={normering.maxPoints}
+                                      nTerms={[0, normering.nTerm, 2.0]}
+                                      mode={normering.cvteCalculationMode}
+                                    />
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            )}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
 

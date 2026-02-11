@@ -9,19 +9,25 @@ import {
   type LevelNormering,
 } from "@/services/test-database";
 import type { Student } from "@/services/student-database";
+import { studentDB } from "@/services/student-database";
 import { evaluateFormulaExpression } from "@/utils/formula-parser";
 import {
   compareStudents,
   formatStudentName,
+  extractShortLevel,
+  LEVEL_OVERRIDE_PROPERTY_ID,
   type StudentSortKey,
 } from "@/helpers/student_helpers";
 import { StudentPhoto } from "@/components/student-directory/StudentPhoto";
 import { Button } from "../ui/button";
 import { logger } from "@/utils/logger";
+import { useSchoolYear } from "@/contexts/SchoolYearContext";
 
 interface GradeEntryProps {
   test: Test;
   students: Student[];
+  className?: string | null;
+  schoolYear?: string;
   onClose: () => void;
   onSave?: () => void;
   readOnly?: boolean;
@@ -30,11 +36,15 @@ interface GradeEntryProps {
 export function GradeEntry({
   test,
   students,
+  className,
+  schoolYear,
   onClose,
   onSave,
   readOnly = false,
 }: GradeEntryProps) {
   const { t } = useTranslation();
+  const { currentSchoolYear } = useSchoolYear();
+  const resolvedSchoolYear = schoolYear ?? currentSchoolYear;
 
   // Chart data: show three reference n-term lines
   const chartNTerms = useMemo(() => [0, 1.0, 2.0], []);
@@ -42,12 +52,65 @@ export function GradeEntry({
   // Chart modal state
   const [showChart, setShowChart] = useState(false);
 
+  const [levelOverrides, setLevelOverrides] = useState<Map<number, string>>(
+    new Map(),
+  );
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"achternaam" | "roepnaam" | "number">(
     "achternaam",
   );
+
+  useEffect(() => {
+    if (!className || !resolvedSchoolYear) {
+      setLevelOverrides(new Map());
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadOverrides = async () => {
+      try {
+        const entries = await Promise.all(
+          students.map(async (student) => {
+            const values = await studentDB.getPropertyValues(
+              student.id,
+              className,
+              resolvedSchoolYear,
+            );
+            const override = values.find(
+              (value) => value.propertyId === LEVEL_OVERRIDE_PROPERTY_ID,
+            )?.value;
+            return [student.id, override] as const;
+          }),
+        );
+
+        if (cancelled) return;
+
+        const overrides = new Map<number, string>();
+        entries.forEach(([studentId, value]) => {
+          if (typeof value === "string" && value.trim().length > 0) {
+            overrides.set(studentId, value.trim().toUpperCase());
+          }
+        });
+
+        setLevelOverrides(overrides);
+      } catch (error) {
+        if (!cancelled) {
+          logger.error("Failed to load level overrides:", error);
+          setLevelOverrides(new Map());
+        }
+      }
+    };
+
+    loadOverrides();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [className, resolvedSchoolYear, students]);
 
   // Form state for each student
   const [entries, setEntries] = useState<
@@ -104,14 +167,19 @@ export function GradeEntry({
 
   // Get student level (e.g., "HAVO", "VWO")
   const getStudentLevel = (student: Student): string | null => {
+    const overrideValue = levelOverrides.get(student.id);
+    if (overrideValue) {
+      return overrideValue;
+    }
+
     // First try profiel1
     if (student.profiel1) {
-      return student.profiel1.toUpperCase();
+      return extractShortLevel(student.profiel1);
     }
 
     // Extract from studies array
     if (student.studies && student.studies.length > 0) {
-      return student.studies[0].toUpperCase();
+      return extractShortLevel(student.studies[0]);
     }
 
     return null;
@@ -600,9 +668,7 @@ export function GradeEntry({
                 return (
                   <tr
                     key={student.id}
-                    className={`hover:bg-muted/30 border-t transition-colors ${
-                      missingLevelNormering || noLevelDetected ? "bg-yellow-50 dark:bg-yellow-900/10" : ""
-                    }`}
+                    className="hover:bg-muted/30 border-t transition-colors"
                   >
                     <td className="text-muted-foreground p-3">{index + 1}</td>
                     <td className="p-3">
@@ -618,23 +684,27 @@ export function GradeEntry({
                         <div className="flex items-center gap-2">
                           {studentLevel ? (
                             <>
-                              <span>{studentLevel}</span>
-                              {missingLevelNormering && (
-                                <span
-                                  className="cursor-help text-yellow-600"
-                                  title={t("missingLevelNormering")}
-                                >
-                                  ⚠️
-                                </span>
-                              )}
+                              <span 
+                                className={
+                                  missingLevelNormering 
+                                    ? "text-orange-600 dark:text-orange-400 font-medium" 
+                                    : "text-green-600 dark:text-green-400 font-medium"
+                                }
+                                title={
+                                  missingLevelNormering 
+                                    ? t("missingLevelNormering") 
+                                    : t("levelSpecificNormeringActive")
+                                }
+                              >
+                                {studentLevel}
+                              </span>
                             </>
                           ) : (
                             <span
-                              className="text-muted-foreground flex items-center gap-1 cursor-help"
+                              className="text-orange-600 dark:text-orange-400 font-medium cursor-help"
                               title={t("noLevelDetected")}
                             >
                               -
-                              <span className="text-yellow-600">⚠️</span>
                             </span>
                           )}
                         </div>
