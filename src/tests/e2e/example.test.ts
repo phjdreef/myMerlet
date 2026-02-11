@@ -94,7 +94,11 @@ test("create cvte test with multiple levels and enter grades for a class", async
         ipcRenderer.invoke("studentDB:savePropertyDefinition", property),
       deletePropertyDefinition: (propertyId: string) =>
         ipcRenderer.invoke("studentDB:deletePropertyDefinition", propertyId),
-      getPropertyValues: (studentId: number, className: string, schoolYear: string) =>
+      getPropertyValues: (
+        studentId: number,
+        className: string,
+        schoolYear: string,
+      ) =>
         ipcRenderer.invoke(
           "studentDB:getPropertyValues",
           studentId,
@@ -119,16 +123,24 @@ test("create cvte test with multiple levels and enter grades for a class", async
         ipcRenderer.invoke("test:get-for-class", classGroup),
       getAllTests: () => ipcRenderer.invoke("test:get-all"),
       getTest: (testId: string) => ipcRenderer.invoke("test:get", testId),
-      createTest: (test: unknown) =>
-        ipcRenderer.invoke("test:create", test),
+      createTest: (test: unknown) => ipcRenderer.invoke("test:create", test),
       updateTest: (testId: string, updates: unknown) =>
         ipcRenderer.invoke("test:update", testId, updates),
       deleteTest: (testId: string) => ipcRenderer.invoke("test:delete", testId),
       getGradesForTest: (testId: string) =>
         ipcRenderer.invoke("test:get-grades-for-test", testId),
       getGradesForStudent: (studentId: number, classGroup: string) =>
-        ipcRenderer.invoke("test:get-grades-for-student", studentId, classGroup),
-      saveGrade: (testId: string, studentId: number, pointsEarned: number, manualOverride?: number) =>
+        ipcRenderer.invoke(
+          "test:get-grades-for-student",
+          studentId,
+          classGroup,
+        ),
+      saveGrade: (
+        testId: string,
+        studentId: number,
+        pointsEarned: number,
+        manualOverride?: number,
+      ) =>
         ipcRenderer.invoke(
           "test:save-grade",
           testId,
@@ -136,7 +148,12 @@ test("create cvte test with multiple levels and enter grades for a class", async
           pointsEarned,
           manualOverride,
         ),
-      saveCompositeGrade: (testId: string, studentId: number, elementGrades: unknown, manualOverride?: number) =>
+      saveCompositeGrade: (
+        testId: string,
+        studentId: number,
+        elementGrades: unknown,
+        manualOverride?: number,
+      ) =>
         ipcRenderer.invoke(
           "test:save-composite-grade",
           testId,
@@ -153,13 +170,19 @@ test("create cvte test with multiple levels and enter grades for a class", async
 
   const schoolYear = (() => {
     const now = new Date();
-    const year = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    const year =
+      now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
     return `${year}-${year + 1}`;
   })();
 
-  const userDataPath = await electronApp.evaluate(({ app }) => app.getPath("userData"));
+  const userDataPath = await electronApp.evaluate(({ app }) =>
+    app.getPath("userData"),
+  );
   const studentsPath = path.join(userDataPath, "magister_students.json");
-  const propertyValuesPath = path.join(userDataPath, "student_property_values.json");
+  const propertyValuesPath = path.join(
+    userDataPath,
+    "student_property_values.json",
+  );
   const testsPath = path.join(userDataPath, "tests.json");
   const gradesPath = path.join(userDataPath, "grades.json");
   const settingsPath = path.join(userDataPath, "global_settings.json");
@@ -300,29 +323,32 @@ test("create cvte test with multiple levels and enter grades for a class", async
 
   await classButton.click();
 
-  await page.evaluate(async ({ schoolYear }) => {
-    const api = (window as any).testAPI;
-    if (!api?.getTestsForClassGroup || !api?.createTest) return;
-    const existing = await api.getTestsForClassGroup("3A");
-    if (existing?.data?.length) return;
+  await page.evaluate(
+    async ({ schoolYear }) => {
+      const api = (window as any).testAPI;
+      if (!api?.getTestsForClassGroup || !api?.createTest) return;
+      const existing = await api.getTestsForClassGroup("3A");
+      if (existing?.data?.length) return;
 
-    await api.createTest({
-      classGroups: ["3A"],
-      name: "Wiskunde toets",
-      date: new Date().toISOString(),
-      description: "",
-      weight: 1,
-      testType: "cvte",
-      schoolYear,
-      nTerm: 1,
-      maxPoints: 60,
-      cvteCalculationMode: "legacy",
-      levelNormerings: {
-        A: { nTerm: 1.0, maxPoints: 60, cvteCalculationMode: "legacy" },
-        G: { nTerm: 1.5, maxPoints: 60, cvteCalculationMode: "legacy" },
-      },
-    });
-  }, { schoolYear });
+      await api.createTest({
+        classGroups: ["3A"],
+        name: "Wiskunde toets",
+        date: new Date().toISOString(),
+        description: "",
+        weight: 1,
+        testType: "cvte",
+        schoolYear,
+        nTerm: 1,
+        maxPoints: 60,
+        cvteCalculationMode: "legacy",
+        levelNormerings: {
+          A: { nTerm: 1.0, maxPoints: 60, cvteCalculationMode: "legacy" },
+          G: { nTerm: 1.5, maxPoints: 60, cvteCalculationMode: "legacy" },
+        },
+      });
+    },
+    { schoolYear },
+  );
 
   await page.evaluate(async () => {
     const api = (window as any).testAPI;
@@ -339,7 +365,9 @@ test("create cvte test with multiple levels and enter grades for a class", async
 
   await page.waitForTimeout(500);
 
-  const savedGrades = JSON.parse(fs.readFileSync(gradesPath, "utf-8")) as Array<{
+  const savedGrades = JSON.parse(
+    fs.readFileSync(gradesPath, "utf-8"),
+  ) as Array<{
     testId: string;
   }>;
 

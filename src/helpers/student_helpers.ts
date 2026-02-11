@@ -19,7 +19,7 @@ export const LEVEL_OVERRIDE_OPTIONS = [
  * - "A - ATHENEUM" -> "A"
  */
 export function extractShortLevel(level: string): string {
-  return level.split(' - ')[0].trim().toUpperCase();
+  return level.split(" - ")[0].trim().toUpperCase();
 }
 
 interface FormatStudentNameOptions {

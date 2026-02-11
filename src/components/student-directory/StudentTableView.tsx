@@ -156,8 +156,15 @@ export function StudentTableView({
     // Helper to check if a value is a valid niveau (not a course code like "CV3")
     const isValidNiveau = (value: string) => {
       const normalized = value.toUpperCase();
-      const validNiveaus = ['HAVO', 'VWO', 'MAVO', 'VMBO', 'ATHENEUM', 'GYMNASIUM'];
-      return validNiveaus.some(niveau => normalized.includes(niveau));
+      const validNiveaus = [
+        "HAVO",
+        "VWO",
+        "MAVO",
+        "VMBO",
+        "ATHENEUM",
+        "GYMNASIUM",
+      ];
+      return validNiveaus.some((niveau) => normalized.includes(niveau));
     };
 
     // First try profiel1
@@ -169,7 +176,9 @@ export function StudentTableView({
     if (student.studies && student.studies.length > 0) {
       const validStudies = student.studies.filter(isValidNiveau);
       if (validStudies.length > 0) {
-        return validStudies.map((s) => formatClassName(extractShortLevel(s))).join(", ");
+        return validStudies
+          .map((s) => formatClassName(extractShortLevel(s)))
+          .join(", ");
       }
     }
 
@@ -726,7 +735,8 @@ export function StudentTableView({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="default">
-                              {t("defaultLevelOption")}: {getDefaultNiveau(student)}
+                              {t("defaultLevelOption")}:{" "}
+                              {getDefaultNiveau(student)}
                             </SelectItem>
                             {LEVEL_OVERRIDE_OPTIONS.map((option) => (
                               <SelectItem key={option.code} value={option.code}>

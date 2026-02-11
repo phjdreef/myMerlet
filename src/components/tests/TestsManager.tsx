@@ -439,7 +439,8 @@ export function TestsManager({
                       {test.testType === "cvte" && (
                         <>
                           {/* Standard normering - only show if no level-specific normeringen */}
-                          {(!test.levelNormerings || Object.keys(test.levelNormerings).length === 0) && (
+                          {(!test.levelNormerings ||
+                            Object.keys(test.levelNormerings).length === 0) && (
                             <div className="text-muted-foreground mt-2 flex gap-4 text-xs">
                               <span>
                                 {t("maxPoints")}: {test.maxPoints}
@@ -447,25 +448,30 @@ export function TestsManager({
                               <span>n = {test.nTerm}</span>
                             </div>
                           )}
-                          
+
                           {/* Level-specific normeringen */}
-                          {test.levelNormerings && Object.keys(test.levelNormerings).length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              <div className="text-muted-foreground text-xs font-medium">
-                                {t("levelSpecificNormerings")}:
+                          {test.levelNormerings &&
+                            Object.keys(test.levelNormerings).length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                <div className="text-muted-foreground text-xs font-medium">
+                                  {t("levelSpecificNormerings")}:
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {Object.entries(test.levelNormerings).map(
+                                    ([level, normering]) => (
+                                      <span
+                                        key={level}
+                                        className="rounded bg-blue-100 px-2 py-1 text-xs dark:bg-blue-900"
+                                      >
+                                        <strong>{level}</strong>:{" "}
+                                        {normering.maxPoints}p, n=
+                                        {normering.nTerm}
+                                      </span>
+                                    ),
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex flex-wrap gap-2">
-                                {Object.entries(test.levelNormerings).map(([level, normering]) => (
-                                  <span
-                                    key={level}
-                                    className="bg-blue-100 dark:bg-blue-900 rounded px-2 py-1 text-xs"
-                                  >
-                                    <strong>{level}</strong>: {normering.maxPoints}p, n={normering.nTerm}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                            )}
                         </>
                       )}
 

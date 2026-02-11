@@ -3,7 +3,11 @@ import { PlusIcon, XIcon, ChartLine } from "@phosphor-icons/react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { useRef, useMemo, useState, useEffect } from "react";
 import { CvTEChart } from "./CvTEChart";
-import type { CompositeElement, TestType, LevelNormering } from "@/services/test-database";
+import type {
+  CompositeElement,
+  TestType,
+  LevelNormering,
+} from "@/services/test-database";
 import { Button } from "../ui/button";
 import type { TestFormState } from "./types";
 import { studentDB } from "@/services/student-database";
@@ -54,7 +58,7 @@ export function TestForm({
   const chartNTerms = useMemo(() => [0, formData.nTerm, 2.0], [formData.nTerm]);
   const hasLevelNormerings = useMemo(
     () => Object.keys(formData.levelNormerings).length > 0,
-    [formData.levelNormerings]
+    [formData.levelNormerings],
   );
 
   // Load available levels from selected class groups
@@ -68,25 +72,33 @@ export function TestForm({
       try {
         // Get all students and filter by selected classes
         const allLevels = new Set<string>();
-        
+
         console.log("Loading levels for classes:", formData.classGroups);
-        
+
         const allStudents = await studentDB.getAllStudents();
         console.log("Total students in database:", allStudents.length);
-        
+
         // Helper to check if a value is a valid niveau (not a course code like "CV3")
         const isValidNiveau = (value: string) => {
           const normalized = value.toUpperCase();
-          const validNiveaus = ['HAVO', 'VWO', 'MAVO', 'VMBO', 'ATHENEUM', 'GYMNASIUM'];
-          return validNiveaus.some(niveau => normalized.includes(niveau));
+          const validNiveaus = [
+            "HAVO",
+            "VWO",
+            "MAVO",
+            "VMBO",
+            "ATHENEUM",
+            "GYMNASIUM",
+          ];
+          return validNiveaus.some((niveau) => normalized.includes(niveau));
         };
-        
+
         for (const classGroup of formData.classGroups) {
           // Filter students that have this class
-          const studentsInClass = allStudents.filter(student => 
-            student.klassen && student.klassen.includes(classGroup)
+          const studentsInClass = allStudents.filter(
+            (student) =>
+              student.klassen && student.klassen.includes(classGroup),
           );
-          
+
           console.log(`Students for ${classGroup}:`, studentsInClass.length);
 
           if (currentSchoolYear) {
@@ -109,7 +121,7 @@ export function TestForm({
               }
             });
           }
-          
+
           // Extract levels from students
           studentsInClass.forEach((student) => {
             if (student.profiel1 && isValidNiveau(student.profiel1)) {
@@ -254,7 +266,10 @@ export function TestForm({
     });
   };
 
-  const updateLevelNormering = (level: string, patch: Partial<LevelNormering>) => {
+  const updateLevelNormering = (
+    level: string,
+    patch: Partial<LevelNormering>,
+  ) => {
     setFormData((prev) => ({
       ...prev,
       levelNormerings: {
@@ -390,7 +405,7 @@ export function TestForm({
                 {hasLevelNormerings ? t("defaultNormering") : t("normering")}
               </label>
               {hasLevelNormerings && (
-                <p className="text-muted-foreground text-xs mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {t("defaultNormeringHelper")}
                 </p>
               )}
@@ -452,13 +467,21 @@ export function TestForm({
 
             {formData.maxPoints > 0 && (
               <div className="col-span-2">
-                <Dialog open={showChartDialog && chartDialogLevel === null} onOpenChange={(open) => { if (!open) setShowChartDialog(false); }}>
+                <Dialog
+                  open={showChartDialog && chartDialogLevel === null}
+                  onOpenChange={(open) => {
+                    if (!open) setShowChartDialog(false);
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => { setShowChartDialog(true); setChartDialogLevel(null); }}
+                      onClick={() => {
+                        setShowChartDialog(true);
+                        setChartDialogLevel(null);
+                      }}
                     >
                       <ChartLine className="mr-2 h-4 w-4" />
                       {t("viewChart")}
@@ -479,11 +502,15 @@ export function TestForm({
             )}
 
             {/* Level-specific normerings - show debug info */}
-            <div className="col-span-2 space-y-2 rounded border bg-muted/30 p-3">
+            <div className="bg-muted/30 col-span-2 space-y-2 rounded border p-3">
               <div className="text-sm">
                 <strong>Debug Info:</strong>
-                <div>Selected classes: {formData.classGroups.join(", ") || "none"}</div>
-                <div>Detected levels: {availableLevels.join(", ") || "none"}</div>
+                <div>
+                  Selected classes: {formData.classGroups.join(", ") || "none"}
+                </div>
+                <div>
+                  Detected levels: {availableLevels.join(", ") || "none"}
+                </div>
                 <div>Test type: {formData.testType}</div>
               </div>
             </div>
@@ -505,10 +532,9 @@ export function TestForm({
                   </Button>
                 </div>
                 <p className="text-muted-foreground text-xs">
-                  {availableLevels.length > 1 
+                  {availableLevels.length > 1
                     ? t("levelSpecificNormeringsHelper")
-                    : `${t("detectedLevels")}: ${availableLevels.join(", ")} - ${t("singleLevelDetected")}`
-                  }
+                    : `${t("detectedLevels")}: ${availableLevels.join(", ")} - ${t("singleLevelDetected")}`}
                 </p>
 
                 {showLevelNormerings && (
@@ -519,109 +545,142 @@ export function TestForm({
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {Object.entries(formData.levelNormerings).map(([level, normering]) => {
-                          const levelLabel =
-                            LEVEL_OVERRIDE_OPTIONS.find((option) => option.code === level)
-                              ?.label ?? level;
-                          return (
-                          <div key={level} className="rounded border bg-muted/30 p-3">
-                            <div className="mb-2 flex items-center justify-between">
-                              <h4 className="font-medium">{levelLabel}</h4>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeLevelNormering(level)}
+                        {Object.entries(formData.levelNormerings).map(
+                          ([level, normering]) => {
+                            const levelLabel =
+                              LEVEL_OVERRIDE_OPTIONS.find(
+                                (option) => option.code === level,
+                              )?.label ?? level;
+                            return (
+                              <div
+                                key={level}
+                                className="bg-muted/30 rounded border p-3"
                               >
-                                <XIcon className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <label className="mb-1 block text-xs font-medium">
-                                  {t("maxPoints")}
-                                </label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={normering.maxPoints}
-                                  onChange={(e) =>
-                                    updateLevelNormering(level, {
-                                      maxPoints: parseInt(e.target.value, 10),
-                                    })
-                                  }
-                                  className="w-full rounded border px-2 py-1 text-sm"
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="mb-1 block text-xs font-medium">
-                                  {t("nTerm")} (n)
-                                </label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.1"
-                                  value={normering.nTerm}
-                                  onChange={(e) =>
-                                    updateLevelNormering(level, {
-                                      nTerm: parseFloat(e.target.value),
-                                    })
-                                  }
-                                  className="w-full rounded border px-2 py-1 text-sm"
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="mb-1 block text-xs font-medium">
-                                  {t("cvteCalculation")}
-                                </label>
-                                <select
-                                  value={normering.cvteCalculationMode}
-                                  onChange={(e) =>
-                                    updateLevelNormering(level, {
-                                      cvteCalculationMode: e.target.value as LevelNormering["cvteCalculationMode"],
-                                    })
-                                  }
-                                  className="w-full rounded border px-2 py-1 text-sm"
-                                >
-                                  <option value="legacy">{t("cvteCalculationLegacy")}</option>
-                                  <option value="official">{t("cvteCalculationOfficial")}</option>
-                                  <option value="main">{t("cvteCalculationMain")}</option>
-                                </select>
-                              </div>
-                            </div>
-                            {/* Chart for this level */}
-                            {normering.maxPoints > 0 && (
-                              <div className="mt-3">
-                                <Dialog open={showChartDialog && chartDialogLevel === level} onOpenChange={(open) => { if (!open) { setShowChartDialog(false); setChartDialogLevel(null); } }}>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => { setShowChartDialog(true); setChartDialogLevel(level); }}
-                                    >
-                                      <ChartLine className="mr-2 h-4 w-4" />
-                                      {t("viewChart")} ({level})
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-4xl">
-                                    <DialogHeader>
-                                      <DialogTitle>{t("gradeCalculationChart")} - {level}</DialogTitle>
-                                    </DialogHeader>
-                                    <CvTEChart
-                                      maxPoints={normering.maxPoints}
-                                      nTerms={[0, normering.nTerm, 2.0]}
-                                      mode={normering.cvteCalculationMode}
+                                <div className="mb-2 flex items-center justify-between">
+                                  <h4 className="font-medium">{levelLabel}</h4>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeLevelNormering(level)}
+                                  >
+                                    <XIcon className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <label className="mb-1 block text-xs font-medium">
+                                      {t("maxPoints")}
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={normering.maxPoints}
+                                      onChange={(e) =>
+                                        updateLevelNormering(level, {
+                                          maxPoints: parseInt(
+                                            e.target.value,
+                                            10,
+                                          ),
+                                        })
+                                      }
+                                      className="w-full rounded border px-2 py-1 text-sm"
+                                      required
                                     />
-                                  </DialogContent>
-                                </Dialog>
+                                  </div>
+                                  <div>
+                                    <label className="mb-1 block text-xs font-medium">
+                                      {t("nTerm")} (n)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.1"
+                                      value={normering.nTerm}
+                                      onChange={(e) =>
+                                        updateLevelNormering(level, {
+                                          nTerm: parseFloat(e.target.value),
+                                        })
+                                      }
+                                      className="w-full rounded border px-2 py-1 text-sm"
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="mb-1 block text-xs font-medium">
+                                      {t("cvteCalculation")}
+                                    </label>
+                                    <select
+                                      value={normering.cvteCalculationMode}
+                                      onChange={(e) =>
+                                        updateLevelNormering(level, {
+                                          cvteCalculationMode: e.target
+                                            .value as LevelNormering["cvteCalculationMode"],
+                                        })
+                                      }
+                                      className="w-full rounded border px-2 py-1 text-sm"
+                                    >
+                                      <option value="legacy">
+                                        {t("cvteCalculationLegacy")}
+                                      </option>
+                                      <option value="official">
+                                        {t("cvteCalculationOfficial")}
+                                      </option>
+                                      <option value="main">
+                                        {t("cvteCalculationMain")}
+                                      </option>
+                                    </select>
+                                  </div>
+                                </div>
+                                {/* Chart for this level */}
+                                {normering.maxPoints > 0 && (
+                                  <div className="mt-3">
+                                    <Dialog
+                                      open={
+                                        showChartDialog &&
+                                        chartDialogLevel === level
+                                      }
+                                      onOpenChange={(open) => {
+                                        if (!open) {
+                                          setShowChartDialog(false);
+                                          setChartDialogLevel(null);
+                                        }
+                                      }}
+                                    >
+                                      <DialogTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            setShowChartDialog(true);
+                                            setChartDialogLevel(level);
+                                          }}
+                                        >
+                                          <ChartLine className="mr-2 h-4 w-4" />
+                                          {t("viewChart")} ({level})
+                                        </Button>
+                                      </DialogTrigger>
+                                      <DialogContent className="max-w-4xl">
+                                        <DialogHeader>
+                                          <DialogTitle>
+                                            {t("gradeCalculationChart")} -{" "}
+                                            {level}
+                                          </DialogTitle>
+                                        </DialogHeader>
+                                        <CvTEChart
+                                          maxPoints={normering.maxPoints}
+                                          nTerms={[0, normering.nTerm, 2.0]}
+                                          mode={normering.cvteCalculationMode}
+                                        />
+                                      </DialogContent>
+                                    </Dialog>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                          );
-                        })}
+                            );
+                          },
+                        )}
                       </div>
                     )}
 
