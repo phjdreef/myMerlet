@@ -22,8 +22,6 @@ interface UseStudentDirectoryDataResult {
   refresh: () => void;
 }
 
-const AUTO_DISMISS_TIMEOUT = 3000;
-
 export function useStudentDirectoryData(): UseStudentDirectoryDataResult {
   const { t } = useTranslation();
   const [students, setStudents] = useState<Student[]>([]);
@@ -52,25 +50,10 @@ export function useStudentDirectoryData(): UseStudentDirectoryDataResult {
     }
   }, []);
 
-  const setTransientMessage = useCallback(
-    (message: string) => {
-      clearPendingTimeout();
-      setError(message);
-      dismissTimeoutRef.current = setTimeout(() => {
-        setError(null);
-        dismissTimeoutRef.current = null;
-      }, AUTO_DISMISS_TIMEOUT);
-    },
-    [clearPendingTimeout],
-  );
-
   const loadStudents = useCallback(async () => {
     setLoading(true);
     try {
-      const [savedStudents, metadata] = await Promise.all([
-        studentDB.getAllStudents(),
-        studentDB.getMetadata(),
-      ]);
+      const savedStudents = await studentDB.getAllStudents();
 
       if (savedStudents.length > 0) {
         const sortedStudents = sortStudents(savedStudents);
@@ -91,7 +74,7 @@ export function useStudentDirectoryData(): UseStudentDirectoryDataResult {
     } finally {
       setLoading(false);
     }
-  }, [clearPendingTimeout, setTransientMessage, t]);
+  }, [clearPendingTimeout, t]);
 
   const loadPlans = useCallback(async () => {
     try {

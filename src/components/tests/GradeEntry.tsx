@@ -676,8 +676,7 @@ export function GradeEntry({
                 const missingLevelNormering =
                   hasLevelNormerings &&
                   studentLevel &&
-                  !test.levelNormerings[studentLevel];
-                const noLevelDetected = hasLevelNormerings && !studentLevel;
+                  !test.levelNormerings?.[studentLevel];
 
                 return (
                   <tr

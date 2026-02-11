@@ -6,12 +6,6 @@ import {
   formatStudentName,
 } from "@/helpers/student_helpers";
 
-// Simple cache to prevent duplicate photo requests
-const photoCache = new Map<
-  string,
-  Promise<{ success: boolean; data?: string; error?: string }>
->();
-
 interface StudentPhotoProps {
   student: Student;
   size?: "small" | "normal" | "large";

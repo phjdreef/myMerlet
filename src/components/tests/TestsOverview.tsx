@@ -7,7 +7,8 @@ import { TestsManager } from "./TestsManager";
 export function TestsOverview() {
   const { t } = useTranslation();
   const location = useLocation();
-  const editTestId = (location.state as any)?.editTestId;
+  const editTestId = (location.state as { editTestId?: string } | null)
+    ?.editTestId;
   const [availableClassGroups, setAvailableClassGroups] = useState<string[]>(
     [],
   );

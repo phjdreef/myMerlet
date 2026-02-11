@@ -172,7 +172,7 @@ export function TestForm({
     };
 
     loadLevels();
-  }, [formData.classGroups]);
+  }, [formData.classGroups, currentSchoolYear]);
 
   const updateField = <Key extends keyof TestFormState>(
     key: Key,

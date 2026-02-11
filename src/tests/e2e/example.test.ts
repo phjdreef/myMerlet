@@ -7,6 +7,69 @@ import {
 } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+
+type StudentDBAPI = {
+  saveStudents: (students: unknown[]) => Promise<unknown>;
+  getAllStudents: () => Promise<unknown>;
+  searchStudents: (query: string) => Promise<unknown>;
+  getMetadata: () => Promise<unknown>;
+  clearAllData: () => Promise<unknown>;
+  savePhoto: (studentId: number, photoData: string) => Promise<unknown>;
+  getPhoto: (studentId: number) => Promise<unknown>;
+  getPropertyDefinitions: (
+    className: string,
+    schoolYear: string,
+  ) => Promise<unknown>;
+  savePropertyDefinition: (property: unknown) => Promise<unknown>;
+  deletePropertyDefinition: (propertyId: string) => Promise<unknown>;
+  getPropertyValues: (
+    studentId: number,
+    className: string,
+    schoolYear: string,
+  ) => Promise<unknown>;
+  savePropertyValue: (value: unknown) => Promise<unknown>;
+  getNote: (
+    studentId: number,
+    className: string,
+    schoolYear: string,
+  ) => Promise<unknown>;
+  saveNote: (note: unknown) => Promise<unknown>;
+};
+
+type TestAPI = {
+  getTestsForClassGroup: (
+    classGroup: string,
+  ) => Promise<{ data?: { id: string }[] }>;
+  getAllTests: () => Promise<unknown>;
+  getTest: (testId: string) => Promise<unknown>;
+  createTest: (test: unknown) => Promise<unknown>;
+  updateTest: (testId: string, updates: unknown) => Promise<unknown>;
+  deleteTest: (testId: string) => Promise<unknown>;
+  getGradesForTest: (testId: string) => Promise<unknown>;
+  getGradesForStudent: (
+    studentId: number,
+    classGroup: string,
+  ) => Promise<unknown>;
+  saveGrade: (
+    testId: string,
+    studentId: number,
+    pointsEarned: number,
+    manualOverride?: number,
+  ) => Promise<unknown>;
+  saveCompositeGrade: (
+    testId: string,
+    studentId: number,
+    elementGrades: unknown,
+    manualOverride?: number,
+  ) => Promise<unknown>;
+  getTestStatistics: (testId: string, classGroup?: string) => Promise<unknown>;
+};
+
+type WindowWithApis = Window & {
+  require?: (module: "electron") => typeof import("electron");
+  studentDBAPI?: StudentDBAPI;
+  testAPI?: TestAPI;
+};
 import { findLatestBuild, parseElectronApp } from "electron-playwright-helpers";
 
 /*
@@ -69,10 +132,11 @@ test("create cvte test with multiple levels and enter grades for a class", async
   const page: Page = await electronApp.firstWindow();
 
   await page.addInitScript(() => {
-    const { ipcRenderer } = (window as any).require?.("electron") ?? {};
+    const win = window as unknown as WindowWithApis;
+    const { ipcRenderer } = win.require?.("electron") ?? {};
     if (!ipcRenderer) return;
 
-    (window as any).studentDBAPI = (window as any).studentDBAPI || {
+    win.studentDBAPI = win.studentDBAPI || {
       saveStudents: (students: unknown[]) =>
         ipcRenderer.invoke("studentDB:saveStudents", students),
       getAllStudents: () => ipcRenderer.invoke("studentDB:getAllStudents"),
@@ -118,7 +182,7 @@ test("create cvte test with multiple levels and enter grades for a class", async
         ipcRenderer.invoke("studentDB:saveNote", note),
     };
 
-    (window as any).testAPI = (window as any).testAPI || {
+    win.testAPI = win.testAPI || {
       getTestsForClassGroup: (classGroup: string) =>
         ipcRenderer.invoke("test:get-for-class", classGroup),
       getAllTests: () => ipcRenderer.invoke("test:get-all"),
@@ -325,7 +389,7 @@ test("create cvte test with multiple levels and enter grades for a class", async
 
   await page.evaluate(
     async ({ schoolYear }) => {
-      const api = (window as any).testAPI;
+      const api = (window as unknown as WindowWithApis).testAPI;
       if (!api?.getTestsForClassGroup || !api?.createTest) return;
       const existing = await api.getTestsForClassGroup("3A");
       if (existing?.data?.length) return;
@@ -351,7 +415,7 @@ test("create cvte test with multiple levels and enter grades for a class", async
   );
 
   await page.evaluate(async () => {
-    const api = (window as any).testAPI;
+    const api = (window as unknown as WindowWithApis).testAPI;
     if (!api?.getTestsForClassGroup || !api?.saveGrade) return;
 
     const result = await api.getTestsForClassGroup("3A");

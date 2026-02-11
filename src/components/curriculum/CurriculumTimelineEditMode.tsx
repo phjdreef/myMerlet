@@ -48,7 +48,7 @@ export function CurriculumTimelineEditMode({
 
   const flushDebounces = useCallback(() => {
     // Immediately execute all pending debounced updates
-    Object.entries(debounceTimers.current).forEach(([key, timer]) => {
+    Object.entries(debounceTimers.current).forEach(([, timer]) => {
       clearTimeout(timer);
     });
     debounceTimers.current = {};
