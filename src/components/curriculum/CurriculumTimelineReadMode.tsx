@@ -46,7 +46,6 @@ export function CurriculumTimelineReadMode({
   onDragLeave,
   onDrop,
   isDragOver,
-  isDragging,
 }: CurriculumTimelineReadModeProps) {
   const { t } = useTranslation();
 

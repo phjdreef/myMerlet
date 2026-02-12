@@ -30,6 +30,12 @@ import { logger } from "@/utils/logger";
 import { PropertyManager } from "./PropertyManager";
 import { StudentPhoto } from "./StudentPhoto";
 import { formatClassName } from "@/utils/class-utils";
+import {
+  extractShortLevel,
+  isValidNiveau,
+  LEVEL_OVERRIDE_OPTIONS,
+  LEVEL_OVERRIDE_PROPERTY_ID,
+} from "@/helpers/student_helpers";
 
 interface StudentTableViewProps {
   students: Student[];
@@ -147,15 +153,20 @@ export function StudentTableView({
     return parts.join(" ");
   };
 
-  const getNiveau = (student: Student) => {
+  const getDefaultNiveau = (student: Student) => {
     // First try profiel1
-    if (student.profiel1) {
-      return formatClassName(student.profiel1);
+    if (student.profiel1 && isValidNiveau(student.profiel1)) {
+      return formatClassName(extractShortLevel(student.profiel1));
     }
 
     // Extract niveau from studies array (e.g., "MAVO", "HAVO", "VWO", etc.)
     if (student.studies && student.studies.length > 0) {
-      return student.studies.map((s) => formatClassName(s)).join(", ");
+      const validStudies = student.studies.filter(isValidNiveau);
+      if (validStudies.length > 0) {
+        return validStudies
+          .map((s) => formatClassName(extractShortLevel(s)))
+          .join(", ");
+      }
     }
 
     // Fallback: try to extract niveau from class name
@@ -185,6 +196,19 @@ export function StudentTableView({
     }
 
     return "-";
+  };
+
+  const getNiveau = (student: StudentWithExtras | Student) => {
+    const overrideValue =
+      "propertyValues" in student
+        ? student.propertyValues.get(LEVEL_OVERRIDE_PROPERTY_ID)
+        : undefined;
+
+    if (typeof overrideValue === "string" && overrideValue.trim().length > 0) {
+      return overrideValue.trim().toUpperCase();
+    }
+
+    return getDefaultNiveau(student);
   };
 
   // Apply filters and sorting
@@ -676,7 +700,42 @@ export function StudentTableView({
 
                     {/* Level/Niveau */}
                     <TableCell className="text-sm">
-                      {getNiveau(student)}
+                      <div className="space-y-1">
+                        <Select
+                          value={
+                            (student.propertyValues.get(
+                              LEVEL_OVERRIDE_PROPERTY_ID,
+                            ) as string) || "default"
+                          }
+                          onValueChange={(value) =>
+                            handlePropertyValueChange(
+                              student,
+                              LEVEL_OVERRIDE_PROPERTY_ID,
+                              value === "default" ? "" : value,
+                            )
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue
+                              placeholder={getDefaultNiveau(student)}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="default">
+                              {t("defaultLevelOption")}:{" "}
+                              {getDefaultNiveau(student)}
+                            </SelectItem>
+                            {LEVEL_OVERRIDE_OPTIONS.map((option) => (
+                              <SelectItem key={option.code} value={option.code}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-muted-foreground text-xs">
+                          {t("defaultLevelLabel")}: {getDefaultNiveau(student)}
+                        </span>
+                      </div>
                     </TableCell>
 
                     {/* Grades */}

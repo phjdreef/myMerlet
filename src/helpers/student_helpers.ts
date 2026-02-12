@@ -1,5 +1,33 @@
 import type { Student } from "@/services/student-database";
 
+export const LEVEL_OVERRIDE_PROPERTY_ID = "level_override";
+
+export const LEVEL_OVERRIDE_OPTIONS = [
+  { code: "B", label: "B - Basis" },
+  { code: "K", label: "K - Kader" },
+  { code: "M", label: "M - Mavo" },
+  { code: "H", label: "H - Havo" },
+  { code: "A", label: "A - Atheneum" },
+  { code: "G", label: "G - Gymnasium" },
+];
+
+/**
+ * Extract the short level code from a niveau string.
+ * Examples:
+ * - "M/K - MAVO/VMBO KADER" -> "M/K"
+ * - "HAVO" -> "HAVO"
+ * - "A - ATHENEUM" -> "A"
+ */
+export function extractShortLevel(level: string): string {
+  return level.split(" - ")[0].trim().toUpperCase();
+}
+
+export function isValidNiveau(value: string): boolean {
+  const normalized = value.toUpperCase();
+  const validNiveaus = ["HAVO", "VWO", "MAVO", "VMBO", "ATHENEUM", "GYMNASIUM"];
+  return validNiveaus.some((niveau) => normalized.includes(niveau));
+}
+
 interface FormatStudentNameOptions {
   /**
    * When true, use the student's initials/voorletters as the leading portion of the name.

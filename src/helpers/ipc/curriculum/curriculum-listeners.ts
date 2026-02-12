@@ -516,8 +516,7 @@ async function buildPlanDocument(
                 spacing: { before: 100 },
               }),
             );
-            filteredLines.forEach((line, lineIndex) => {
-              const isLastLine = lineIndex === filteredLines.length - 1;
+            filteredLines.forEach((line) => {
               goalParagraphs.push(
                 new DocParagraph({
                   children: [

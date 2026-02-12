@@ -6,21 +6,28 @@ import {
   calculateCvTEGrade,
   type Test,
   type StudentGrade,
+  type LevelNormering,
 } from "@/services/test-database";
 import type { Student } from "@/services/student-database";
+import { studentDB } from "@/services/student-database";
 import { evaluateFormulaExpression } from "@/utils/formula-parser";
 import {
   compareStudents,
   formatStudentName,
+  extractShortLevel,
+  LEVEL_OVERRIDE_PROPERTY_ID,
   type StudentSortKey,
 } from "@/helpers/student_helpers";
 import { StudentPhoto } from "@/components/student-directory/StudentPhoto";
 import { Button } from "../ui/button";
 import { logger } from "@/utils/logger";
+import { useSchoolYear } from "@/contexts/SchoolYearContext";
 
 interface GradeEntryProps {
   test: Test;
   students: Student[];
+  className?: string | null;
+  schoolYear?: string;
   onClose: () => void;
   onSave?: () => void;
   readOnly?: boolean;
@@ -29,11 +36,15 @@ interface GradeEntryProps {
 export function GradeEntry({
   test,
   students,
+  className,
+  schoolYear,
   onClose,
   onSave,
   readOnly = false,
 }: GradeEntryProps) {
   const { t } = useTranslation();
+  const { currentSchoolYear } = useSchoolYear();
+  const resolvedSchoolYear = schoolYear ?? currentSchoolYear;
 
   // Chart data: show three reference n-term lines
   const chartNTerms = useMemo(() => [0, 1.0, 2.0], []);
@@ -41,12 +52,65 @@ export function GradeEntry({
   // Chart modal state
   const [showChart, setShowChart] = useState(false);
 
+  const [levelOverrides, setLevelOverrides] = useState<Map<number, string>>(
+    new Map(),
+  );
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"achternaam" | "roepnaam" | "number">(
     "achternaam",
   );
+
+  useEffect(() => {
+    if (!className || !resolvedSchoolYear) {
+      setLevelOverrides(new Map());
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadOverrides = async () => {
+      try {
+        const entries = await Promise.all(
+          students.map(async (student) => {
+            const values = await studentDB.getPropertyValues(
+              student.id,
+              className,
+              resolvedSchoolYear,
+            );
+            const override = values.find(
+              (value) => value.propertyId === LEVEL_OVERRIDE_PROPERTY_ID,
+            )?.value;
+            return [student.id, override] as const;
+          }),
+        );
+
+        if (cancelled) return;
+
+        const overrides = new Map<number, string>();
+        entries.forEach(([studentId, value]) => {
+          if (typeof value === "string" && value.trim().length > 0) {
+            overrides.set(studentId, value.trim().toUpperCase());
+          }
+        });
+
+        setLevelOverrides(overrides);
+      } catch (error) {
+        if (!cancelled) {
+          logger.error("Failed to load level overrides:", error);
+          setLevelOverrides(new Map());
+        }
+      }
+    };
+
+    loadOverrides();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [className, resolvedSchoolYear, students]);
 
   // Form state for each student
   const [entries, setEntries] = useState<
@@ -101,6 +165,43 @@ export function GradeEntry({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [test.id]);
 
+  // Get student level (e.g., "HAVO", "VWO")
+  const getStudentLevel = (student: Student): string | null => {
+    const overrideValue = levelOverrides.get(student.id);
+    if (overrideValue) {
+      return overrideValue;
+    }
+
+    // First try profiel1
+    if (student.profiel1) {
+      return extractShortLevel(student.profiel1);
+    }
+
+    // Extract from studies array
+    if (student.studies && student.studies.length > 0) {
+      return extractShortLevel(student.studies[0]);
+    }
+
+    return null;
+  };
+
+  // Get normering for a student (level-specific or default)
+  const getNormeringForStudent = (student: Student): LevelNormering => {
+    const level = getStudentLevel(student);
+
+    // If level-specific normering exists, use it
+    if (level && test.levelNormerings && test.levelNormerings[level]) {
+      return test.levelNormerings[level];
+    }
+
+    // Otherwise use default normering
+    return {
+      nTerm: test.nTerm ?? 1,
+      maxPoints: test.maxPoints ?? 10,
+      cvteCalculationMode: test.cvteCalculationMode ?? "legacy",
+    };
+  };
+
   const loadGrades = async () => {
     setLoading(true);
     try {
@@ -128,15 +229,24 @@ export function GradeEntry({
     }
   };
 
-  const calculateGrade = (pointsEarned?: number): number | null => {
+  const calculateGrade = (
+    pointsEarned: number | undefined,
+    student: Student,
+  ): number | null => {
     // CvTE formula only
     if (test.testType !== "cvte") return null;
     if (pointsEarned === undefined || !Number.isFinite(pointsEarned))
       return null;
-    if (!test.maxPoints || test.maxPoints <= 0) return null;
-    const nTerm = test.nTerm ?? 1;
-    const mode = test.cvteCalculationMode ?? "legacy";
-    return calculateCvTEGrade(pointsEarned, test.maxPoints, nTerm, mode);
+
+    const normering = getNormeringForStudent(student);
+    if (!normering.maxPoints || normering.maxPoints <= 0) return null;
+
+    return calculateCvTEGrade(
+      pointsEarned,
+      normering.maxPoints,
+      normering.nTerm,
+      normering.cvteCalculationMode,
+    );
   };
 
   const calculateCompositeGrade = (
@@ -220,11 +330,15 @@ export function GradeEntry({
     return Math.round(grade * 10) / 10;
   };
 
-  const handlePointsChange = (studentId: number, points: string) => {
+  const handlePointsChange = (
+    studentId: number,
+    student: Student,
+    points: string,
+  ) => {
     const parsed = points.trim() === "" ? undefined : parseFloat(points);
     const pointsEarned = Number.isFinite(parsed) ? parsed : undefined;
     const calculatedGrade =
-      pointsEarned !== undefined ? calculateGrade(pointsEarned) : null;
+      pointsEarned !== undefined ? calculateGrade(pointsEarned, student) : null;
     const currentEntry = entries.get(studentId);
     const manualOverride = currentEntry?.manualOverride;
     const finalGrade =
@@ -502,12 +616,25 @@ export function GradeEntry({
                 <th className="bg-muted/50 p-3 text-left font-medium">
                   {t("studentName")}
                 </th>
+                {test.levelNormerings &&
+                  Object.keys(test.levelNormerings).length > 0 && (
+                    <th className="bg-muted/50 p-3 text-left font-medium">
+                      {t("level")}
+                    </th>
+                  )}
                 {test.testType === "cvte" ? (
                   <th className="bg-muted/50 p-3 text-left font-medium">
                     {t("pointsEarned")}
-                    <span className="text-muted-foreground ml-1 text-xs font-normal">
-                      (max: {test.maxPoints})
-                    </span>
+                    {test.levelNormerings &&
+                    Object.keys(test.levelNormerings).length > 0 ? (
+                      <span className="text-muted-foreground ml-1 text-xs font-normal">
+                        ({t("levelSpecific")})
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground ml-1 text-xs font-normal">
+                        (max: {test.maxPoints})
+                      </span>
+                    )}
                   </th>
                 ) : (
                   test.elements?.map((element) => (
@@ -542,6 +669,15 @@ export function GradeEntry({
                   finalGrade: null,
                 };
 
+                const studentLevel = getStudentLevel(student);
+                const hasLevelNormerings =
+                  test.levelNormerings &&
+                  Object.keys(test.levelNormerings).length > 0;
+                const missingLevelNormering =
+                  hasLevelNormerings &&
+                  studentLevel &&
+                  !test.levelNormerings?.[studentLevel];
+
                 return (
                   <tr
                     key={student.id}
@@ -554,6 +690,39 @@ export function GradeEntry({
                       </div>
                     </td>
                     <td className="p-3">{formatStudentName(student)}</td>
+
+                    {/* Level column - only show if level-specific normerings exist */}
+                    {hasLevelNormerings && (
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          {studentLevel ? (
+                            <>
+                              <span
+                                className={
+                                  missingLevelNormering
+                                    ? "font-medium text-orange-600 dark:text-orange-400"
+                                    : "font-medium text-green-600 dark:text-green-400"
+                                }
+                                title={
+                                  missingLevelNormering
+                                    ? t("missingLevelNormering")
+                                    : t("levelSpecificNormeringActive")
+                                }
+                              >
+                                {studentLevel}
+                              </span>
+                            </>
+                          ) : (
+                            <span
+                              className="cursor-help font-medium text-orange-600 dark:text-orange-400"
+                              title={t("noLevelDetected")}
+                            >
+                              -
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    )}
 
                     {/* CvTE Test - Single Points Input */}
                     {test.testType === "cvte" && (
@@ -569,30 +738,35 @@ export function GradeEntry({
                             <input
                               type="number"
                               min="0"
-                              max={test.maxPoints}
+                              max={getNormeringForStudent(student).maxPoints}
                               step="0.5"
                               value={entry.pointsEarned ?? ""}
                               onChange={(e) =>
-                                handlePointsChange(student.id, e.target.value)
+                                handlePointsChange(
+                                  student.id,
+                                  student,
+                                  e.target.value,
+                                )
                               }
                               className={`w-20 rounded border px-2 py-1 ${
                                 (entry.pointsEarned ?? 0) >
-                                (test.maxPoints ?? 0)
+                                (getNormeringForStudent(student).maxPoints ?? 0)
                                   ? "border-red-500 bg-red-50 dark:bg-red-900/20"
                                   : ""
                               }`}
                               title={
                                 (entry.pointsEarned ?? 0) >
-                                (test.maxPoints ?? 0)
-                                  ? `${t("pointsExceedMax")}: ${test.maxPoints}`
+                                (getNormeringForStudent(student).maxPoints ?? 0)
+                                  ? `${t("pointsExceedMax")}: ${getNormeringForStudent(student).maxPoints}`
                                   : undefined
                               }
                             />
                             {(entry.pointsEarned ?? 0) >
-                              (test.maxPoints ?? 0) && (
+                              (getNormeringForStudent(student).maxPoints ??
+                                0) && (
                               <span
                                 className="absolute top-1/2 -right-6 -translate-y-1/2 cursor-help text-lg text-red-600"
-                                title={`${t("pointsExceedMax")}: ${test.maxPoints}`}
+                                title={`${t("pointsExceedMax")}: ${getNormeringForStudent(student).maxPoints}`}
                               >
                                 ⚠️
                               </span>
