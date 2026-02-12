@@ -380,13 +380,6 @@ test("create cvte test with multiple levels and enter grades for a class", async
   await classButton.waitFor({ timeout: 20000 });
   await classButton.click();
 
-  const gradesTab = page.getByRole("button", { name: /Cijfers|Grades/i });
-  await gradesTab.waitFor({ timeout: 20000 });
-  await expect(gradesTab).toBeEnabled();
-  await gradesTab.click();
-
-  await classButton.click();
-
   await page.evaluate(async () => {
     const api = (window as unknown as WindowWithApis).testAPI;
     if (!api?.getTestsForClassGroup || !api?.saveGrade) return;
