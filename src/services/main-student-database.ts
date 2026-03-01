@@ -585,6 +585,35 @@ class MainStudentDatabase {
     }
   }
 
+  async getPropertyValuesBatch(
+    studentIds: number[],
+    className: string,
+    schoolYear: string,
+  ): Promise<StudentPropertyValue[]> {
+    if (!this.initialized) await this.init();
+
+    if (studentIds.length === 0) return [];
+
+    try {
+      const path = this.getPropertyValuesPath();
+      if (!fs.existsSync(path)) return [];
+
+      const studentIdSet = new Set(studentIds);
+      const data = fs.readFileSync(path, "utf8");
+      const all = JSON.parse(data) as StudentPropertyValue[];
+
+      return all.filter(
+        (propertyValue) =>
+          studentIdSet.has(propertyValue.studentId) &&
+          propertyValue.className === className &&
+          propertyValue.schoolYear === schoolYear,
+      );
+    } catch (error) {
+      logger.error("Failed to get property values batch:", error);
+      return [];
+    }
+  }
+
   async savePropertyValue(value: StudentPropertyValue): Promise<void> {
     if (!this.initialized) await this.init();
 

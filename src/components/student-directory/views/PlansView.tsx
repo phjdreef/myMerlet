@@ -3,7 +3,7 @@ import { CurriculumTimeline } from "@/components/curriculum/CurriculumTimeline";
 import type { CurriculumPlan } from "@/services/curriculum-database";
 import { useTranslation } from "react-i18next";
 import { useSchoolYear } from "@/contexts/SchoolYearContext";
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { logger } from "@/utils/logger";
 
@@ -26,6 +26,23 @@ export function PlansView({
 }: PlansViewProps) {
   const { t, i18n } = useTranslation();
   const { currentSchoolYear } = useSchoolYear();
+  const [localPlans, setLocalPlans] = useState<CurriculumPlan[]>(classPlans);
+  const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {},
+  );
+
+  useEffect(() => {
+    setLocalPlans(classPlans);
+  }, [classPlans]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(saveTimersRef.current).forEach((timer) =>
+        clearTimeout(timer),
+      );
+      saveTimersRef.current = {};
+    };
+  }, []);
 
   // For templates, use current school year from context
   const getEffectivePlan = useMemo(() => {
@@ -53,23 +70,34 @@ export function PlansView({
       return;
     }
 
-    try {
-      // Simply save the plan - no more automatic copy-on-write
-      // Class-specific copies should already exist (created when assigning class in PlanEditor)
-      const result = await window.curriculumAPI.savePlan(updatedPlan);
-      if (result.success) {
-        // Reload plans to update the UI
+    setLocalPlans((prev) =>
+      prev.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan)),
+    );
+
+    const existingTimer = saveTimersRef.current[updatedPlan.id];
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    saveTimersRef.current[updatedPlan.id] = setTimeout(async () => {
+      try {
+        const result = await window.curriculumAPI.savePlan(updatedPlan);
+        if (!result.success) {
+          logger.error("Failed to update plan:", result.error);
+          alert(t("planUpdateError") || "Failed to update plan.");
+          return;
+        }
+
         if (onReloadPlans) {
           onReloadPlans();
         }
-      } else {
-        logger.error("Failed to update plan:", result.error);
+      } catch (error) {
+        logger.error("Failed to update plan:", error);
         alert(t("planUpdateError") || "Failed to update plan.");
+      } finally {
+        delete saveTimersRef.current[updatedPlan.id];
       }
-    } catch (error) {
-      logger.error("Failed to update plan:", error);
-      alert(t("planUpdateError") || "Failed to update plan.");
-    }
+    }, 800);
   };
 
   const handleExportPlan = async (plan: CurriculumPlan) => {
@@ -124,7 +152,7 @@ export function PlansView({
     }
   };
 
-  if (classPlans.length === 0) {
+  if (localPlans.length === 0) {
     return (
       <div className="py-8 text-center">
         <p className="text-muted-foreground">
@@ -145,7 +173,7 @@ export function PlansView({
       <div className="sticky top-0 z-10 bg-white pb-2 dark:bg-gray-900">
         <div className="flex items-center justify-between gap-4">
           <TabsList>
-            {classPlans.map((plan) => (
+            {localPlans.map((plan) => (
               <TabsTrigger key={plan.id} value={plan.id}>
                 {plan.subject} ({plan.schoolYear})
               </TabsTrigger>
@@ -157,7 +185,7 @@ export function PlansView({
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  const selectedPlan = classPlans.find(
+                  const selectedPlan = localPlans.find(
                     (p) => p.id === selectedPlanTab,
                   );
                   if (selectedPlan) handleDeletePlan(selectedPlan);
@@ -169,7 +197,7 @@ export function PlansView({
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  const selectedPlan = classPlans.find(
+                  const selectedPlan = localPlans.find(
                     (p) => p.id === selectedPlanTab,
                   );
                   if (selectedPlan) handleExportPlan(selectedPlan);
@@ -182,7 +210,7 @@ export function PlansView({
         </div>
       </div>
       <div className="flex-1 overflow-auto">
-        {classPlans.map((plan) => {
+        {localPlans.map((plan) => {
           const effectivePlan = getEffectivePlan(plan);
           const isTemplatePlan =
             plan.isTemplate === true ||

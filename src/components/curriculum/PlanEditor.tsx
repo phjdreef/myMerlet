@@ -121,6 +121,7 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
         // Deep copy all nested arrays to ensure they're independent
         studyGoals: editedPlan.studyGoals.map((goal) => ({
           ...goal,
+          teacherNotes: "",
           paragraphIds: [...goal.paragraphIds],
           topicIds: [...goal.topicIds],
         })),
@@ -283,15 +284,9 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
   return (
     <div className="container mx-auto h-full p-4">
       <div className="flex h-full flex-col">
-        {/* Header with title and buttons */}
-        <div className="mb-6 flex shrink-0 items-center justify-between">
+        {/* Header */}
+        <div className="mb-6 flex shrink-0 items-center">
           <h1 className="text-3xl font-bold">{t("editPlan")}</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onCancel}>
-              {t("cancel")}
-            </Button>
-            <Button onClick={handleSave}>{t("save")}</Button>
-          </div>
         </div>
 
         {/* Tabs */}
@@ -715,6 +710,13 @@ export function PlanEditor({ plan, onSave, onCancel }: PlanEditorProps) {
               }
             />
           )}
+        </div>
+
+        <div className="bg-background sticky bottom-0 z-10 -mx-4 mt-4 flex shrink-0 justify-end gap-2 border-t px-4 pt-4 pb-2">
+          <Button variant="outline" onClick={onCancel}>
+            {t("cancel")}
+          </Button>
+          <Button onClick={handleSave}>{t("save")}</Button>
         </div>
       </div>
     </div>

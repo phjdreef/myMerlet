@@ -40,6 +40,17 @@ export const studentDBAPI = {
       className,
       schoolYear,
     ),
+  getPropertyValuesBatch: (
+    studentIds: number[],
+    className: string,
+    schoolYear: string,
+  ) =>
+    ipcRenderer.invoke(
+      STUDENT_DB_CHANNELS.GET_PROPERTY_VALUES_BATCH,
+      studentIds,
+      className,
+      schoolYear,
+    ),
   savePropertyValue: (value: unknown) =>
     ipcRenderer.invoke(STUDENT_DB_CHANNELS.SAVE_PROPERTY_VALUE, value),
   // Notes

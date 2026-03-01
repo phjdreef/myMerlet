@@ -44,6 +44,9 @@ export function CurriculumTimelineEditMode({
   const [localDescriptions, setLocalDescriptions] = useState<
     Record<string, string>
   >({});
+  const [localTeacherNotes, setLocalTeacherNotes] = useState<
+    Record<string, string>
+  >({});
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
 
   const flushDebounces = useCallback(() => {
@@ -87,6 +90,22 @@ export function CurriculumTimelineEditMode({
       debounceTimers.current[`desc-${goalId}`] = setTimeout(() => {
         onUpdateGoal(goalId, { description: value });
         delete debounceTimers.current[`desc-${goalId}`];
+      }, 300);
+    },
+    [onUpdateGoal],
+  );
+
+  const handleTeacherNotesChange = useCallback(
+    (goalId: string, value: string) => {
+      setLocalTeacherNotes((prev) => ({ ...prev, [goalId]: value }));
+
+      if (debounceTimers.current[`notes-${goalId}`]) {
+        clearTimeout(debounceTimers.current[`notes-${goalId}`]);
+      }
+
+      debounceTimers.current[`notes-${goalId}`] = setTimeout(() => {
+        onUpdateGoal(goalId, { teacherNotes: value });
+        delete debounceTimers.current[`notes-${goalId}`];
       }, 300);
     },
     [onUpdateGoal],
@@ -187,18 +206,6 @@ export function CurriculumTimelineEditMode({
       </div>
 
       <div className="flex-1 space-y-3">
-        {/* Done editing button at the top */}
-        <div className="flex items-center justify-end gap-2">
-          {onAddGoal && !blockedWeekInfo && (
-            <Button size="sm" onClick={onAddGoal}>
-              + {t("addStudyGoal", "Weekdoel")}
-            </Button>
-          )}
-          <Button size="sm" variant="outline" onClick={onDoneEditing}>
-            {t("doneEditing", "Klaar met bewerken")}
-          </Button>
-        </div>
-
         {blockedWeekInfo && (
           <div className="rounded-lg border border-dashed bg-white/50 p-3 text-sm dark:bg-gray-900/30">
             <div className="mb-1 font-medium text-orange-700 dark:text-orange-400">
@@ -265,6 +272,29 @@ export function CurriculumTimelineEditMode({
                           }
                         />
                       </div>
+
+                      {plan.isTemplate !== true && (
+                        <div className="space-y-2">
+                          <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                            {t("notes", "Opmerkingen")}
+                          </label>
+                          <textarea
+                            className="min-h-16 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                            value={
+                              localTeacherNotes[goal.id] ??
+                              goal.teacherNotes ??
+                              ""
+                            }
+                            onChange={(e) =>
+                              handleTeacherNotesChange(goal.id, e.target.value)
+                            }
+                            placeholder={t(
+                              "teacherNotesPlaceholder",
+                              "Opmerkingen bij afwijkingen voor deze klas",
+                            )}
+                          />
+                        </div>
+                      )}
 
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div>
@@ -455,6 +485,17 @@ export function CurriculumTimelineEditMode({
             })}
           </div>
         )}
+
+        <div className="bg-background/95 sticky bottom-0 z-10 mt-2 flex items-center justify-end gap-2 py-2 backdrop-blur-sm">
+          {onAddGoal && !blockedWeekInfo && (
+            <Button size="sm" variant="outline" onClick={onAddGoal}>
+              + {t("addStudyGoal", "Weekdoel")}
+            </Button>
+          )}
+          <Button size="sm" onClick={onDoneEditing}>
+            {t("save", "Opslaan")}
+          </Button>
+        </div>
       </div>
     </div>
   );

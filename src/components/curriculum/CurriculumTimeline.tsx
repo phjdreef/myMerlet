@@ -265,6 +265,21 @@ export function CurriculumTimeline({
       });
 
       if (onUpdate) {
+        const existingGoal = plan.studyGoals.find((goal) => goal.id === goalId);
+        if (!existingGoal) {
+          return;
+        }
+
+        const hasActualChange = Object.entries(updates).some(
+          ([key, value]) =>
+            existingGoal[key as keyof StudyGoal] !==
+            (value as StudyGoal[keyof StudyGoal]),
+        );
+
+        if (!hasActualChange) {
+          return;
+        }
+
         onUpdate({
           ...plan,
           studyGoals: plan.studyGoals.map((goal) =>
@@ -282,6 +297,11 @@ export function CurriculumTimeline({
   const deleteGoal = useCallback(
     (goalId: string) => {
       if (onUpdate) {
+        const exists = plan.studyGoals.some((goal) => goal.id === goalId);
+        if (!exists) {
+          return;
+        }
+
         onUpdate({
           ...plan,
           studyGoals: plan.studyGoals.filter((goal) => goal.id !== goalId),
@@ -440,6 +460,19 @@ export function CurriculumTimeline({
     });
   }, [plan.studyGoals]);
 
+  useEffect(() => {
+    if (editingWeek === null) {
+      return;
+    }
+
+    const hasPending = pendingGoals[editingWeek] !== undefined;
+    const hasGoals = (goalsByWeek.get(editingWeek) ?? []).length > 0;
+
+    if (!hasPending && !hasGoals) {
+      setEditingWeek(null);
+    }
+  }, [editingWeek, goalsByWeek, pendingGoals]);
+
   useLayoutEffect(() => {
     if (!isCurrentWeekInRange) {
       return;
@@ -521,8 +554,10 @@ export function CurriculumTimeline({
             pendingGoal && !goals.some((goal) => goal.id === pendingGoal.id)
               ? [...goals, pendingGoal]
               : goals;
+          const hasVisibleGoals = mergedGoals.length > 0;
           const isEditing =
-            editingWeek === weekNumber || pendingGoal !== undefined;
+            pendingGoal !== undefined ||
+            (editingWeek === weekNumber && hasVisibleGoals);
           const displayGoals = isEditing ? mergedGoals : goals;
           const isCurrentWeek =
             isCurrentWeekInRange && weekNumber === currentWeek;
@@ -538,6 +573,7 @@ export function CurriculumTimeline({
                 const hasContent =
                   (goal.title ?? "").trim().length > 0 ||
                   (goal.description ?? "").trim().length > 0 ||
+                  (goal.teacherNotes ?? "").trim().length > 0 ||
                   goal.topicIds.length > 0 ||
                   goal.paragraphIds.length > 0;
                 return !hasContent;

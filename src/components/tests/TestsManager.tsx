@@ -24,6 +24,8 @@ interface TestsManagerProps {
   availableClassGroups: string[];
   onSelectTest?: (test: Test) => void;
   onRequestClassGroupFocus?: (classGroup: string) => void;
+  onSaveSuccess?: () => void;
+  onCancelEdit?: () => void;
   variant?: "class" | "global";
   enableSearch?: boolean;
   enableClassFilter?: boolean;
@@ -35,6 +37,8 @@ export function TestsManager({
   availableClassGroups,
   onSelectTest,
   onRequestClassGroupFocus,
+  onSaveSuccess,
+  onCancelEdit,
   variant = "class",
   enableSearch = false,
   enableClassFilter = false,
@@ -171,6 +175,7 @@ export function TestsManager({
           if (!includesCurrentGroup && primaryGroup) {
             onRequestClassGroupFocus?.(primaryGroup);
           }
+          onSaveSuccess?.();
         }
       } else {
         // Create new test
@@ -229,6 +234,14 @@ export function TestsManager({
     setEditingTest(null);
     setIsCreating(false);
     setFormError(null);
+  };
+
+  const handleFormCancel = () => {
+    if (editingTest && onCancelEdit) {
+      onCancelEdit();
+      return;
+    }
+    resetForm();
   };
 
   const formatDate = (dateString: string) => {
@@ -368,7 +381,7 @@ export function TestsManager({
           formData={formData}
           setFormData={setFormData}
           onSubmit={handleSubmit}
-          onCancel={resetForm}
+          onCancel={handleFormCancel}
           classOptions={classOptions}
           onToggleClass={toggleClassSelection}
           formError={formError}
