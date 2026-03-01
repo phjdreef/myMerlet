@@ -112,9 +112,9 @@ export function GradeEntry({
   }, [className, resolvedSchoolYear, students]);
 
   // Form state for each student
-  const [entries, setEntries] = useState<
-    Map<number, GradeEntryFormEntry>
-  >(new Map());
+  const [entries, setEntries] = useState<Map<number, GradeEntryFormEntry>>(
+    new Map(),
+  );
 
   // Calculate live statistics from current entries
   const liveStatistics = (() => {

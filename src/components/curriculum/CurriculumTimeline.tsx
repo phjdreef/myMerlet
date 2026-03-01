@@ -124,6 +124,17 @@ export function CurriculumTimeline({
     return map;
   }, [sortedGoals, weekSequence]);
 
+  const activeEditingWeek = useMemo(() => {
+    if (editingWeek === null) {
+      return null;
+    }
+
+    const hasPending = pendingGoals[editingWeek] !== undefined;
+    const hasGoals = (goalsByWeek.get(editingWeek) ?? []).length > 0;
+
+    return hasPending || hasGoals ? editingWeek : null;
+  }, [editingWeek, goalsByWeek, pendingGoals]);
+
   const getBlockedWeekInfo = useCallback(
     (weekNumber: number) => {
       // Helper function to check if a week is within a blocked range
@@ -460,19 +471,6 @@ export function CurriculumTimeline({
     });
   }, [plan.studyGoals]);
 
-  useEffect(() => {
-    if (editingWeek === null) {
-      return;
-    }
-
-    const hasPending = pendingGoals[editingWeek] !== undefined;
-    const hasGoals = (goalsByWeek.get(editingWeek) ?? []).length > 0;
-
-    if (!hasPending && !hasGoals) {
-      setEditingWeek(null);
-    }
-  }, [editingWeek, goalsByWeek, pendingGoals]);
-
   useLayoutEffect(() => {
     if (!isCurrentWeekInRange) {
       return;
@@ -557,7 +555,7 @@ export function CurriculumTimeline({
           const hasVisibleGoals = mergedGoals.length > 0;
           const isEditing =
             pendingGoal !== undefined ||
-            (editingWeek === weekNumber && hasVisibleGoals);
+            (activeEditingWeek === weekNumber && hasVisibleGoals);
           const displayGoals = isEditing ? mergedGoals : goals;
           const isCurrentWeek =
             isCurrentWeekInRange && weekNumber === currentWeek;

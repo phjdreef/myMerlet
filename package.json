@@ -21,7 +21,13 @@
     "test:watch": "vitest watch",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
-    "test:all": "vitest run && playwright test"
+    "test:all": "vitest run && playwright test",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,css,md,json,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "author": "Paul Dreef",
   "license": "MIT",
@@ -62,8 +68,10 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^16.4.0",
+    "husky": "^9.1.7",
     "icon-gen": "^5.0.0",
     "jsdom": "^27.0.1",
+    "lint-staged": "^16.3.1",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.0",
     "sharp": "^0.34.4",

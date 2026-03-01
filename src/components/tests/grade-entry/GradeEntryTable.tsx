@@ -173,7 +173,11 @@ export function GradeEntryTable({
                             step="0.5"
                             value={entry.pointsEarned ?? ""}
                             onChange={(e) =>
-                              onPointsChange(student.id, student, e.target.value)
+                              onPointsChange(
+                                student.id,
+                                student,
+                                e.target.value,
+                              )
                             }
                             className={`w-20 rounded border px-2 py-1 ${
                               (entry.pointsEarned ?? 0) >
@@ -189,7 +193,8 @@ export function GradeEntryTable({
                             }
                           />
                           {(entry.pointsEarned ?? 0) >
-                            (getNormeringForStudent(student).maxPoints ?? 0) && (
+                            (getNormeringForStudent(student).maxPoints ??
+                              0) && (
                             <span
                               className="absolute top-1/2 -right-6 -translate-y-1/2 cursor-help text-lg text-red-600"
                               title={`${t("pointsExceedMax")}: ${getNormeringForStudent(student).maxPoints}`}
@@ -208,13 +213,16 @@ export function GradeEntryTable({
                         (g) => g.elementId === element.id,
                       );
                       const elementPoints = elementGrade?.pointsEarned;
-                      const elementPointsValue = elementGrade?.pointsEarned ?? 0;
+                      const elementPointsValue =
+                        elementGrade?.pointsEarned ?? 0;
 
                       return (
                         <td key={element.id} className="p-3">
                           {readOnly ? (
                             <span>
-                              {elementPoints !== undefined ? elementPoints : "-"}
+                              {elementPoints !== undefined
+                                ? elementPoints
+                                : "-"}
                             </span>
                           ) : (
                             <input
@@ -243,7 +251,8 @@ export function GradeEntryTable({
 
                   <td className="p-3">
                     <span className="font-medium">
-                      {entry.calculatedGrade !== null && entry.calculatedGrade !== 0
+                      {entry.calculatedGrade !== null &&
+                      entry.calculatedGrade !== 0
                         ? entry.calculatedGrade.toFixed(2)
                         : "-"}
                     </span>
@@ -277,7 +286,9 @@ export function GradeEntryTable({
                     {entry.finalGrade !== null && entry.finalGrade !== 0 ? (
                       <span
                         className={`font-semibold ${
-                          entry.finalGrade >= 5.5 ? "text-green-600" : "text-red-600"
+                          entry.finalGrade >= 5.5
+                            ? "text-green-600"
+                            : "text-red-600"
                         }`}
                       >
                         {entry.finalGrade.toFixed(1)}

@@ -2,10 +2,7 @@ import { useTranslation } from "react-i18next";
 import { PlusIcon, XIcon, CaretDownIcon } from "@phosphor-icons/react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { useRef, useState, useEffect } from "react";
-import type {
-  CompositeElement,
-  TestType,
-} from "@/services/test-database";
+import type { CompositeElement, TestType } from "@/services/test-database";
 import { Button } from "../ui/button";
 import type { TestFormState } from "./types";
 import { studentDB } from "@/services/student-database";
