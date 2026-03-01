@@ -58,7 +58,7 @@ export function StudentTableHeader({
                 onClick={() => onSort("lastName")}
                 className="hover:text-foreground flex items-center gap-1 text-xs"
               >
-                Achternaam
+                {t("lastName")}
                 {sortColumn === "lastName" && (
                   <span className="text-xs">
                     {sortDirection === "asc" ? "↑" : "↓"}

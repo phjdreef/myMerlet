@@ -50,12 +50,57 @@ export function CurriculumTimelineEditMode({
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
 
   const flushDebounces = useCallback(() => {
-    // Immediately execute all pending debounced updates
-    Object.entries(debounceTimers.current).forEach(([, timer]) => {
+    const updatesByGoal = new Map<string, Partial<StudyGoal>>();
+
+    Object.entries(debounceTimers.current).forEach(([timerKey, timer]) => {
       clearTimeout(timer);
+
+      const separatorIndex = timerKey.indexOf("-");
+      if (separatorIndex <= 0 || separatorIndex >= timerKey.length - 1) {
+        return;
+      }
+
+      const fieldKey = timerKey.slice(0, separatorIndex);
+      const goalId = timerKey.slice(separatorIndex + 1);
+      const updates = updatesByGoal.get(goalId) ?? {};
+
+      if (
+        fieldKey === "title" &&
+        Object.prototype.hasOwnProperty.call(localTitles, goalId)
+      ) {
+        updates.title = localTitles[goalId];
+      }
+
+      if (
+        fieldKey === "desc" &&
+        Object.prototype.hasOwnProperty.call(localDescriptions, goalId)
+      ) {
+        updates.description = localDescriptions[goalId];
+      }
+
+      if (
+        fieldKey === "notes" &&
+        Object.prototype.hasOwnProperty.call(localTeacherNotes, goalId)
+      ) {
+        updates.teacherNotes = localTeacherNotes[goalId];
+      }
+
+      updatesByGoal.set(goalId, updates);
     });
+
     debounceTimers.current = {};
-  }, []);
+
+    updatesByGoal.forEach((updates, goalId) => {
+      if (Object.keys(updates).length > 0) {
+        onUpdateGoal(goalId, updates);
+      }
+    });
+  }, [localDescriptions, localTeacherNotes, localTitles, onUpdateGoal]);
+
+  const handleDoneEditing = useCallback(() => {
+    flushDebounces();
+    onDoneEditing();
+  }, [flushDebounces, onDoneEditing]);
 
   const handleTitleChange = useCallback(
     (goalId: string, value: string) => {
@@ -492,7 +537,7 @@ export function CurriculumTimelineEditMode({
               + {t("addStudyGoal", "Weekdoel")}
             </Button>
           )}
-          <Button size="sm" onClick={onDoneEditing}>
+          <Button size="sm" onClick={handleDoneEditing}>
             {t("save", "Opslaan")}
           </Button>
         </div>

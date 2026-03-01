@@ -43,9 +43,13 @@ export function TestForm({
 
   // Load available levels from selected class groups
   useEffect(() => {
+    let isCancelled = false;
+
     const loadLevels = async () => {
       if (formData.classGroups.length === 0) {
-        setAvailableLevels([]);
+        if (!isCancelled) {
+          setAvailableLevels([]);
+        }
         return;
       }
 
@@ -130,14 +134,22 @@ export function TestForm({
 
         const levelsArray = Array.from(allLevels).sort();
         console.log("Final detected levels:", levelsArray);
-        setAvailableLevels(levelsArray);
+        if (!isCancelled) {
+          setAvailableLevels(levelsArray);
+        }
       } catch (error) {
         console.error("Failed to load levels:", error);
-        setAvailableLevels([]);
+        if (!isCancelled) {
+          setAvailableLevels([]);
+        }
       }
     };
 
-    loadLevels();
+    void loadLevels();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [formData.classGroups, currentSchoolYear]);
 
   const updateField = <Key extends keyof TestFormState>(
