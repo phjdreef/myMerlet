@@ -229,6 +229,20 @@ npm run make
 # - Linux: out/make/deb/x64/
 ```
 
+### macOS Signing & Notarization (recommended)
+
+To avoid macOS Gatekeeper warnings such as “app is damaged and can’t be opened”,
+configure these GitHub repository secrets for release builds:
+
+- `APPLE_CERTIFICATE_P12` (base64 of your Developer ID Application certificate `.p12`)
+- `APPLE_CERTIFICATE_PASSWORD` (password for that `.p12`)
+- `APPLE_ID` (Apple account email)
+- `APPLE_APP_SPECIFIC_PASSWORD` (app-specific password for notarization)
+- `APPLE_TEAM_ID` (Apple Developer Team ID)
+
+When all secrets are present, CI signs and notarizes macOS artifacts automatically.
+If secrets are missing, CI still builds unsigned macOS artifacts.
+
 ## Credits
 
 Built on the [electron-shadcn](https://github.com/LuanRoger/electron-shadcn) template by LuanRoger.

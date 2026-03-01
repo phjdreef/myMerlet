@@ -8,11 +8,27 @@ import { VitePlugin } from "@electron-forge/plugin-vite";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
+const shouldSignAndNotarize = process.env.CI_MAC_SIGN === "true";
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: path.resolve(__dirname, "resources/icons/merlet"),
     extraResource: [path.resolve(__dirname, "resources/icons")],
+    ...(shouldSignAndNotarize
+      ? {
+          osxSign: {
+            hardenedRuntime: true,
+            gatekeeperAssess: false,
+          },
+          osxNotarize: {
+            tool: "notarytool",
+            appleId: process.env.APPLE_ID ?? "",
+            appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD ?? "",
+            teamId: process.env.APPLE_TEAM_ID ?? "",
+          },
+        }
+      : {}),
   },
   rebuildConfig: {},
   makers: [
