@@ -6,6 +6,7 @@ import { updateAppLanguage } from "./helpers/language_helpers";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./utils/routes";
 import { SchoolYearProvider } from "./contexts/SchoolYearContext";
+import { Toaster } from "./components/ui/toaster";
 import "./localization/i18n";
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
   return (
     <SchoolYearProvider>
       <RouterProvider router={router} />
+      <Toaster />
     </SchoolYearProvider>
   );
 }

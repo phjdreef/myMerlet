@@ -7,6 +7,7 @@ import type {
   TestStatistics,
   CompositeElementGrade,
 } from "../../../services/test-database";
+import type { Student } from "../../../services/student-database";
 import {
   calculateCompositeGrade,
   calculateCvTEGrade,
@@ -558,7 +559,7 @@ export function registerTestListeners() {
 
         // Filter by class if classGroup is provided
         if (classGroup) {
-          const studentsDB = readJSONFile<any[]>(
+          const studentsDB = readJSONFile<Student[]>(
             path.join(app.getPath("userData"), "students.json"),
             [],
           );

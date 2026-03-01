@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import type { Student } from "@/services/student-database";
 import { StudentTableView } from "../StudentTableView";
 

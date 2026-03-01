@@ -102,6 +102,13 @@ interface StudentDBAPI {
   ) => Promise<
     APIResponse<import("./services/student-database").StudentPropertyValue[]>
   >;
+  getPropertyValuesBatch: (
+    studentIds: number[],
+    className: string,
+    schoolYear: string,
+  ) => Promise<
+    APIResponse<import("./services/student-database").StudentPropertyValue[]>
+  >;
   savePropertyValue: (
     value: import("./services/student-database").StudentPropertyValue,
   ) => Promise<APIResult>;

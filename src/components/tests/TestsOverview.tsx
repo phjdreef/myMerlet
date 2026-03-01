@@ -1,13 +1,27 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { studentDB } from "../../services/student-database";
 import { TestsManager } from "./TestsManager";
 
 export function TestsOverview() {
   const { t } = useTranslation();
   const location = useLocation();
-  const editTestId = (location.state as any)?.editTestId;
+  const navigate = useNavigate();
+  const editTestId =
+    (location.search as { editTestId?: string } | null)?.editTestId ??
+    (location.state as { editTestId?: string } | null)?.editTestId;
+  const returnClass =
+    (location.search as { returnClass?: string } | null)?.returnClass ??
+    (location.state as { returnClass?: string } | null)?.returnClass;
+
+  const handleReturnToClass = () => {
+    if (!returnClass) return;
+
+    localStorage.setItem("student_directory_selected_class", returnClass);
+    localStorage.setItem("student_directory_view_mode", "grades");
+    navigate({ to: "/students" });
+  };
   const [availableClassGroups, setAvailableClassGroups] = useState<string[]>(
     [],
   );
@@ -69,6 +83,12 @@ export function TestsOverview() {
             enableClassFilter
             variant="global"
             editTestId={editTestId}
+            onSaveSuccess={
+              editTestId && returnClass ? handleReturnToClass : undefined
+            }
+            onCancelEdit={
+              editTestId && returnClass ? handleReturnToClass : undefined
+            }
           />
         )}
       </div>

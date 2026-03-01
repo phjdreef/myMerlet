@@ -138,6 +138,22 @@ class StudentDatabase {
     return response.data as StudentPropertyValue[];
   }
 
+  async getPropertyValuesBatch(
+    studentIds: number[],
+    className: string,
+    schoolYear: string,
+  ): Promise<StudentPropertyValue[]> {
+    const response = await window.studentDBAPI.getPropertyValuesBatch(
+      studentIds,
+      className,
+      schoolYear,
+    );
+    if (!response.success) {
+      throw new Error(response.error || "Failed to get property values batch");
+    }
+    return response.data as StudentPropertyValue[];
+  }
+
   async savePropertyValue(value: StudentPropertyValue): Promise<void> {
     const response = await window.studentDBAPI.savePropertyValue(value);
     if (!response.success) {

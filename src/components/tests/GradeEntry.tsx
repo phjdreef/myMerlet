@@ -6,21 +6,30 @@ import {
   calculateCvTEGrade,
   type Test,
   type StudentGrade,
+  type LevelNormering,
 } from "@/services/test-database";
 import type { Student } from "@/services/student-database";
+import { studentDB } from "@/services/student-database";
 import { evaluateFormulaExpression } from "@/utils/formula-parser";
 import {
   compareStudents,
   formatStudentName,
+  extractShortLevel,
+  LEVEL_OVERRIDE_PROPERTY_ID,
   type StudentSortKey,
 } from "@/helpers/student_helpers";
-import { StudentPhoto } from "@/components/student-directory/StudentPhoto";
 import { Button } from "../ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
+import { useSchoolYear } from "@/contexts/SchoolYearContext";
+import { GradeEntryTable } from "./grade-entry/GradeEntryTable";
+import type { GradeEntryFormEntry } from "./grade-entry/types";
 
 interface GradeEntryProps {
   test: Test;
   students: Student[];
+  className?: string | null;
+  schoolYear?: string;
   onClose: () => void;
   onSave?: () => void;
   readOnly?: boolean;
@@ -29,17 +38,26 @@ interface GradeEntryProps {
 export function GradeEntry({
   test,
   students,
+  className,
+  schoolYear,
   onClose,
   onSave,
   readOnly = false,
 }: GradeEntryProps) {
   const { t } = useTranslation();
+  const { toast } = useToast();
+  const { currentSchoolYear } = useSchoolYear();
+  const resolvedSchoolYear = schoolYear ?? currentSchoolYear;
 
   // Chart data: show three reference n-term lines
   const chartNTerms = useMemo(() => [0, 1.0, 2.0], []);
 
   // Chart modal state
   const [showChart, setShowChart] = useState(false);
+
+  const [levelOverrides, setLevelOverrides] = useState<Map<number, string>>(
+    new Map(),
+  );
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,19 +66,55 @@ export function GradeEntry({
     "achternaam",
   );
 
-  // Form state for each student
-  const [entries, setEntries] = useState<
-    Map<
-      number,
-      {
-        pointsEarned?: number; // For CvTE tests
-        elementGrades?: { elementId: string; pointsEarned: number }[]; // For composite tests
-        manualOverride?: number;
-        calculatedGrade: number | null;
-        finalGrade: number | null;
+  useEffect(() => {
+    if (!className || !resolvedSchoolYear) {
+      setLevelOverrides(new Map());
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadOverrides = async () => {
+      try {
+        const values = await studentDB.getPropertyValuesBatch(
+          students.map((student) => student.id),
+          className,
+          resolvedSchoolYear,
+        );
+
+        const entries = values
+          .filter((value) => value.propertyId === LEVEL_OVERRIDE_PROPERTY_ID)
+          .map((value) => [value.studentId, value.value] as const);
+
+        if (cancelled) return;
+
+        const overrides = new Map<number, string>();
+        entries.forEach(([studentId, value]) => {
+          if (typeof value === "string" && value.trim().length > 0) {
+            overrides.set(studentId, value.trim().toUpperCase());
+          }
+        });
+
+        setLevelOverrides(overrides);
+      } catch (error) {
+        if (!cancelled) {
+          logger.error("Failed to load level overrides:", error);
+          setLevelOverrides(new Map());
+        }
       }
-    >
-  >(new Map());
+    };
+
+    loadOverrides();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [className, resolvedSchoolYear, students]);
+
+  // Form state for each student
+  const [entries, setEntries] = useState<Map<number, GradeEntryFormEntry>>(
+    new Map(),
+  );
 
   // Calculate live statistics from current entries
   const liveStatistics = (() => {
@@ -101,6 +155,43 @@ export function GradeEntry({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [test.id]);
 
+  // Get student level (e.g., "HAVO", "VWO")
+  const getStudentLevel = (student: Student): string | null => {
+    const overrideValue = levelOverrides.get(student.id);
+    if (overrideValue) {
+      return overrideValue;
+    }
+
+    // First try profiel1
+    if (student.profiel1) {
+      return extractShortLevel(student.profiel1);
+    }
+
+    // Extract from studies array
+    if (student.studies && student.studies.length > 0) {
+      return extractShortLevel(student.studies[0]);
+    }
+
+    return null;
+  };
+
+  // Get normering for a student (level-specific or default)
+  const getNormeringForStudent = (student: Student): LevelNormering => {
+    const level = getStudentLevel(student);
+
+    // If level-specific normering exists, use it
+    if (level && test.levelNormerings && test.levelNormerings[level]) {
+      return test.levelNormerings[level];
+    }
+
+    // Otherwise use default normering
+    return {
+      nTerm: test.nTerm ?? 1,
+      maxPoints: test.maxPoints ?? 10,
+      cvteCalculationMode: test.cvteCalculationMode ?? "legacy",
+    };
+  };
+
   const loadGrades = async () => {
     setLoading(true);
     try {
@@ -128,15 +219,24 @@ export function GradeEntry({
     }
   };
 
-  const calculateGrade = (pointsEarned?: number): number | null => {
+  const calculateGrade = (
+    pointsEarned: number | undefined,
+    student: Student,
+  ): number | null => {
     // CvTE formula only
     if (test.testType !== "cvte") return null;
     if (pointsEarned === undefined || !Number.isFinite(pointsEarned))
       return null;
-    if (!test.maxPoints || test.maxPoints <= 0) return null;
-    const nTerm = test.nTerm ?? 1;
-    const mode = test.cvteCalculationMode ?? "legacy";
-    return calculateCvTEGrade(pointsEarned, test.maxPoints, nTerm, mode);
+
+    const normering = getNormeringForStudent(student);
+    if (!normering.maxPoints || normering.maxPoints <= 0) return null;
+
+    return calculateCvTEGrade(
+      pointsEarned,
+      normering.maxPoints,
+      normering.nTerm,
+      normering.cvteCalculationMode,
+    );
   };
 
   const calculateCompositeGrade = (
@@ -220,11 +320,15 @@ export function GradeEntry({
     return Math.round(grade * 10) / 10;
   };
 
-  const handlePointsChange = (studentId: number, points: string) => {
+  const handlePointsChange = (
+    studentId: number,
+    student: Student,
+    points: string,
+  ) => {
     const parsed = points.trim() === "" ? undefined : parseFloat(points);
     const pointsEarned = Number.isFinite(parsed) ? parsed : undefined;
     const calculatedGrade =
-      pointsEarned !== undefined ? calculateGrade(pointsEarned) : null;
+      pointsEarned !== undefined ? calculateGrade(pointsEarned, student) : null;
     const currentEntry = entries.get(studentId);
     const manualOverride = currentEntry?.manualOverride;
     const finalGrade =
@@ -328,9 +432,15 @@ export function GradeEntry({
         }
       }
       onSave?.();
-      onClose();
+      toast({
+        title: t("gradesSavedSuccess"),
+      });
     } catch (error) {
       logger.error("Failed to save grades:", error);
+      toast({
+        title: t("gradesSaveFailed"),
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -422,7 +532,7 @@ export function GradeEntry({
       {/* Header */}
       <div>
         {test.testType === "cvte" ? (
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
             <p className="text-muted-foreground text-sm">
               {t("maxPoints")}: {test.maxPoints} | {t("formula")}:{" "}
               {(() => {
@@ -438,13 +548,16 @@ export function GradeEntry({
               })()}
             </p>
             {test.maxPoints && (
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t("showChart", "Toon Grafiek")}
+                title={t("showChart", "Toon Grafiek")}
                 onClick={() => setShowChart(true)}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-1 text-xs"
               >
                 <ChartBarIcon className="h-4 w-4" />
-                {t("showChart", "Toon Grafiek")}
-              </button>
+              </Button>
             )}
           </div>
         ) : (
@@ -489,223 +602,17 @@ export function GradeEntry({
         </div>
       </div>
 
-      {/* Grade Entry Table */}
-      <div className="flex-1 overflow-hidden rounded-lg border">
-        <div className="h-full overflow-auto pr-2">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 sticky top-0 z-10">
-              <tr>
-                <th className="bg-muted/50 p-3 text-left font-medium">#</th>
-                <th className="bg-muted/50 p-3 text-left font-medium">
-                  {t("photo")}
-                </th>
-                <th className="bg-muted/50 p-3 text-left font-medium">
-                  {t("studentName")}
-                </th>
-                {test.testType === "cvte" ? (
-                  <th className="bg-muted/50 p-3 text-left font-medium">
-                    {t("pointsEarned")}
-                    <span className="text-muted-foreground ml-1 text-xs font-normal">
-                      (max: {test.maxPoints})
-                    </span>
-                  </th>
-                ) : (
-                  test.elements?.map((element) => (
-                    <th
-                      key={element.id}
-                      className="bg-muted/50 p-3 text-left font-medium"
-                    >
-                      {element.name}
-                      <span className="text-muted-foreground ml-1 text-xs font-normal">
-                        (max: {element.maxPoints})
-                      </span>
-                    </th>
-                  ))
-                )}
-                <th className="bg-muted/50 p-3 text-left font-medium">
-                  {t("calculatedGrade")}
-                </th>
-                <th className="bg-muted/50 p-3 text-left font-medium">
-                  {t("manualOverride")}
-                </th>
-                <th className="bg-muted/50 p-3 text-left font-medium">
-                  {t("finalGrade")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAndSortedStudents.map((student, index) => {
-                const entry = entries.get(student.id) || {
-                  pointsEarned: undefined,
-                  elementGrades: [],
-                  calculatedGrade: null,
-                  finalGrade: null,
-                };
-
-                return (
-                  <tr
-                    key={student.id}
-                    className="hover:bg-muted/30 border-t transition-colors"
-                  >
-                    <td className="text-muted-foreground p-3">{index + 1}</td>
-                    <td className="p-3">
-                      <div className="h-10 w-10">
-                        <StudentPhoto student={student} size="small" />
-                      </div>
-                    </td>
-                    <td className="p-3">{formatStudentName(student)}</td>
-
-                    {/* CvTE Test - Single Points Input */}
-                    {test.testType === "cvte" && (
-                      <td className="p-3">
-                        {readOnly ? (
-                          <span>
-                            {entry.pointsEarned !== undefined
-                              ? entry.pointsEarned
-                              : "-"}
-                          </span>
-                        ) : (
-                          <div className="relative">
-                            <input
-                              type="number"
-                              min="0"
-                              max={test.maxPoints}
-                              step="0.5"
-                              value={entry.pointsEarned ?? ""}
-                              onChange={(e) =>
-                                handlePointsChange(student.id, e.target.value)
-                              }
-                              className={`w-20 rounded border px-2 py-1 ${
-                                (entry.pointsEarned ?? 0) >
-                                (test.maxPoints ?? 0)
-                                  ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                                  : ""
-                              }`}
-                              title={
-                                (entry.pointsEarned ?? 0) >
-                                (test.maxPoints ?? 0)
-                                  ? `${t("pointsExceedMax")}: ${test.maxPoints}`
-                                  : undefined
-                              }
-                            />
-                            {(entry.pointsEarned ?? 0) >
-                              (test.maxPoints ?? 0) && (
-                              <span
-                                className="absolute top-1/2 -right-6 -translate-y-1/2 cursor-help text-lg text-red-600"
-                                title={`${t("pointsExceedMax")}: ${test.maxPoints}`}
-                              >
-                                ⚠️
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    )}
-
-                    {/* Composite Test - Multiple Element Inputs */}
-                    {test.testType === "composite" &&
-                      test.elements?.map((element) => {
-                        const elementGrade = entry.elementGrades?.find(
-                          (g) => g.elementId === element.id,
-                        );
-                        const elementPoints = elementGrade?.pointsEarned;
-                        const elementPointsValue =
-                          elementGrade?.pointsEarned ?? 0;
-
-                        return (
-                          <td key={element.id} className="p-3">
-                            {readOnly ? (
-                              <span>
-                                {elementPoints !== undefined
-                                  ? elementPoints
-                                  : "-"}
-                              </span>
-                            ) : (
-                              <input
-                                type="number"
-                                min="0"
-                                max={element.maxPoints}
-                                step="0.5"
-                                value={elementPoints ?? ""}
-                                onChange={(e) =>
-                                  handleElementGradeChange(
-                                    student.id,
-                                    element.id,
-                                    e.target.value,
-                                  )
-                                }
-                                className={`w-20 rounded border px-2 py-1 ${
-                                  elementPointsValue > element.maxPoints
-                                    ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                                    : ""
-                                }`}
-                              />
-                            )}
-                          </td>
-                        );
-                      })}
-
-                    {/* Calculated Grade */}
-                    <td className="p-3">
-                      <span className="font-medium">
-                        {entry.calculatedGrade !== null &&
-                        entry.calculatedGrade !== 0
-                          ? entry.calculatedGrade.toFixed(2)
-                          : "-"}
-                      </span>
-                    </td>
-
-                    {/* Manual Override */}
-                    <td className="p-3">
-                      {readOnly ? (
-                        entry.manualOverride !== undefined ? (
-                          <span>{entry.manualOverride.toFixed(1)}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )
-                      ) : (
-                        <input
-                          type="number"
-                          min="1"
-                          max="10"
-                          step="0.1"
-                          tabIndex={-1}
-                          value={entry.manualOverride ?? ""}
-                          onChange={(e) =>
-                            handleManualOverrideChange(
-                              student.id,
-                              e.target.value,
-                            )
-                          }
-                          className="w-20 rounded border px-2 py-1"
-                          placeholder={t("autoPlaceholder")}
-                        />
-                      )}
-                    </td>
-
-                    {/* Final Grade */}
-                    <td className="p-3">
-                      {entry.finalGrade !== null && entry.finalGrade !== 0 ? (
-                        <span
-                          className={`font-semibold ${
-                            entry.finalGrade >= 5.5
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {entry.finalGrade.toFixed(1)}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <GradeEntryTable
+        test={test}
+        students={filteredAndSortedStudents}
+        entries={entries}
+        readOnly={readOnly}
+        getStudentLevel={getStudentLevel}
+        getNormeringForStudent={getNormeringForStudent}
+        onPointsChange={handlePointsChange}
+        onElementGradeChange={handleElementGradeChange}
+        onManualOverrideChange={handleManualOverrideChange}
+      />
 
       {/* Actions - Sticky at bottom */}
       {!readOnly && (

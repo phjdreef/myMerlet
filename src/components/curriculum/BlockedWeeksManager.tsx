@@ -164,7 +164,7 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
       {isAdding && (
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 rounded-lg border p-4"
+          className="space-y-4 rounded-lg border p-4 pb-20"
         >
           <h4 className="font-medium">
             {editingId ? t("editBlockedWeek") : t("blockWeek")}
@@ -301,7 +301,7 @@ export const BlockedWeeksManager: React.FC<BlockedWeeksManagerProps> = ({
             </div>
           )}
 
-          <div className="flex justify-end gap-2">
+          <div className="bg-background sticky bottom-0 z-10 -mx-4 flex justify-end gap-2 border-t px-4 pt-4 pb-2">
             <Button type="button" variant="outline" onClick={resetForm}>
               {t("cancel")}
             </Button>

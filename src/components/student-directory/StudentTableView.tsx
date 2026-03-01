@@ -7,42 +7,27 @@ import type {
 } from "@/services/student-database";
 import { studentDB } from "@/services/student-database";
 import type { Test, StudentGrade } from "@/services/test-database";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Table, TableBody } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Settings2 } from "lucide-react";
 import { logger } from "@/utils/logger";
 import { PropertyManager } from "./PropertyManager";
-import { StudentPhoto } from "./StudentPhoto";
 import { formatClassName } from "@/utils/class-utils";
+import {
+  extractShortLevel,
+  isValidNiveau,
+  LEVEL_OVERRIDE_OPTIONS,
+  LEVEL_OVERRIDE_PROPERTY_ID,
+} from "@/helpers/student_helpers";
+import { StudentTableHeader } from "./student-table/StudentTableHeader";
+import { StudentTableRow } from "./student-table/StudentTableRow";
+import type { StudentWithExtras } from "./student-table/types";
 
 interface StudentTableViewProps {
   students: Student[];
   selectedClass: string | null;
   loading: boolean;
   totalStudents: number;
-}
-
-interface StudentWithExtras extends Student {
-  propertyValues: Map<string, string | number | boolean>;
-  note: string;
-  recentGrades: Array<{ test: Test; grade: StudentGrade } | null>;
-  average: number | null;
 }
 
 export function StudentTableView({
@@ -147,15 +132,20 @@ export function StudentTableView({
     return parts.join(" ");
   };
 
-  const getNiveau = (student: Student) => {
+  const getDefaultNiveau = (student: Student) => {
     // First try profiel1
-    if (student.profiel1) {
-      return formatClassName(student.profiel1);
+    if (student.profiel1 && isValidNiveau(student.profiel1)) {
+      return formatClassName(extractShortLevel(student.profiel1));
     }
 
     // Extract niveau from studies array (e.g., "MAVO", "HAVO", "VWO", etc.)
     if (student.studies && student.studies.length > 0) {
-      return student.studies.map((s) => formatClassName(s)).join(", ");
+      const validStudies = student.studies.filter(isValidNiveau);
+      if (validStudies.length > 0) {
+        return validStudies
+          .map((s) => formatClassName(extractShortLevel(s)))
+          .join(", ");
+      }
     }
 
     // Fallback: try to extract niveau from class name
@@ -185,6 +175,45 @@ export function StudentTableView({
     }
 
     return "-";
+  };
+
+  const getDefaultNiveauCode = (student: Student): string | null => {
+    const defaultNiveau = getDefaultNiveau(student).toUpperCase().trim();
+
+    if (!defaultNiveau || defaultNiveau === "-") return null;
+
+    const directMatch = LEVEL_OVERRIDE_OPTIONS.find(
+      (option) => option.code === defaultNiveau,
+    );
+    if (directMatch) return directMatch.code;
+
+    const firstToken = defaultNiveau.split(/[/,\s-]+/).find(Boolean);
+    if (firstToken) {
+      const tokenMatch = LEVEL_OVERRIDE_OPTIONS.find(
+        (option) => option.code === firstToken,
+      );
+      if (tokenMatch) return tokenMatch.code;
+    }
+
+    if (defaultNiveau.includes("MAVO")) return "M";
+    if (defaultNiveau.includes("HAVO")) return "H";
+    if (defaultNiveau.includes("ATHENEUM")) return "A";
+    if (defaultNiveau.includes("GYMNASIUM")) return "G";
+
+    return null;
+  };
+
+  const getNiveau = (student: StudentWithExtras | Student) => {
+    const overrideValue =
+      "propertyValues" in student
+        ? student.propertyValues.get(LEVEL_OVERRIDE_PROPERTY_ID)
+        : undefined;
+
+    if (typeof overrideValue === "string" && overrideValue.trim().length > 0) {
+      return overrideValue.trim().toUpperCase();
+    }
+
+    return getDefaultNiveau(student);
   };
 
   // Apply filters and sorting
@@ -428,6 +457,12 @@ export function StudentTableView({
     return "text-red-600 dark:text-red-400 font-semibold";
   };
 
+  const levelOptions = Array.from(
+    new Set(studentsWithExtras.map((student) => getNiveau(student))),
+  )
+    .filter((niveau) => niveau && niveau !== "-")
+    .sort();
+
   if (students.length > 0 && studentsWithExtras.length > 0) {
     logger.debug(
       `Rendering table with ${propertyDefinitions.length} property definitions:`,
@@ -497,329 +532,31 @@ export function StudentTableView({
 
         <div className="overflow-hidden rounded-lg border">
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">{t("photo")}</TableHead>
-                  <TableHead className="min-w-[150px]">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleSort("name")}
-                          className="hover:text-foreground flex items-center gap-1"
-                        >
-                          {t("studentName")}
-                          {sortColumn === "name" && (
-                            <span className="text-xs">
-                              {sortDirection === "asc" ? "↑" : "↓"}
-                            </span>
-                          )}
-                        </button>
-                        <span className="text-muted-foreground">|</span>
-                        <button
-                          onClick={() => handleSort("lastName")}
-                          className="hover:text-foreground flex items-center gap-1 text-xs"
-                        >
-                          Achternaam
-                          {sortColumn === "lastName" && (
-                            <span className="text-xs">
-                              {sortDirection === "asc" ? "↑" : "↓"}
-                            </span>
-                          )}
-                        </button>
-                      </div>
-                      <Input
-                        placeholder={t("filter")}
-                        value={filters.get("name") || ""}
-                        onChange={(e) =>
-                          handleFilterChange("name", e.target.value)
-                        }
-                        className="mb-2 h-7 text-xs"
-                      />
-                    </div>
-                  </TableHead>
-                  <TableHead className="min-w-[100px]">
-                    <div className="space-y-1">
-                      <button
-                        onClick={() => handleSort("level")}
-                        className="hover:text-foreground flex items-center gap-1"
-                      >
-                        {t("level")}
-                        {sortColumn === "level" && (
-                          <span className="text-xs">
-                            {sortDirection === "asc" ? "↑" : "↓"}
-                          </span>
-                        )}
-                      </button>
-                      <Select
-                        value={filters.get("level") || "all"}
-                        onValueChange={(value) =>
-                          handleFilterChange(
-                            "level",
-                            value === "all" ? "" : value,
-                          )
-                        }
-                      >
-                        <SelectTrigger className="mb-2 h-7 text-xs">
-                          <SelectValue placeholder={t("all")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">{t("all")}</SelectItem>
-                          {Array.from(
-                            new Set(
-                              studentsWithExtras.map((s) => getNiveau(s)),
-                            ),
-                          )
-                            .filter((n) => n && n !== "-")
-                            .sort()
-                            .map((niveau) => (
-                              <SelectItem
-                                key={niveau}
-                                value={niveau.toLowerCase()}
-                              >
-                                {niveau}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </TableHead>
-                  {recentTests.length > 0 ? (
-                    <>
-                      {recentTests.map((test) => (
-                        <TableHead key={test.id} className="w-32 text-center">
-                          <div className="flex flex-col">
-                            <span className="text-muted-foreground text-xs font-normal">
-                              {test.name}
-                            </span>
-                          </div>
-                        </TableHead>
-                      ))}
-                      <TableHead className="w-24 text-center">
-                        <button
-                          onClick={() => handleSort("average")}
-                          className="hover:text-foreground mx-auto flex items-center gap-1"
-                        >
-                          {t("studentAverage")}
-                          {sortColumn === "average" && (
-                            <span className="text-xs">
-                              {sortDirection === "asc" ? "↑" : "↓"}
-                            </span>
-                          )}
-                        </button>
-                      </TableHead>
-                    </>
-                  ) : (
-                    <>
-                      <TableHead className="w-24 text-center">
-                        {t("lastGrade1")}
-                      </TableHead>
-                      <TableHead className="w-24 text-center">
-                        {t("lastGrade2")}
-                      </TableHead>
-                      <TableHead className="w-24 text-center">
-                        {t("studentAverage")}
-                      </TableHead>
-                    </>
-                  )}
-                  {propertyDefinitions.map((prop) => (
-                    <TableHead
-                      key={prop.id}
-                      className={
-                        prop.type === "boolean" ? "w-16" : "min-w-[120px]"
-                      }
-                    >
-                      <div className="space-y-1">
-                        <button
-                          onClick={() => handleSort(`prop_${prop.id}`)}
-                          className="hover:text-foreground flex items-center gap-1"
-                        >
-                          {prop.name}
-                          {sortColumn === `prop_${prop.id}` && (
-                            <span className="text-xs">
-                              {sortDirection === "asc" ? "↑" : "↓"}
-                            </span>
-                          )}
-                        </button>
-                        {prop.type !== "boolean" && (
-                          <Input
-                            placeholder={t("filter")}
-                            value={filters.get(`prop_${prop.id}`) || ""}
-                            onChange={(e) =>
-                              handleFilterChange(
-                                `prop_${prop.id}`,
-                                e.target.value,
-                              )
-                            }
-                            className="mb-2 h-7 text-xs"
-                          />
-                        )}
-                      </div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
+            <Table className="[&_tbody_td]:px-2 [&_tbody_td]:py-1.5 [&_thead_th]:px-2 [&_thead_th]:py-2">
+              <StudentTableHeader
+                recentTests={recentTests}
+                propertyDefinitions={propertyDefinitions}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                filters={filters}
+                levelOptions={levelOptions}
+                onSort={handleSort}
+                onFilterChange={handleFilterChange}
+              />
               <TableBody>
                 {filteredAndSortedStudents.map((student) => (
-                  <TableRow key={student.id} className="group/row">
-                    {/* Photo */}
-                    <TableCell className="relative">
-                      <div className="h-10 w-10">
-                        <StudentPhoto student={student} size="small" />
-                      </div>
-                    </TableCell>
-
-                    {/* Name */}
-                    <TableCell className="font-medium">
-                      {getFullName(student)}
-                    </TableCell>
-
-                    {/* Level/Niveau */}
-                    <TableCell className="text-sm">
-                      {getNiveau(student)}
-                    </TableCell>
-
-                    {/* Grades */}
-                    {recentTests.length > 0 ? (
-                      <>
-                        {student.recentGrades.map((gradeInfo, idx) => (
-                          <TableCell key={idx} className="text-center">
-                            {gradeInfo ? (
-                              <span
-                                className={getGradeColor(
-                                  gradeInfo.grade.manualOverride ??
-                                    gradeInfo.grade.calculatedGrade,
-                                )}
-                              >
-                                {(
-                                  gradeInfo.grade.manualOverride ??
-                                  gradeInfo.grade.calculatedGrade
-                                ).toFixed(1)}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-center">
-                          {student.average !== null ? (
-                            <span className={getGradeColor(student.average)}>
-                              {student.average.toFixed(1)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                      </>
-                    ) : (
-                      <>
-                        <TableCell className="text-muted-foreground text-center text-sm">
-                          -
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-center text-sm">
-                          -
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-center text-sm">
-                          -
-                        </TableCell>
-                      </>
-                    )}
-
-                    {/* Custom Properties */}
-                    {propertyDefinitions.map((prop) => (
-                      <TableCell key={prop.id} className="relative z-10">
-                        {prop.type === "boolean" ? (
-                          <Checkbox
-                            checked={
-                              (student.propertyValues.get(
-                                prop.id,
-                              ) as boolean) || false
-                            }
-                            onCheckedChange={(checked: boolean) =>
-                              handlePropertyValueChange(
-                                student,
-                                prop.id,
-                                checked === true,
-                              )
-                            }
-                            className="relative z-10"
-                          />
-                        ) : prop.type === "number" ? (
-                          <Input
-                            type="number"
-                            value={
-                              (student.propertyValues.get(prop.id) as
-                                | number
-                                | string) || ""
-                            }
-                            onChange={(
-                              e: React.ChangeEvent<HTMLInputElement>,
-                            ) =>
-                              handlePropertyValueChange(
-                                student,
-                                prop.id,
-                                parseFloat(e.target.value) || 0,
-                              )
-                            }
-                            className="h-8 w-20"
-                          />
-                        ) : prop.type === "letter" ? (
-                          <Input
-                            type="text"
-                            maxLength={1}
-                            value={
-                              (student.propertyValues.get(prop.id) as string) ||
-                              ""
-                            }
-                            onChange={(
-                              e: React.ChangeEvent<HTMLInputElement>,
-                            ) =>
-                              handlePropertyValueChange(
-                                student,
-                                prop.id,
-                                e.target.value,
-                              )
-                            }
-                            className="h-8 w-12 text-center"
-                          />
-                        ) : prop.type === "longtext" ? (
-                          <textarea
-                            value={
-                              (student.propertyValues.get(prop.id) as string) ||
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleTextareaChange(e, student, prop.id)
-                            }
-                            placeholder="..."
-                            className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full resize-none overflow-hidden rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                            rows={1}
-                            style={{
-                              minHeight: "2.5rem",
-                            }}
-                          />
-                        ) : (
-                          <Input
-                            type="text"
-                            value={
-                              (student.propertyValues.get(prop.id) as string) ||
-                              ""
-                            }
-                            onChange={(
-                              e: React.ChangeEvent<HTMLInputElement>,
-                            ) =>
-                              handlePropertyValueChange(
-                                student,
-                                prop.id,
-                                e.target.value,
-                              )
-                            }
-                            className="h-8"
-                          />
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+                  <StudentTableRow
+                    key={student.id}
+                    student={student}
+                    recentTests={recentTests}
+                    propertyDefinitions={propertyDefinitions}
+                    getFullName={getFullName}
+                    getDefaultNiveau={getDefaultNiveau}
+                    getDefaultNiveauCode={getDefaultNiveauCode}
+                    onPropertyValueChange={handlePropertyValueChange}
+                    onTextareaChange={handleTextareaChange}
+                    getGradeColor={getGradeColor}
+                  />
                 ))}
               </TableBody>
             </Table>

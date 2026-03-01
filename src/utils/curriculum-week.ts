@@ -145,8 +145,6 @@ export function getYearForWeek(
   fallbackYear: number,
 ): number {
   const week = clampWeekNumber(weekNumber);
-  const start = clampWeekNumber(startWeek);
-  const end = clampWeekNumber(endWeek);
   const { startYear, endYear } = schoolYears;
 
   if (!startYear && !endYear) {

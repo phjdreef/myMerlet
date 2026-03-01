@@ -30,6 +30,7 @@ export interface StudyGoal {
   id: string; // unique ID for the goal
   title: string; // e.g., "Week goal title"
   description?: string;
+  teacherNotes?: string; // Class-specific deviation notes (not used in templates)
   weekStart: number; // week number (e.g., 1, 2, 3...)
   weekEnd: number; // week number for multi-week goals
   topicIds: string[]; // Can be 0 to multiple topics

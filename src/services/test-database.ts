@@ -16,6 +16,12 @@ export interface CompositeElement {
   order: number; // Display order
 }
 
+export interface LevelNormering {
+  nTerm: number;
+  maxPoints: number;
+  cvteCalculationMode: CvTECalculationMode;
+}
+
 export interface Test {
   id: string;
   classGroups: string[]; // Class groups this test applies to
@@ -27,9 +33,10 @@ export interface Test {
   schoolYear: string; // e.g., "2024-2025"
 
   // CvTE test properties (only for testType === "cvte")
-  nTerm?: number; // The n-term for CvTE formula (normering)
-  maxPoints?: number; // Maximum points for the entire test
-  cvteCalculationMode?: CvTECalculationMode; // Which formula to use for CvTE tests
+  nTerm?: number; // The n-term for CvTE formula (normering) - used when no level-specific normering exists
+  maxPoints?: number; // Maximum points for the entire test - used when no level-specific normering exists
+  cvteCalculationMode?: CvTECalculationMode; // Which formula to use for CvTE tests - used when no level-specific normering exists
+  levelNormerings?: Record<string, LevelNormering>; // Level-specific normerings (e.g., {"HAVO": {nTerm: 1.0, maxPoints: 50, cvteCalculationMode: "legacy"}, "VWO": {...}})
 
   // Composite test properties (only for testType === "composite")
   elements?: CompositeElement[]; // Array of elements to score

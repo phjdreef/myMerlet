@@ -194,6 +194,28 @@ export function addStudentDBEventListeners() {
   );
 
   ipcMain.handle(
+    STUDENT_DB_CHANNELS.GET_PROPERTY_VALUES_BATCH,
+    async (_, studentIds: number[], className: string, schoolYear: string) => {
+      try {
+        const values = await mainStudentDB.getPropertyValuesBatch(
+          studentIds,
+          className,
+          schoolYear,
+        );
+        return { success: true, data: values };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to get property values batch",
+        };
+      }
+    },
+  );
+
+  ipcMain.handle(
     STUDENT_DB_CHANNELS.SAVE_PROPERTY_VALUE,
     async (_, value: StudentPropertyValue) => {
       try {

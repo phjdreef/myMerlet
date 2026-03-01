@@ -277,7 +277,20 @@ async function migrateParagraphStudyGoals(): Promise<void> {
 
   try {
     const content = fs.readFileSync(curriculumPath, "utf-8");
-    const data = JSON.parse(content);
+    type CurriculumParagraph = {
+      id: string;
+      studyGoals?: string;
+    };
+    type CurriculumStudyGoal = {
+      paragraphIds?: string[];
+      title?: string;
+      description?: string;
+    };
+    type CurriculumPlanMigration = {
+      paragraphs?: CurriculumParagraph[];
+      studyGoals?: CurriculumStudyGoal[];
+    };
+    const data = JSON.parse(content) as { plans?: CurriculumPlanMigration[] };
     let migrated = 0;
 
     if (data.plans && Array.isArray(data.plans)) {
@@ -287,7 +300,7 @@ async function migrateParagraphStudyGoals(): Promise<void> {
         // For each paragraph, find studyGoals that reference it
         for (const paragraph of plan.paragraphs) {
           const paragraphGoals = plan.studyGoals.filter(
-            (goal: any) =>
+            (goal) =>
               goal.paragraphIds &&
               goal.paragraphIds.includes(paragraph.id) &&
               (!goal.title || goal.title.trim() === ""),
@@ -296,8 +309,8 @@ async function migrateParagraphStudyGoals(): Promise<void> {
           if (paragraphGoals.length > 0) {
             // Combine all paragraph goals into one rich text field
             const combinedGoals = paragraphGoals
-              .map((goal: any) => goal.description || "")
-              .filter((desc: string) => desc.trim() !== "")
+              .map((goal) => goal.description || "")
+              .filter((desc) => desc.trim() !== "")
               .join("<br><br>");
 
             if (combinedGoals) {
@@ -307,7 +320,7 @@ async function migrateParagraphStudyGoals(): Promise<void> {
 
             // Remove these goals from the studyGoals array
             plan.studyGoals = plan.studyGoals.filter(
-              (goal: any) => !paragraphGoals.includes(goal),
+              (goal) => !paragraphGoals.includes(goal),
             );
           }
         }

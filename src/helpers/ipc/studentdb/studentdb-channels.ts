@@ -12,6 +12,7 @@ export const STUDENT_DB_CHANNELS = {
   DELETE_PROPERTY_DEFINITION: "studentDB:deletePropertyDefinition",
   // Property Values
   GET_PROPERTY_VALUES: "studentDB:getPropertyValues",
+  GET_PROPERTY_VALUES_BATCH: "studentDB:getPropertyValuesBatch",
   SAVE_PROPERTY_VALUE: "studentDB:savePropertyValue",
   // Notes
   GET_NOTE: "studentDB:getNote",

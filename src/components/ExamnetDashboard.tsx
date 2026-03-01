@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { logger } from "../utils/logger";
 import { ErrorBanner } from "./ui/error-banner";
-import LoadingSpinner from "./LoadingSpinner";
 
 interface ExamnetTest {
   id: number;

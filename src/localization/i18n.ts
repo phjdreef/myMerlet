@@ -266,6 +266,8 @@ i18n.use(initReactI18next).init({
         // Student Table View
         studentName: "Naam",
         level: "Niveau",
+        defaultLevelOption: "Standaard",
+        defaultLevelLabel: "Standaard (Magister)",
         lastGrade1: "Cijfer 1",
         lastGrade2: "Cijfer 2",
         studentAverage: "Gemiddelde",
@@ -327,7 +329,31 @@ i18n.use(initReactI18next).init({
           "Gewicht wordt alleen gebruikt als er geen aangepaste formule is ingesteld. Bij een formule wordt dit veld genegeerd.",
         clickToInsert: "Klik om dit element in de formule in te voegen",
         nameElementFirst: "Geef eerst een naam aan dit element",
-        backToTests: "Terug naar toetsen",
+        backToTests: "Terug naar lijst",
+        levelSpecificNormerings: "Niveau-specifieke Normeringen",
+        levelSpecificNormeringsHelper:
+          "Definieer verschillende normeringen per niveau (bijv. HAVO/VWO). Leerlingen zonder niveau-specifieke normering gebruiken de standaard normering hierboven.",
+        defaultNormering: "Standaard Normering",
+        defaultNormeringHelper:
+          "Deze normering wordt gebruikt voor leerlingen zonder niveau-specifieke normering.",
+        normering: "Normering",
+        noLevelNormeringsYet:
+          "Nog geen niveau-specifieke normeringen toegevoegd.",
+        allLevelsMustBeFilled:
+          "Alle gedetecteerde niveaus moeten ingevuld worden",
+        viewChart: "Bekijk grafiek",
+        gradeCalculationChart: "Cijferberekening grafiek",
+        hide: "Verberg",
+        show: "Toon",
+        levelSpecific: "niveau-specifiek",
+        levelSpecificNormeringActive: "Niveau-specifieke normering actief",
+        missingLevelNormering:
+          "Geen normering gevonden voor dit niveau. Standaard normering wordt gebruikt.",
+        noLevelDetected:
+          "Geen niveau gedetecteerd voor deze leerling. Standaard normering wordt gebruikt.",
+        detectedLevels: "Gedetecteerde niveaus",
+        singleLevelDetected:
+          "Slechts één niveau gevonden, geen niveau-specifieke normeringen nodig",
         selectClassLabel: "Kies een klas",
         studentsInClass: "{{count}} leerlingen in deze klas",
         selectClassForTests: "Selecteer een klas om toetsen te beheren.",
@@ -352,6 +378,8 @@ i18n.use(initReactI18next).init({
         points: "punten",
         saving: "Opslaan...",
         saveAllGrades: "Alle Cijfers Opslaan",
+        gradesSavedSuccess: "Cijfers succesvol opgeslagen.",
+        gradesSaveFailed: "Opslaan van cijfers is mislukt.",
         unsavedChangesWarning:
           "Je hebt onopgeslagen wijzigingen. Wil je de cijfers eerst opslaan? Klik op 'Annuleren' om terug te gaan en te bewaren, of 'OK' om door te gaan zonder op te slaan.",
         searchStudents: "Zoek leerlingen...",
@@ -420,7 +448,7 @@ i18n.use(initReactI18next).init({
         redo: "Opnieuw (Ctrl+Y)",
         autoPlaceholder: "auto",
         untitledGoal: "Naamloos leerdoel",
-        doneEditing: "Klaar met bewerken",
+        doneEditing: "Opslaan",
         emptyWeek: "Geen planning",
         beginTyping: "Begin met typen...",
         weekGoalTitlePlaceholder: "Titel van het leerdoel",
@@ -691,6 +719,8 @@ i18n.use(initReactI18next).init({
         // Student Table View
         studentName: "Name",
         level: "Level",
+        defaultLevelOption: "Default",
+        defaultLevelLabel: "Default (Magister)",
         lastGrade1: "Grade 1",
         lastGrade2: "Grade 2",
         studentAverage: "Average",
@@ -753,6 +783,28 @@ i18n.use(initReactI18next).init({
         clickToInsert: "Click to insert this element into the formula",
         nameElementFirst: "Name this element first",
         backToTests: "Back to tests",
+        levelSpecificNormerings: "Level-specific Grading Scales",
+        levelSpecificNormeringsHelper:
+          "Define different grading scales per level (e.g. HAVO/VWO). Students without a level-specific scale will use the default scale above.",
+        defaultNormering: "Default Grading Scale",
+        defaultNormeringHelper:
+          "This grading scale is used for students without a level-specific scale.",
+        normering: "Grading Scale",
+        noLevelNormeringsYet: "No level-specific grading scales added yet.",
+        allLevelsMustBeFilled: "All detected levels must be filled in",
+        viewChart: "View chart",
+        gradeCalculationChart: "Grade calculation chart",
+        hide: "Hide",
+        show: "Show",
+        levelSpecific: "level-specific",
+        levelSpecificNormeringActive: "Level-specific grading scale active",
+        missingLevelNormering:
+          "No grading scale found for this level. Default scale will be used.",
+        noLevelDetected:
+          "No level detected for this student. Default scale will be used.",
+        detectedLevels: "Detected levels",
+        singleLevelDetected:
+          "Only one level found, no level-specific grading scales needed",
         selectClassLabel: "Select class",
         studentsInClass: "{{count}} students in this class",
         selectClassForTests: "Select a class to manage tests.",
@@ -777,6 +829,8 @@ i18n.use(initReactI18next).init({
         points: "points",
         saving: "Saving...",
         saveAllGrades: "Save All Grades",
+        gradesSavedSuccess: "Grades saved successfully.",
+        gradesSaveFailed: "Failed to save grades.",
         unsavedChangesWarning:
           "You have unsaved changes. Do you want to save the grades first? Click 'Cancel' to go back and save, or 'OK' to proceed without saving.",
         searchStudents: "Search students...",
@@ -844,7 +898,7 @@ i18n.use(initReactI18next).init({
         redo: "Redo (Ctrl+Y)",
         autoPlaceholder: "auto",
         untitledGoal: "Untitled goal",
-        doneEditing: "Done editing",
+        doneEditing: "Save",
         emptyWeek: "No planning",
         beginTyping: "Start typing...",
         weekGoalTitlePlaceholder: "Study goal title",

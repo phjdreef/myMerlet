@@ -6,12 +6,6 @@ import {
   formatStudentName,
 } from "@/helpers/student_helpers";
 
-// Simple cache to prevent duplicate photo requests
-const photoCache = new Map<
-  string,
-  Promise<{ success: boolean; data?: string; error?: string }>
->();
-
 interface StudentPhotoProps {
   student: Student;
   size?: "small" | "normal" | "large";
@@ -55,10 +49,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
           setImageLoading(false);
         }
       } catch (err) {
-        logger.debug(
-          `💥 Failed to load photo for student ${student.externeId}:`,
-          err,
-        );
+        logger.debug(`💥 Failed to load photo for student ${student.id}:`, err);
         if (mounted) {
           setImageError(true);
         }
@@ -74,7 +65,7 @@ export function StudentPhoto({ student, size = "normal" }: StudentPhotoProps) {
     return () => {
       mounted = false;
     };
-  }, [student.id, student.externeId]);
+  }, [student.id]);
 
   const sizeClasses =
     size === "small"

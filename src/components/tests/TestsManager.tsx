@@ -24,6 +24,8 @@ interface TestsManagerProps {
   availableClassGroups: string[];
   onSelectTest?: (test: Test) => void;
   onRequestClassGroupFocus?: (classGroup: string) => void;
+  onSaveSuccess?: () => void;
+  onCancelEdit?: () => void;
   variant?: "class" | "global";
   enableSearch?: boolean;
   enableClassFilter?: boolean;
@@ -35,6 +37,8 @@ export function TestsManager({
   availableClassGroups,
   onSelectTest,
   onRequestClassGroupFocus,
+  onSaveSuccess,
+  onCancelEdit,
   variant = "class",
   enableSearch = false,
   enableClassFilter = false,
@@ -64,6 +68,7 @@ export function TestsManager({
     nTerm: 1,
     maxPoints: 10,
     cvteCalculationMode: "legacy",
+    levelNormerings: {},
     // Composite properties
     elements: [] as TestFormState["elements"],
     customFormula: "", // Custom formula for composite tests
@@ -170,6 +175,7 @@ export function TestsManager({
           if (!includesCurrentGroup && primaryGroup) {
             onRequestClassGroupFocus?.(primaryGroup);
           }
+          onSaveSuccess?.();
         }
       } else {
         // Create new test
@@ -203,6 +209,7 @@ export function TestsManager({
       nTerm: normalizedTest.nTerm || 1,
       maxPoints: normalizedTest.maxPoints || 10,
       cvteCalculationMode: normalizedTest.cvteCalculationMode || "official",
+      levelNormerings: normalizedTest.levelNormerings || {},
       elements: normalizedTest.elements || [],
       customFormula: normalizedTest.customFormula || "",
       classGroups: normalizedTest.classGroups,
@@ -227,6 +234,14 @@ export function TestsManager({
     setEditingTest(null);
     setIsCreating(false);
     setFormError(null);
+  };
+
+  const handleFormCancel = () => {
+    if (editingTest && onCancelEdit) {
+      onCancelEdit();
+      return;
+    }
+    resetForm();
   };
 
   const formatDate = (dateString: string) => {
@@ -366,7 +381,7 @@ export function TestsManager({
           formData={formData}
           setFormData={setFormData}
           onSubmit={handleSubmit}
-          onCancel={resetForm}
+          onCancel={handleFormCancel}
           classOptions={classOptions}
           onToggleClass={toggleClassSelection}
           formError={formError}
@@ -435,12 +450,42 @@ export function TestsManager({
 
                       {/* CvTE Test Details */}
                       {test.testType === "cvte" && (
-                        <div className="text-muted-foreground mt-2 flex gap-4 text-xs">
-                          <span>
-                            {t("maxPoints")}: {test.maxPoints}
-                          </span>
-                          <span>n = {test.nTerm}</span>
-                        </div>
+                        <>
+                          {/* Standard normering - only show if no level-specific normeringen */}
+                          {(!test.levelNormerings ||
+                            Object.keys(test.levelNormerings).length === 0) && (
+                            <div className="text-muted-foreground mt-2 flex gap-4 text-xs">
+                              <span>
+                                {t("maxPoints")}: {test.maxPoints}
+                              </span>
+                              <span>n = {test.nTerm}</span>
+                            </div>
+                          )}
+
+                          {/* Level-specific normeringen */}
+                          {test.levelNormerings &&
+                            Object.keys(test.levelNormerings).length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                <div className="text-muted-foreground text-xs font-medium">
+                                  {t("levelSpecificNormerings")}:
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {Object.entries(test.levelNormerings).map(
+                                    ([level, normering]) => (
+                                      <span
+                                        key={level}
+                                        className="rounded bg-blue-100 px-2 py-1 text-xs dark:bg-blue-900"
+                                      >
+                                        <strong>{level}</strong>:{" "}
+                                        {normering.maxPoints}p, n=
+                                        {normering.nTerm}
+                                      </span>
+                                    ),
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                        </>
                       )}
 
                       {/* Composite Test Details */}

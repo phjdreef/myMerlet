@@ -46,7 +46,6 @@ export function CurriculumTimelineReadMode({
   onDragLeave,
   onDrop,
   isDragOver,
-  isDragging,
 }: CurriculumTimelineReadModeProps) {
   const { t } = useTranslation();
 
@@ -141,7 +140,6 @@ export function CurriculumTimelineReadMode({
                 size="sm"
                 variant="ghost"
                 onClick={onAddGoal}
-                className="opacity-0 transition-opacity group-hover:opacity-100"
                 title={t("addStudyGoal")}
               >
                 <PlusIcon className="h-4 w-4" />
@@ -171,6 +169,17 @@ export function CurriculumTimelineReadMode({
                   {goal.description && (
                     <div className="text-sm whitespace-pre-line text-gray-600 dark:text-gray-300">
                       {goal.description}
+                    </div>
+                  )}
+
+                  {plan.isTemplate !== true && goal.teacherNotes?.trim() && (
+                    <div className="rounded-md border border-amber-200/70 bg-amber-50/70 p-2 text-sm dark:border-amber-800/40 dark:bg-amber-900/20">
+                      <span className="font-semibold text-amber-800 dark:text-amber-300">
+                        {t("notes", "Opmerkingen")}:
+                      </span>
+                      <span className="ml-2 whitespace-pre-line text-amber-900 dark:text-amber-200">
+                        {goal.teacherNotes}
+                      </span>
                     </div>
                   )}
 

@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
+import { useSchoolYear } from "@/contexts/SchoolYearContext";
 import type { Test, TestStatistics } from "../../services/test-database";
 import type { Student } from "../../services/student-database";
 import { GradeEntry } from "../tests/GradeEntry";
 import { Button } from "../ui/button";
-import { ChartBarIcon } from "@phosphor-icons/react";
+import {
+  ArrowLeftIcon,
+  ChartBarIcon,
+  PencilSimpleIcon,
+} from "@phosphor-icons/react";
 import { normalizeTestRecord } from "../../helpers/tests/normalize-test";
 
 interface ClassGradesTabProps {
@@ -19,6 +24,7 @@ export function ClassGradesTab({
 }: ClassGradesTabProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { currentSchoolYear } = useSchoolYear();
   const [tests, setTests] = useState<Test[]>([]);
   const [statistics, setStatistics] = useState<Map<string, TestStatistics>>(
     new Map(),
@@ -58,7 +64,15 @@ export function ClassGradesTab({
         const result = await window.testAPI.getTestsForClassGroup(classGroup);
         if (result.success && result.data) {
           const normalized = (result.data as Test[]).map(normalizeTestRecord);
-          normalized.sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+          normalized.sort((a, b) => {
+            const aDate = new Date(
+              a.date || a.updatedAt || a.createdAt || 0,
+            ).getTime();
+            const bDate = new Date(
+              b.date || b.updatedAt || b.createdAt || 0,
+            ).getTime();
+            return bDate - aDate;
+          });
           setTests(normalized);
 
           const statsMap = new Map<string, TestStatistics>();
@@ -108,7 +122,6 @@ export function ClassGradesTab({
 
   const handleGradesSaved = () => {
     if (!selectedClass) return;
-    setSelectedTest(null);
     setSelectedTestMode("view");
     void loadTests(selectedClass);
   };
@@ -133,7 +146,7 @@ export function ClassGradesTab({
               {(selectedTest.classGroups || []).slice().join(", ")}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {isReadOnly ? (
               <Button onClick={() => setSelectedTestMode("edit")}>
                 {t("enterGrades")}
@@ -148,12 +161,32 @@ export function ClassGradesTab({
             )}
             <Button
               variant="outline"
+              size="icon"
+              aria-label={t("editTest")}
+              title={t("editTest")}
+              onClick={() => {
+                navigate({
+                  to: "/tests",
+                  search: {
+                    editTestId: selectedTest.id,
+                    returnClass: selectedClass ?? undefined,
+                  },
+                });
+              }}
+            >
+              <PencilSimpleIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={t("backToTests")}
+              title={t("backToTests")}
               onClick={() => {
                 setSelectedTest(null);
                 setSelectedTestMode("view");
               }}
             >
-              {t("backToTests")}
+              <ArrowLeftIcon className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -162,6 +195,8 @@ export function ClassGradesTab({
             key={`${selectedTest.id}-${selectedTestMode}`}
             test={selectedTest}
             students={classStudents}
+            className={selectedClass}
+            schoolYear={currentSchoolYear}
             onClose={() => {
               setSelectedTest(null);
               setSelectedTestMode("view");
@@ -336,7 +371,6 @@ export function ClassGradesTab({
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        variant="outline"
                         onClick={(event) => {
                           event.stopPropagation();
                           setSelectedTest(test);
@@ -346,17 +380,22 @@ export function ClassGradesTab({
                         {t("enterGrades")}
                       </Button>
                       <Button
-                        size="sm"
-                        variant="ghost"
+                        size="icon"
+                        variant="outline"
+                        aria-label={t("editTest")}
+                        title={t("editTest")}
                         onClick={(event) => {
                           event.stopPropagation();
                           navigate({
                             to: "/tests",
-                            search: { editTestId: test.id },
+                            search: {
+                              editTestId: test.id,
+                              returnClass: selectedClass ?? undefined,
+                            },
                           });
                         }}
                       >
-                        {t("editTest")}
+                        <PencilSimpleIcon className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>

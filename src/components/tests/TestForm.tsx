@@ -1,11 +1,18 @@
 import { useTranslation } from "react-i18next";
-import { PlusIcon, XIcon } from "@phosphor-icons/react";
+import { PlusIcon, XIcon, CaretDownIcon } from "@phosphor-icons/react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { useRef, useMemo } from "react";
-import { CvTEChart } from "./CvTEChart";
+import { useRef, useState, useEffect } from "react";
 import type { CompositeElement, TestType } from "@/services/test-database";
 import { Button } from "../ui/button";
 import type { TestFormState } from "./types";
+import { studentDB } from "@/services/student-database";
+import {
+  extractShortLevel,
+  isValidNiveau,
+  LEVEL_OVERRIDE_PROPERTY_ID,
+} from "@/helpers/student_helpers";
+import { useSchoolYear } from "@/contexts/SchoolYearContext";
+import { TestFormCvteSection } from "./test-form/TestFormCvteSection";
 
 interface TestFormProps {
   formData: TestFormState;
@@ -29,10 +36,121 @@ export function TestForm({
   isEditing,
 }: TestFormProps) {
   const { t } = useTranslation();
+  const { currentSchoolYear } = useSchoolYear();
   const formulaInputRef = useRef<HTMLInputElement>(null);
+  const [showDescription, setShowDescription] = useState(false);
+  const [availableLevels, setAvailableLevels] = useState<string[]>([]);
 
-  // Chart data: show current n-term and two reference lines
-  const chartNTerms = useMemo(() => [0, formData.nTerm, 2.0], [formData.nTerm]);
+  // Load available levels from selected class groups
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadLevels = async () => {
+      if (formData.classGroups.length === 0) {
+        if (!isCancelled) {
+          setAvailableLevels([]);
+        }
+        return;
+      }
+
+      try {
+        // Get all students and filter by selected classes
+        const allLevels = new Set<string>();
+
+        console.log("Loading levels for classes:", formData.classGroups);
+
+        const allStudents = await studentDB.getAllStudents();
+        console.log("Total students in database:", allStudents.length);
+
+        for (const classGroup of formData.classGroups) {
+          // Filter students that have this class
+          const studentsInClass = allStudents.filter(
+            (student) =>
+              student.klassen && student.klassen.includes(classGroup),
+          );
+
+          console.log(`Students for ${classGroup}:`, studentsInClass.length);
+
+          if (currentSchoolYear) {
+            const overrideValues = await Promise.all(
+              studentsInClass.map(async (student) => {
+                const values = await studentDB.getPropertyValues(
+                  student.id,
+                  classGroup,
+                  currentSchoolYear,
+                );
+                return values.find(
+                  (value) => value.propertyId === LEVEL_OVERRIDE_PROPERTY_ID,
+                )?.value;
+              }),
+            );
+
+            overrideValues.forEach((value) => {
+              if (typeof value === "string" && value.trim().length > 0) {
+                allLevels.add(value.trim().toUpperCase());
+              }
+            });
+          }
+
+          // Extract levels from students
+          studentsInClass.forEach((student) => {
+            if (student.profiel1 && isValidNiveau(student.profiel1)) {
+              const level = extractShortLevel(student.profiel1);
+              console.log("Found profiel1:", level);
+              allLevels.add(level);
+            }
+            if (student.studies && student.studies.length > 0) {
+              student.studies.forEach((study) => {
+                if (isValidNiveau(study)) {
+                  const level = extractShortLevel(study);
+                  console.log("Found study:", level);
+                  allLevels.add(level);
+                }
+              });
+            }
+          });
+        }
+
+        // Only use class name detection if no levels found from students
+        // and only for very obvious patterns
+        if (allLevels.size === 0) {
+          formData.classGroups.forEach((className) => {
+            const normalized = className.toLowerCase();
+            // Only match complete words or very clear patterns
+            if (/\bvwo\b/.test(normalized)) {
+              allLevels.add("VWO");
+            }
+            if (/\bhavo\b/.test(normalized)) {
+              allLevels.add("HAVO");
+            }
+            if (/\bmavo\b/.test(normalized)) {
+              allLevels.add("MAVO");
+            }
+            if (/\bvmbo\b/.test(normalized)) {
+              allLevels.add("VMBO");
+            }
+          });
+        }
+
+        const levelsArray = Array.from(allLevels).sort();
+        console.log("Final detected levels:", levelsArray);
+        if (!isCancelled) {
+          setAvailableLevels(levelsArray);
+        }
+      } catch (error) {
+        console.error("Failed to load levels:", error);
+        if (!isCancelled) {
+          setAvailableLevels([]);
+        }
+      }
+    };
+
+    void loadLevels();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [formData.classGroups, currentSchoolYear]);
 
   const updateField = <Key extends keyof TestFormState>(
     key: Key,
@@ -102,7 +220,7 @@ export function TestForm({
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border p-4">
+    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border p-4 pb-20">
       <h3 className="font-medium">
         {isEditing ? t("editTest") : t("newTest")}
       </h3>
@@ -119,6 +237,30 @@ export function TestForm({
             className="w-full rounded border px-3 py-2"
             required
           />
+        </div>
+
+        <div className="col-span-2">
+          <button
+            type="button"
+            className="mb-1 inline-flex items-center gap-1 text-sm font-medium"
+            aria-expanded={showDescription}
+            onClick={() => setShowDescription((prev) => !prev)}
+          >
+            <span>{t("description")}</span>
+            <CaretDownIcon
+              className={`h-4 w-4 transition-transform ${showDescription ? "rotate-180" : ""}`}
+            />
+          </button>
+          {showDescription && (
+            <textarea
+              value={formData.description}
+              onChange={(event) =>
+                updateField("description", event.target.value)
+              }
+              className="w-full rounded border px-3 py-2"
+              rows={3}
+            />
+          )}
         </div>
 
         <div className="col-span-2">
@@ -217,72 +359,11 @@ export function TestForm({
         </div>
 
         {formData.testType === "cvte" && (
-          <>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                {t("maxPoints")}
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={formData.maxPoints}
-                onChange={(event) =>
-                  updateField("maxPoints", parseInt(event.target.value, 10))
-                }
-                className="w-full rounded border px-3 py-2"
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                {t("nTerm")} (n)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={formData.nTerm}
-                onChange={(event) =>
-                  updateField("nTerm", parseFloat(event.target.value))
-                }
-                className="w-full rounded border px-3 py-2"
-                required
-              />
-              <p className="text-muted-foreground mt-1 text-xs">
-                {t("nTermHelp")}
-              </p>
-            </div>
-
-            <div className="col-span-2">
-              <label className="mb-1 block text-sm font-medium">
-                {t("cvteCalculation")}
-              </label>
-              <select
-                value={formData.cvteCalculationMode}
-                onChange={(event) =>
-                  updateField(
-                    "cvteCalculationMode",
-                    event.target.value as TestFormState["cvteCalculationMode"],
-                  )
-                }
-                className="w-full rounded border px-3 py-2"
-              >
-                <option value="legacy">{t("cvteCalculationLegacy")}</option>
-                <option value="official">{t("cvteCalculationOfficial")}</option>
-                <option value="main">{t("cvteCalculationMain")}</option>
-              </select>
-            </div>
-
-            {formData.maxPoints > 0 && (
-              <div className="col-span-2">
-                <CvTEChart
-                  maxPoints={formData.maxPoints}
-                  nTerms={chartNTerms}
-                  mode={formData.cvteCalculationMode}
-                />
-              </div>
-            )}
-          </>
+          <TestFormCvteSection
+            formData={formData}
+            setFormData={setFormData}
+            availableLevels={availableLevels}
+          />
         )}
 
         {formData.testType === "composite" && (
@@ -445,21 +526,9 @@ export function TestForm({
             )}
           </div>
         )}
-
-        <div className="col-span-2">
-          <label className="mb-1 block text-sm font-medium">
-            {t("description")}
-          </label>
-          <textarea
-            value={formData.description}
-            onChange={(event) => updateField("description", event.target.value)}
-            className="w-full rounded border px-3 py-2"
-            rows={3}
-          />
-        </div>
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="bg-background sticky bottom-0 z-10 -mx-4 flex justify-end gap-2 border-t px-4 pt-4 pb-2">
         <Button type="submit">{t("save")}</Button>
         <Button type="button" variant="outline" onClick={onCancel}>
           {t("cancel")}
