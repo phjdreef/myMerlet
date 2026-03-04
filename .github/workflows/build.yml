@@ -61,25 +61,23 @@ jobs:
             exit 1
           fi
 
-          mapfile -t dmg_files < <(find out/make -type f -name "*.dmg")
-          if [[ ${#dmg_files[@]} -eq 0 ]]; then
+          dmg_count="$(find out/make -type f -name "*.dmg" | wc -l | tr -d ' ')"
+          if [[ "$dmg_count" -eq 0 ]]; then
             echo "No .dmg artifacts found under out/make"
             find out/make -maxdepth 4 -type f | sort
             exit 1
           fi
 
-          mapfile -t zip_candidates < <(find out/make -type f -name "*.zip")
-          zip_file=""
-          for file in "${zip_candidates[@]}"; do
+          zip_file="$(find out/make -type f -name "*.zip" | while IFS= read -r file; do
             if [[ "$file" == *"/darwin/${{ matrix.arch }}/"* ]]; then
-              zip_file="$file"
+              echo "$file"
               break
             fi
-          done
+          done)"
 
           if [[ -z "$zip_file" ]]; then
             echo "No macOS zip found for darwin/${{ matrix.arch }}"
-            printf '%s\n' "${zip_candidates[@]}"
+            find out/make -type f -name "*.zip" | sort
             exit 1
           fi
 
