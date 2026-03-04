@@ -48,6 +48,90 @@ jobs:
         if: matrix.platform == 'win32'
         run: npm run make
 
+      - name: Validate macOS artifacts
+        if: matrix.platform == 'darwin'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Validating macOS artifacts for arch=${{ matrix.arch }}"
+
+          if [[ ! -d out/make ]]; then
+            echo "Expected out/make directory but it does not exist."
+            exit 1
+          fi
+
+          mapfile -t dmg_files < <(find out/make -type f -name "*.dmg")
+          if [[ ${#dmg_files[@]} -eq 0 ]]; then
+            echo "No .dmg artifacts found under out/make"
+            find out/make -maxdepth 4 -type f | sort
+            exit 1
+          fi
+
+          mapfile -t zip_candidates < <(find out/make -type f -name "*.zip")
+          zip_file=""
+          for file in "${zip_candidates[@]}"; do
+            if [[ "$file" == *"/darwin/${{ matrix.arch }}/"* ]]; then
+              zip_file="$file"
+              break
+            fi
+          done
+
+          if [[ -z "$zip_file" ]]; then
+            echo "No macOS zip found for darwin/${{ matrix.arch }}"
+            printf '%s\n' "${zip_candidates[@]}"
+            exit 1
+          fi
+
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+
+          ditto -xk "$zip_file" "$temp_dir"
+
+          app_binary="$(find "$temp_dir" -type f -path "*.app/Contents/MacOS/*" | head -n 1 || true)"
+          if [[ -z "$app_binary" ]]; then
+            echo "No app binary found in extracted zip: $zip_file"
+            find "$temp_dir" -maxdepth 5 -type f | sort
+            exit 1
+          fi
+
+          binary_archs="$(lipo -archs "$app_binary")"
+          expected_arch="x86_64"
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            expected_arch="arm64"
+          fi
+
+          echo "Binary architectures: $binary_archs"
+          if [[ "$binary_archs" != *"$expected_arch"* ]]; then
+            echo "Binary architecture check failed. Expected: $expected_arch"
+            echo "Binary: $app_binary"
+            exit 1
+          fi
+
+          echo "macOS artifact validation passed."
+
+      - name: Validate Windows artifacts
+        if: matrix.platform == 'win32'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'out/make')) {
+            throw 'Expected out/make directory but it does not exist.'
+          }
+
+          $exeArtifacts = @(Get-ChildItem -Path out/make -Recurse -Filter *.exe)
+          if ($exeArtifacts.Count -eq 0) {
+            throw 'No .exe artifacts found under out/make.'
+          }
+
+          Write-Host "Found $($exeArtifacts.Count) EXE artifact(s)."
+
+          $msiArtifacts = @(Get-ChildItem -Path out/make -Recurse -Filter *.msi)
+          if ($msiArtifacts.Count -gt 0) {
+            Write-Host "Found $($msiArtifacts.Count) MSI artifact(s)."
+          } else {
+            Write-Host 'No MSI artifacts found (allowed when maker does not produce MSI).'
+          }
+
       - name: Upload macOS artifacts
         if: matrix.platform == 'darwin'
         uses: actions/upload-artifact@v4
