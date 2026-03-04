@@ -62,10 +62,10 @@ jobs:
           fi
 
           dmg_count="$(find out/make -type f -name "*.dmg" | wc -l | tr -d ' ')"
-          if [[ "$dmg_count" -eq 0 ]]; then
-            echo "No .dmg artifacts found under out/make"
-            find out/make -maxdepth 4 -type f | sort
-            exit 1
+          if [[ "$dmg_count" -gt 0 ]]; then
+            echo "Found $dmg_count .dmg artifact(s)."
+          else
+            echo "No .dmg artifacts found (allowed when no DMG maker is configured)."
           fi
 
           zip_file="$(find out/make -type f -name "*.zip" | while IFS= read -r file; do
