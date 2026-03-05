@@ -224,10 +224,22 @@ Example of adding a new IPC channel:
 npm run make
 
 # Outputs will be in:
-# - macOS: out/make/zip/darwin/arm64/
+# - macOS Apple Silicon: out/make/zip/darwin/arm64/
+# - macOS Intel: out/make/zip/darwin/x64/
 # - Windows: out/make/squirrel.windows/x64/
 # - Linux: out/make/deb/x64/
 ```
+
+### CI Build & Artifact Validation
+
+- Workflow: `.github/workflows/build.yml`
+- Build matrix: macOS Intel (`x64`), macOS Apple Silicon (`arm64`), Windows
+- Matrix uses `fail-fast: false` so one platform failure does not cancel the others
+- macOS validation checks for the expected ZIP per architecture, extracts it, and verifies binary architecture with `lipo -archs`
+- `.dmg` files are optional in CI when no DMG maker is configured
+- Windows validation requires at least one `.exe` artifact (`.msi` remains optional)
+- Artifact uploads fail if no files are found (`if-no-files-found: error`)
+- Release publishing runs only for tags matching `v*`
 
 ## Credits
 
