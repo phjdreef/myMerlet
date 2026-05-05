@@ -43,27 +43,33 @@ interface StudentNote {
 }
 
 class StudentDatabase {
+  private unwrapResponse<T>(
+    response: { success: boolean; data?: unknown; error?: string },
+    fallbackMessage: string,
+  ): T {
+    if (!response.success) {
+      throw new Error(response.error || fallbackMessage);
+    }
+
+    return response.data as T;
+  }
+
   async saveStudents(students: Student[]): Promise<void> {
     const response = await window.studentDBAPI.saveStudents(students);
-    if (!response.success) {
-      throw new Error(response.error || "Failed to save students");
-    }
+    this.unwrapResponse<void>(response, "Failed to save students");
   }
 
   async getAllStudents(): Promise<Student[]> {
     const response = await window.studentDBAPI.getAllStudents();
-    if (!response.success) {
-      throw new Error(response.error || "Failed to get students");
-    }
-    return response.data as Student[];
+    return this.unwrapResponse<Student[]>(response, "Failed to get students");
   }
 
   async searchStudents(query: string): Promise<Student[]> {
     const response = await window.studentDBAPI.searchStudents(query);
-    if (!response.success) {
-      throw new Error(response.error || "Failed to search students");
-    }
-    return response.data as Student[];
+    return this.unwrapResponse<Student[]>(
+      response,
+      "Failed to search students",
+    );
   }
 
   async getMetadata(): Promise<{
@@ -72,21 +78,16 @@ class StudentDatabase {
     totalCount: number;
   } | null> {
     const response = await window.studentDBAPI.getMetadata();
-    if (!response.success) {
-      throw new Error(response.error || "Failed to get metadata");
-    }
-    return response.data as {
+    return this.unwrapResponse<{
       key: string;
       value: string;
       totalCount: number;
-    } | null;
+    } | null>(response, "Failed to get metadata");
   }
 
   async clearAllData(): Promise<void> {
     const response = await window.studentDBAPI.clearAllData();
-    if (!response.success) {
-      throw new Error(response.error || "Failed to clear data");
-    }
+    this.unwrapResponse<void>(response, "Failed to clear data");
   }
 
   // Property Definitions
@@ -98,27 +99,23 @@ class StudentDatabase {
       className,
       schoolYear,
     );
-    if (!response.success) {
-      throw new Error(response.error || "Failed to get property definitions");
-    }
-    return response.data as StudentPropertyDefinition[];
+    return this.unwrapResponse<StudentPropertyDefinition[]>(
+      response,
+      "Failed to get property definitions",
+    );
   }
 
   async savePropertyDefinition(
     property: StudentPropertyDefinition,
   ): Promise<void> {
     const response = await window.studentDBAPI.savePropertyDefinition(property);
-    if (!response.success) {
-      throw new Error(response.error || "Failed to save property definition");
-    }
+    this.unwrapResponse<void>(response, "Failed to save property definition");
   }
 
   async deletePropertyDefinition(propertyId: string): Promise<void> {
     const response =
       await window.studentDBAPI.deletePropertyDefinition(propertyId);
-    if (!response.success) {
-      throw new Error(response.error || "Failed to delete property definition");
-    }
+    this.unwrapResponse<void>(response, "Failed to delete property definition");
   }
 
   // Property Values
@@ -132,10 +129,10 @@ class StudentDatabase {
       className,
       schoolYear,
     );
-    if (!response.success) {
-      throw new Error(response.error || "Failed to get property values");
-    }
-    return response.data as StudentPropertyValue[];
+    return this.unwrapResponse<StudentPropertyValue[]>(
+      response,
+      "Failed to get property values",
+    );
   }
 
   async getPropertyValuesBatch(
@@ -148,17 +145,15 @@ class StudentDatabase {
       className,
       schoolYear,
     );
-    if (!response.success) {
-      throw new Error(response.error || "Failed to get property values batch");
-    }
-    return response.data as StudentPropertyValue[];
+    return this.unwrapResponse<StudentPropertyValue[]>(
+      response,
+      "Failed to get property values batch",
+    );
   }
 
   async savePropertyValue(value: StudentPropertyValue): Promise<void> {
     const response = await window.studentDBAPI.savePropertyValue(value);
-    if (!response.success) {
-      throw new Error(response.error || "Failed to save property value");
-    }
+    this.unwrapResponse<void>(response, "Failed to save property value");
   }
 
   // Notes
@@ -172,17 +167,15 @@ class StudentDatabase {
       className,
       schoolYear,
     );
-    if (!response.success) {
-      throw new Error(response.error || "Failed to get note");
-    }
-    return response.data as StudentNote | null;
+    return this.unwrapResponse<StudentNote | null>(
+      response,
+      "Failed to get note",
+    );
   }
 
   async saveNote(note: StudentNote): Promise<void> {
     const response = await window.studentDBAPI.saveNote(note);
-    if (!response.success) {
-      throw new Error(response.error || "Failed to save note");
-    }
+    this.unwrapResponse<void>(response, "Failed to save note");
   }
 }
 

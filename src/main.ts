@@ -8,10 +8,7 @@ import { runMigrations } from "./services/migrations";
 //import started from "electron-squirrel-startup";
 import path from "path";
 import { existsSync } from "node:fs";
-import {
-  installExtension,
-  REACT_DEVELOPER_TOOLS,
-} from "electron-devtools-installer";
+import { performance } from "node:perf_hooks";
 
 const inDevelopment = process.env.NODE_ENV === "development";
 let browserWindowIcon: string | NativeImage | undefined;
@@ -28,7 +25,48 @@ function ensureIconPath(base: string, filename: string) {
   return existsSync(candidate) ? candidate : undefined;
 }
 
-function createWindow() {
+function createStartupLogger() {
+  const startupStart = performance.now();
+  let previousMark = startupStart;
+
+  return (label: string) => {
+    const currentMark = performance.now();
+    const stepDuration = Math.round(currentMark - previousMark);
+    const totalDuration = Math.round(currentMark - startupStart);
+    previousMark = currentMark;
+
+    console.log(
+      `[startup] ${label}: +${stepDuration}ms (${totalDuration}ms total)`,
+    );
+  };
+}
+
+function resolvePlatformIconPaths(base: string): {
+  icnsPath?: string;
+  icoPath?: string;
+  pngPath?: string;
+} {
+  if (process.platform === "darwin") {
+    return {
+      icnsPath: ensureIconPath(base, "merlet.icns"),
+      pngPath: ensureIconPath(base, "merlet.png"),
+    };
+  }
+
+  if (process.platform === "win32") {
+    return {
+      icoPath: ensureIconPath(base, "merlet.ico"),
+      pngPath: ensureIconPath(base, "merlet.png"),
+    };
+  }
+
+  return {
+    pngPath: ensureIconPath(base, "merlet.png"),
+    icoPath: ensureIconPath(base, "merlet.ico"),
+  };
+}
+
+function createWindow(): BrowserWindow {
   const preload = path.join(__dirname, "preload.js");
   const mainWindow = new BrowserWindow({
     width: 800,
@@ -55,10 +93,19 @@ function createWindow() {
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
     );
   }
+
+  return mainWindow;
 }
 
 async function installExtensions() {
+  if (!inDevelopment) {
+    return;
+  }
+
   try {
+    const { installExtension, REACT_DEVELOPER_TOOLS } = await import(
+      "electron-devtools-installer"
+    );
     const result = await installExtension(REACT_DEVELOPER_TOOLS);
     console.log(`Extensions installed successfully: ${result.name}`);
   } catch {
@@ -66,13 +113,24 @@ async function installExtensions() {
   }
 }
 
-app.whenReady().then(async () => {
-  const iconsRoot = resolveIconsRoot();
-  const icnsPath = ensureIconPath(iconsRoot, "merlet.icns");
-  const icoPath = ensureIconPath(iconsRoot, "merlet.ico");
-  const pngPath = ensureIconPath(iconsRoot, "merlet.png");
+async function initializeDatabases(): Promise<void> {
+  await Promise.all([mainStudentDB.init(), curriculumDB.init()]);
+  console.log("Databases initialized successfully");
+}
 
-  console.log("Resolved icon paths", { iconsRoot, icnsPath, icoPath, pngPath });
+app.whenReady().then(async () => {
+  const logStartup = createStartupLogger();
+  const iconsRoot = resolveIconsRoot();
+  const { icnsPath, icoPath, pngPath } = resolvePlatformIconPaths(iconsRoot);
+
+  if (inDevelopment) {
+    console.log("Resolved icon paths", {
+      iconsRoot,
+      icnsPath,
+      icoPath,
+      pngPath,
+    });
+  }
 
   if (process.platform === "darwin") {
     if (icnsPath) {
@@ -102,21 +160,30 @@ app.whenReady().then(async () => {
     );
   }
 
-  try {
-    await mainStudentDB.init();
-    await curriculumDB.init();
-    console.log("Databases initialized successfully");
+  logStartup("icons resolved");
 
-    // Run migrations
-    await runMigrations();
-  } catch (error) {
-    console.error("Database initialization failed:", error);
-  }
   if (process.platform === "darwin" && app.dock && dockIcon) {
     app.dock.setIcon(dockIcon);
   }
-  createWindow();
-  installExtensions();
+
+  const initializationPromise = initializeDatabases();
+  const mainWindow = createWindow();
+  logStartup("window created");
+
+  mainWindow.webContents.once("did-finish-load", () => {
+    logStartup("renderer loaded");
+    void initializationPromise
+      .then(async () => {
+        logStartup("databases initialized");
+        await runMigrations();
+        logStartup("migrations completed");
+      })
+      .catch((error) => {
+        console.error("App data initialization failed:", error);
+      });
+  });
+
+  void installExtensions();
 });
 
 //osX only

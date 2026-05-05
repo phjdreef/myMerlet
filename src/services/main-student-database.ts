@@ -1,8 +1,9 @@
-import { app } from "electron";
 import path from "path";
 import fs from "fs";
+import { promises as fsPromises } from "fs";
 import { globalSettings } from "./global-settings";
 import { logger } from "../utils/logger";
+import { resolveUserDataFilePath } from "./user-data-path";
 
 interface Student {
   id: number;
@@ -77,82 +78,78 @@ class MainStudentDatabase {
     this.notesPath = "";
   }
 
+  private async pathExists(filePath: string): Promise<boolean> {
+    try {
+      await fsPromises.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private readJsonFile<T>(filePath: string): T {
+    const data = fs.readFileSync(filePath, "utf8");
+    return JSON.parse(data) as T;
+  }
+
+  private readJsonFileIfExists<T>(filePath: string, fallbackValue: T): T {
+    if (!fs.existsSync(filePath)) {
+      return fallbackValue;
+    }
+
+    return this.readJsonFile<T>(filePath);
+  }
+
+  private writeJsonFile(filePath: string, data: unknown): void {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  }
+
   private getDbPath(): string {
     if (!this.dbPath) {
-      try {
-        const userDataPath = app.getPath("userData");
-        this.dbPath = path.join(userDataPath, "magister_students.json");
-        logger.debug("Database will be stored at:", this.dbPath);
-      } catch (error) {
-        logger.error("Failed to get user data path:", error);
-        // Fallback to current directory
-        this.dbPath = path.join(process.cwd(), "magister_students.json");
-        logger.debug("Using fallback database path:", this.dbPath);
-      }
+      this.dbPath = resolveUserDataFilePath(
+        "magister_students.json",
+        "Database",
+      );
     }
     return this.dbPath;
   }
 
   private getPhotosPath(): string {
     if (!this.photosPath) {
-      try {
-        const userDataPath = app.getPath("userData");
-        this.photosPath = path.join(userDataPath, "magister_photos.json");
-        logger.debug("Photos cache will be stored at:", this.photosPath);
-      } catch (error) {
-        logger.error("Failed to get user data path:", error);
-        // Fallback to current directory
-        this.photosPath = path.join(process.cwd(), "magister_photos.json");
-        logger.debug("Using fallback photos path:", this.photosPath);
-      }
+      this.photosPath = resolveUserDataFilePath(
+        "magister_photos.json",
+        "Photos cache",
+      );
     }
     return this.photosPath;
   }
 
   private getPropertyDefinitionsPath(): string {
     if (!this.propertyDefinitionsPath) {
-      try {
-        const userDataPath = app.getPath("userData");
-        this.propertyDefinitionsPath = path.join(
-          userDataPath,
-          "student_property_definitions.json",
-        );
-      } catch {
-        this.propertyDefinitionsPath = path.join(
-          process.cwd(),
-          "student_property_definitions.json",
-        );
-      }
+      this.propertyDefinitionsPath = resolveUserDataFilePath(
+        "student_property_definitions.json",
+        "Student property definitions",
+      );
     }
     return this.propertyDefinitionsPath;
   }
 
   private getPropertyValuesPath(): string {
     if (!this.propertyValuesPath) {
-      try {
-        const userDataPath = app.getPath("userData");
-        this.propertyValuesPath = path.join(
-          userDataPath,
-          "student_property_values.json",
-        );
-      } catch {
-        this.propertyValuesPath = path.join(
-          process.cwd(),
-          "student_property_values.json",
-        );
-      }
+      this.propertyValuesPath = resolveUserDataFilePath(
+        "student_property_values.json",
+        "Student property values",
+      );
     }
     return this.propertyValuesPath;
   }
 
   private getNotesPath(): string {
     if (!this.notesPath) {
-      try {
-        const userDataPath = app.getPath("userData");
-        this.notesPath = path.join(userDataPath, "student_notes.json");
-      } catch {
-        this.notesPath = path.join(process.cwd(), "student_notes.json");
-      }
+      this.notesPath = resolveUserDataFilePath(
+        "student_notes.json",
+        "Student notes",
+      );
     }
     return this.notesPath;
   }
@@ -166,34 +163,41 @@ class MainStudentDatabase {
 
       // Ensure the directory exists
       const dbDir = path.dirname(dbPath);
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
+      const dbDirExisted = await this.pathExists(dbDir);
+      await fsPromises.mkdir(dbDir, { recursive: true });
+      if (!dbDirExisted) {
         logger.debug("Created database directory:", dbDir);
       }
 
       // Initialize JSON file if it doesn't exist
-      if (!fs.existsSync(dbPath)) {
+      if (!(await this.pathExists(dbPath))) {
         const initialData: DatabaseData = {
           students: [],
           metadata: null,
         };
-        fs.writeFileSync(dbPath, JSON.stringify(initialData, null, 2));
+        await fsPromises.writeFile(
+          dbPath,
+          JSON.stringify(initialData, null, 2),
+        );
         logger.debug("Created initial database file");
       }
 
       // Initialize photos cache file if it doesn't exist
       const photosPath = this.getPhotosPath();
-      if (!fs.existsSync(photosPath)) {
+      if (!(await this.pathExists(photosPath))) {
         const initialPhotos: PhotoCache = {};
-        fs.writeFileSync(photosPath, JSON.stringify(initialPhotos, null, 2));
+        await fsPromises.writeFile(
+          photosPath,
+          JSON.stringify(initialPhotos, null, 2),
+        );
         logger.debug("Created initial photos cache file");
       }
 
       // Initialize property definitions file if it doesn't exist
       const propertyDefinitionsPath = this.getPropertyDefinitionsPath();
-      if (!fs.existsSync(propertyDefinitionsPath)) {
+      if (!(await this.pathExists(propertyDefinitionsPath))) {
         const initialData: StudentPropertyDefinition[] = [];
-        fs.writeFileSync(
+        await fsPromises.writeFile(
           propertyDefinitionsPath,
           JSON.stringify(initialData, null, 2),
         );
@@ -202,9 +206,9 @@ class MainStudentDatabase {
 
       // Initialize property values file if it doesn't exist
       const propertyValuesPath = this.getPropertyValuesPath();
-      if (!fs.existsSync(propertyValuesPath)) {
+      if (!(await this.pathExists(propertyValuesPath))) {
         const initialData: StudentPropertyValue[] = [];
-        fs.writeFileSync(
+        await fsPromises.writeFile(
           propertyValuesPath,
           JSON.stringify(initialData, null, 2),
         );
@@ -213,17 +217,16 @@ class MainStudentDatabase {
 
       // Initialize notes file if it doesn't exist
       const notesPath = this.getNotesPath();
-      if (!fs.existsSync(notesPath)) {
+      if (!(await this.pathExists(notesPath))) {
         const initialData: StudentNote[] = [];
-        fs.writeFileSync(notesPath, JSON.stringify(initialData, null, 2));
+        await fsPromises.writeFile(
+          notesPath,
+          JSON.stringify(initialData, null, 2),
+        );
         logger.debug("Created initial notes file");
       }
 
-      // Test read/write
-      const testData = this.readDatabase();
-      logger.debug(
-        `JSON database initialized successfully. Contains ${testData.students.length} students`,
-      );
+      logger.debug("JSON database initialized successfully");
 
       this.initialized = true;
     } catch (error) {
@@ -243,16 +246,11 @@ class MainStudentDatabase {
   private readDatabase(): DatabaseData {
     const dbPath = this.getDbPath();
 
-    if (!fs.existsSync(dbPath)) {
-      return {
+    try {
+      return this.readJsonFileIfExists<DatabaseData>(dbPath, {
         students: [],
         metadata: null,
-      };
-    }
-
-    try {
-      const data = fs.readFileSync(dbPath, "utf8");
-      return JSON.parse(data) as DatabaseData;
+      });
     } catch (error) {
       logger.error("Failed to read database:", error);
       // Return empty data if file is corrupted
@@ -266,7 +264,7 @@ class MainStudentDatabase {
   private writeDatabase(data: DatabaseData): void {
     const dbPath = this.getDbPath();
     try {
-      fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+      this.writeJsonFile(dbPath, data);
     } catch (error) {
       logger.error("Failed to write database:", error);
       throw new Error("Failed to write to database file");
@@ -431,19 +429,14 @@ class MainStudentDatabase {
 
     try {
       const photosPath = this.getPhotosPath();
-      let photos: PhotoCache = {};
-
-      if (fs.existsSync(photosPath)) {
-        const data = fs.readFileSync(photosPath, "utf8");
-        photos = JSON.parse(data) as PhotoCache;
-      }
+      const photos = this.readJsonFileIfExists<PhotoCache>(photosPath, {});
 
       photos[studentId.toString()] = {
         data: photoData,
         cachedAt: new Date().toISOString(),
       };
 
-      fs.writeFileSync(photosPath, JSON.stringify(photos, null, 2));
+      this.writeJsonFile(photosPath, photos);
       logger.debug(`Saved photo for student ${studentId}`);
     } catch (error) {
       logger.error("Failed to save photo:", error);
@@ -458,13 +451,7 @@ class MainStudentDatabase {
 
     try {
       const photosPath = this.getPhotosPath();
-
-      if (!fs.existsSync(photosPath)) {
-        return null;
-      }
-
-      const data = fs.readFileSync(photosPath, "utf8");
-      const photos = JSON.parse(data) as PhotoCache;
+      const photos = this.readJsonFileIfExists<PhotoCache>(photosPath, {});
 
       const photo = photos[studentId.toString()];
       if (photo) {
@@ -487,10 +474,10 @@ class MainStudentDatabase {
 
     try {
       const path = this.getPropertyDefinitionsPath();
-      if (!fs.existsSync(path)) return [];
-
-      const data = fs.readFileSync(path, "utf8");
-      const all = JSON.parse(data) as StudentPropertyDefinition[];
+      const all = this.readJsonFileIfExists<StudentPropertyDefinition[]>(
+        path,
+        [],
+      );
       return all.filter(
         (p) => p.className === className && p.schoolYear === schoolYear,
       );
@@ -507,12 +494,10 @@ class MainStudentDatabase {
 
     try {
       const path = this.getPropertyDefinitionsPath();
-      let all: StudentPropertyDefinition[] = [];
-
-      if (fs.existsSync(path)) {
-        const data = fs.readFileSync(path, "utf8");
-        all = JSON.parse(data) as StudentPropertyDefinition[];
-      }
+      const all = this.readJsonFileIfExists<StudentPropertyDefinition[]>(
+        path,
+        [],
+      );
 
       // Update or add
       const index = all.findIndex((p) => p.id === property.id);
@@ -522,7 +507,7 @@ class MainStudentDatabase {
         all.push(property);
       }
 
-      fs.writeFileSync(path, JSON.stringify(all, null, 2));
+      this.writeJsonFile(path, all);
       logger.debug(`Saved property definition ${property.id}`);
     } catch (error) {
       logger.error("Failed to save property definition:", error);
@@ -537,19 +522,17 @@ class MainStudentDatabase {
       const path = this.getPropertyDefinitionsPath();
       if (!fs.existsSync(path)) return;
 
-      const data = fs.readFileSync(path, "utf8");
-      let all = JSON.parse(data) as StudentPropertyDefinition[];
+      let all = this.readJsonFile<StudentPropertyDefinition[]>(path);
 
       all = all.filter((p) => p.id !== propertyId);
-      fs.writeFileSync(path, JSON.stringify(all, null, 2));
+      this.writeJsonFile(path, all);
 
       // Also delete all values for this property
       const valuesPath = this.getPropertyValuesPath();
       if (fs.existsSync(valuesPath)) {
-        const valuesData = fs.readFileSync(valuesPath, "utf8");
-        let allValues = JSON.parse(valuesData) as StudentPropertyValue[];
+        let allValues = this.readJsonFile<StudentPropertyValue[]>(valuesPath);
         allValues = allValues.filter((v) => v.propertyId !== propertyId);
-        fs.writeFileSync(valuesPath, JSON.stringify(allValues, null, 2));
+        this.writeJsonFile(valuesPath, allValues);
       }
 
       logger.debug(`Deleted property definition ${propertyId}`);
@@ -569,10 +552,7 @@ class MainStudentDatabase {
 
     try {
       const path = this.getPropertyValuesPath();
-      if (!fs.existsSync(path)) return [];
-
-      const data = fs.readFileSync(path, "utf8");
-      const all = JSON.parse(data) as StudentPropertyValue[];
+      const all = this.readJsonFileIfExists<StudentPropertyValue[]>(path, []);
       return all.filter(
         (v) =>
           v.studentId === studentId &&
@@ -596,11 +576,8 @@ class MainStudentDatabase {
 
     try {
       const path = this.getPropertyValuesPath();
-      if (!fs.existsSync(path)) return [];
-
       const studentIdSet = new Set(studentIds);
-      const data = fs.readFileSync(path, "utf8");
-      const all = JSON.parse(data) as StudentPropertyValue[];
+      const all = this.readJsonFileIfExists<StudentPropertyValue[]>(path, []);
 
       return all.filter(
         (propertyValue) =>
@@ -619,12 +596,7 @@ class MainStudentDatabase {
 
     try {
       const path = this.getPropertyValuesPath();
-      let all: StudentPropertyValue[] = [];
-
-      if (fs.existsSync(path)) {
-        const data = fs.readFileSync(path, "utf8");
-        all = JSON.parse(data) as StudentPropertyValue[];
-      }
+      const all = this.readJsonFileIfExists<StudentPropertyValue[]>(path, []);
 
       // Update or add (unique by studentId + className + schoolYear + propertyId)
       const existingIndex = all.findIndex(
@@ -641,7 +613,7 @@ class MainStudentDatabase {
         all.push(value);
       }
 
-      fs.writeFileSync(path, JSON.stringify(all, null, 2));
+      this.writeJsonFile(path, all);
     } catch (error) {
       logger.error("Failed to save property value:", error);
       throw new Error("Failed to save property value");
@@ -658,10 +630,7 @@ class MainStudentDatabase {
 
     try {
       const path = this.getNotesPath();
-      if (!fs.existsSync(path)) return null;
-
-      const data = fs.readFileSync(path, "utf8");
-      const all = JSON.parse(data) as StudentNote[];
+      const all = this.readJsonFileIfExists<StudentNote[]>(path, []);
       return (
         all.find(
           (n) =>
@@ -681,12 +650,7 @@ class MainStudentDatabase {
 
     try {
       const path = this.getNotesPath();
-      let all: StudentNote[] = [];
-
-      if (fs.existsSync(path)) {
-        const data = fs.readFileSync(path, "utf8");
-        all = JSON.parse(data) as StudentNote[];
-      }
+      const all = this.readJsonFileIfExists<StudentNote[]>(path, []);
 
       // Update or add (unique by studentId + className + schoolYear)
       const existingIndex = all.findIndex(
@@ -702,7 +666,7 @@ class MainStudentDatabase {
         all.push(note);
       }
 
-      fs.writeFileSync(path, JSON.stringify(all, null, 2));
+      this.writeJsonFile(path, all);
     } catch (error) {
       logger.error("Failed to save note:", error);
       throw new Error("Failed to save note");

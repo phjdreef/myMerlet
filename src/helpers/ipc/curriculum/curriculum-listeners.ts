@@ -28,6 +28,7 @@ import {
 } from "../../../utils/curriculum-week";
 import { formatWeekRange } from "../../../utils/week-utils";
 import { curriculumExportTranslations } from "../../../localization/curriculum-export-translations";
+import { withIpcData, withIpcVoid } from "../ipc-handler-utils";
 
 const CANCELLED_ERROR_CODE = "cancelled";
 
@@ -606,59 +607,31 @@ async function buildPlanDocument(
 }
 
 export function registerCurriculumListeners() {
-  ipcMain.handle(CURRICULUM_CHANNELS.GET_ALL_PLANS, async () => {
-    try {
-      const plans = await curriculumDB.getAllPlans();
-      return { success: true, data: { plans } };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to get plans",
-      };
-    }
-  });
+  ipcMain.handle(CURRICULUM_CHANNELS.GET_ALL_PLANS, async () =>
+    withIpcData(
+      async () => ({ plans: await curriculumDB.getAllPlans() }),
+      "Failed to get plans",
+    ),
+  );
 
   ipcMain.handle(
     CURRICULUM_CHANNELS.GET_PLAN_BY_CLASS,
-    async (_, className: string) => {
-      try {
-        const plan = await curriculumDB.getPlanByClass(className);
-        return { success: true, data: plan };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Failed to get plan",
-        };
-      }
-    },
+    async (_, className: string) =>
+      withIpcData(
+        () => curriculumDB.getPlanByClass(className),
+        "Failed to get plan",
+      ),
   );
 
   ipcMain.handle(
     CURRICULUM_CHANNELS.SAVE_PLAN,
-    async (_, plan: CurriculumPlan) => {
-      try {
-        await curriculumDB.savePlan(plan);
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Failed to save plan",
-        };
-      }
-    },
+    async (_, plan: CurriculumPlan) =>
+      withIpcVoid(() => curriculumDB.savePlan(plan), "Failed to save plan"),
   );
 
-  ipcMain.handle(CURRICULUM_CHANNELS.DELETE_PLAN, async (_, planId: string) => {
-    try {
-      await curriculumDB.deletePlan(planId);
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to delete plan",
-      };
-    }
-  });
+  ipcMain.handle(CURRICULUM_CHANNELS.DELETE_PLAN, async (_, planId: string) =>
+    withIpcVoid(() => curriculumDB.deletePlan(planId), "Failed to delete plan"),
+  );
 
   ipcMain.handle(
     CURRICULUM_CHANNELS.EXPORT_PLAN_PDF,

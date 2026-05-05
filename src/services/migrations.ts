@@ -4,13 +4,24 @@
  */
 import { app } from "electron";
 import path from "path";
-import fs from "fs";
+import { promises as fsPromises } from "fs";
 import { getCurrentSchoolYear } from "../utils/school-year";
 import { logger } from "../utils/logger";
 
 interface MigrationStatus {
   lastMigration: string | null;
   migrations: string[];
+}
+
+let migrationStatusCache: MigrationStatus | null = null;
+
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await fsPromises.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -24,38 +35,46 @@ function getMigrationStatusPath(): string {
 /**
  * Read migration status
  */
-function readMigrationStatus(): MigrationStatus {
+async function readMigrationStatus(): Promise<MigrationStatus> {
+  if (migrationStatusCache) {
+    return migrationStatusCache;
+  }
+
   const filePath = getMigrationStatusPath();
-  if (!fs.existsSync(filePath)) {
-    return { lastMigration: null, migrations: [] };
+  if (!(await pathExists(filePath))) {
+    migrationStatusCache = { lastMigration: null, migrations: [] };
+    return migrationStatusCache;
   }
 
   try {
-    const content = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(content);
+    const content = await fsPromises.readFile(filePath, "utf-8");
+    migrationStatusCache = JSON.parse(content) as MigrationStatus;
+    return migrationStatusCache;
   } catch (error) {
     logger.error("Failed to read migration status:", error);
-    return { lastMigration: null, migrations: [] };
+    migrationStatusCache = { lastMigration: null, migrations: [] };
+    return migrationStatusCache;
   }
 }
 
 /**
  * Write migration status
  */
-function writeMigrationStatus(status: MigrationStatus): void {
+async function writeMigrationStatus(status: MigrationStatus): Promise<void> {
+  migrationStatusCache = status;
   const filePath = getMigrationStatusPath();
-  fs.writeFileSync(filePath, JSON.stringify(status, null, 2));
+  await fsPromises.writeFile(filePath, JSON.stringify(status, null, 2));
 }
 
 /**
  * Mark a migration as completed
  */
-function markMigrationComplete(migrationName: string): void {
-  const status = readMigrationStatus();
+async function markMigrationComplete(migrationName: string): Promise<void> {
+  const status = await readMigrationStatus();
   if (!status.migrations.includes(migrationName)) {
     status.migrations.push(migrationName);
     status.lastMigration = migrationName;
-    writeMigrationStatus(status);
+    await writeMigrationStatus(status);
     logger.log(`Migration completed: ${migrationName}`);
   }
 }
@@ -63,147 +82,132 @@ function markMigrationComplete(migrationName: string): void {
 /**
  * Check if a migration has been completed
  */
-function isMigrationComplete(migrationName: string): boolean {
-  const status = readMigrationStatus();
+async function isMigrationComplete(migrationName: string): Promise<boolean> {
+  const status = await readMigrationStatus();
   return status.migrations.includes(migrationName);
+}
+
+type SchoolYearMigrationItem = {
+  schoolYear?: string;
+};
+
+interface SchoolYearFileMigrationOptions {
+  migrationName: string;
+  fileName: string;
+  missingFileMessage: string;
+  migratedLabel: string;
+  getItems: (parsedData: unknown) => SchoolYearMigrationItem[] | null;
+}
+
+async function migrateSchoolYearFile(
+  options: SchoolYearFileMigrationOptions,
+): Promise<void> {
+  const {
+    migrationName,
+    fileName,
+    missingFileMessage,
+    migratedLabel,
+    getItems,
+  } = options;
+
+  if (await isMigrationComplete(migrationName)) {
+    logger.debug(`Migration ${migrationName} already completed, skipping`);
+    return;
+  }
+
+  const userDataPath = app.getPath("userData");
+  const filePath = path.join(userDataPath, fileName);
+
+  if (!(await pathExists(filePath))) {
+    logger.debug(missingFileMessage);
+    await markMigrationComplete(migrationName);
+    return;
+  }
+
+  try {
+    const content = await fsPromises.readFile(filePath, "utf-8");
+    const parsedData = JSON.parse(content) as unknown;
+    const items = getItems(parsedData);
+    const defaultSchoolYear = getCurrentSchoolYear();
+    let migrated = 0;
+
+    if (items) {
+      for (const item of items) {
+        if (!item.schoolYear) {
+          item.schoolYear = defaultSchoolYear;
+          migrated++;
+        }
+      }
+
+      if (migrated > 0) {
+        await fsPromises.writeFile(
+          filePath,
+          JSON.stringify(parsedData, null, 2),
+        );
+        logger.log(
+          `Migrated ${migrated} ${migratedLabel} to have schoolYear field`,
+        );
+      }
+    }
+
+    await markMigrationComplete(migrationName);
+  } catch (error) {
+    logger.error(`Failed to migrate ${migratedLabel} schoolYear:`, error);
+  }
 }
 
 /**
  * Migration: Add schoolYear field to existing students
  */
 async function migrateStudentsSchoolYear(): Promise<void> {
-  const migrationName = "students_school_year_v1";
-
-  if (isMigrationComplete(migrationName)) {
-    logger.debug(`Migration ${migrationName} already completed, skipping`);
-    return;
-  }
-
-  const userDataPath = app.getPath("userData");
-  const studentsPath = path.join(userDataPath, "magister_students.json");
-
-  if (!fs.existsSync(studentsPath)) {
-    logger.debug("Students file does not exist, skipping migration");
-    markMigrationComplete(migrationName);
-    return;
-  }
-
-  try {
-    const content = fs.readFileSync(studentsPath, "utf-8");
-    const data = JSON.parse(content);
-    const defaultSchoolYear = getCurrentSchoolYear();
-    let migrated = 0;
-
-    if (data.students && Array.isArray(data.students)) {
-      for (const student of data.students) {
-        if (!student.schoolYear) {
-          student.schoolYear = defaultSchoolYear;
-          migrated++;
-        }
+  await migrateSchoolYearFile({
+    migrationName: "students_school_year_v1",
+    fileName: "magister_students.json",
+    missingFileMessage: "Students file does not exist, skipping migration",
+    migratedLabel: "students",
+    getItems: (parsedData: unknown): SchoolYearMigrationItem[] | null => {
+      if (!parsedData || typeof parsedData !== "object") {
+        return null;
       }
 
-      if (migrated > 0) {
-        fs.writeFileSync(studentsPath, JSON.stringify(data, null, 2));
-        logger.log(`Migrated ${migrated} students to have schoolYear field`);
-      }
-    }
-
-    markMigrationComplete(migrationName);
-  } catch (error) {
-    logger.error(`Failed to migrate students schoolYear:`, error);
-  }
+      const students = (parsedData as { students?: unknown }).students;
+      return Array.isArray(students)
+        ? (students as SchoolYearMigrationItem[])
+        : null;
+    },
+  });
 }
 
 /**
  * Migration: Add schoolYear field to existing tests
  */
 async function migrateTestsSchoolYear(): Promise<void> {
-  const migrationName = "tests_school_year_v1";
-
-  if (isMigrationComplete(migrationName)) {
-    logger.debug(`Migration ${migrationName} already completed, skipping`);
-    return;
-  }
-
-  const userDataPath = app.getPath("userData");
-  const testsPath = path.join(userDataPath, "tests.json");
-
-  if (!fs.existsSync(testsPath)) {
-    logger.debug("Tests file does not exist, skipping migration");
-    markMigrationComplete(migrationName);
-    return;
-  }
-
-  try {
-    const content = fs.readFileSync(testsPath, "utf-8");
-    const tests = JSON.parse(content);
-    const defaultSchoolYear = getCurrentSchoolYear();
-    let migrated = 0;
-
-    if (Array.isArray(tests)) {
-      for (const test of tests) {
-        if (!test.schoolYear) {
-          test.schoolYear = defaultSchoolYear;
-          migrated++;
-        }
-      }
-
-      if (migrated > 0) {
-        fs.writeFileSync(testsPath, JSON.stringify(tests, null, 2));
-        logger.log(`Migrated ${migrated} tests to have schoolYear field`);
-      }
-    }
-
-    markMigrationComplete(migrationName);
-  } catch (error) {
-    logger.error(`Failed to migrate tests schoolYear:`, error);
-  }
+  await migrateSchoolYearFile({
+    migrationName: "tests_school_year_v1",
+    fileName: "tests.json",
+    missingFileMessage: "Tests file does not exist, skipping migration",
+    migratedLabel: "tests",
+    getItems: (parsedData: unknown): SchoolYearMigrationItem[] | null =>
+      Array.isArray(parsedData)
+        ? (parsedData as SchoolYearMigrationItem[])
+        : null,
+  });
 }
 
 /**
  * Migration: Add schoolYear field to existing grades
  */
 async function migrateGradesSchoolYear(): Promise<void> {
-  const migrationName = "grades_school_year_v1";
-
-  if (isMigrationComplete(migrationName)) {
-    logger.debug(`Migration ${migrationName} already completed, skipping`);
-    return;
-  }
-
-  const userDataPath = app.getPath("userData");
-  const gradesPath = path.join(userDataPath, "grades.json");
-
-  if (!fs.existsSync(gradesPath)) {
-    logger.debug("Grades file does not exist, skipping migration");
-    markMigrationComplete(migrationName);
-    return;
-  }
-
-  try {
-    const content = fs.readFileSync(gradesPath, "utf-8");
-    const grades = JSON.parse(content);
-    const defaultSchoolYear = getCurrentSchoolYear();
-    let migrated = 0;
-
-    if (Array.isArray(grades)) {
-      for (const grade of grades) {
-        if (!grade.schoolYear) {
-          grade.schoolYear = defaultSchoolYear;
-          migrated++;
-        }
-      }
-
-      if (migrated > 0) {
-        fs.writeFileSync(gradesPath, JSON.stringify(grades, null, 2));
-        logger.log(`Migrated ${migrated} grades to have schoolYear field`);
-      }
-    }
-
-    markMigrationComplete(migrationName);
-  } catch (error) {
-    logger.error(`Failed to migrate grades schoolYear:`, error);
-  }
+  await migrateSchoolYearFile({
+    migrationName: "grades_school_year_v1",
+    fileName: "grades.json",
+    missingFileMessage: "Grades file does not exist, skipping migration",
+    migratedLabel: "grades",
+    getItems: (parsedData: unknown): SchoolYearMigrationItem[] | null =>
+      Array.isArray(parsedData)
+        ? (parsedData as SchoolYearMigrationItem[])
+        : null,
+  });
 }
 
 /**
@@ -261,7 +265,7 @@ export function migrateSeatingPositionsSchoolYear(
 async function migrateParagraphStudyGoals(): Promise<void> {
   const migrationName = "paragraph_study_goals_v1";
 
-  if (isMigrationComplete(migrationName)) {
+  if (await isMigrationComplete(migrationName)) {
     logger.debug(`Migration ${migrationName} already completed, skipping`);
     return;
   }
@@ -269,14 +273,14 @@ async function migrateParagraphStudyGoals(): Promise<void> {
   const userDataPath = app.getPath("userData");
   const curriculumPath = path.join(userDataPath, "curriculum_plans.json");
 
-  if (!fs.existsSync(curriculumPath)) {
+  if (!(await pathExists(curriculumPath))) {
     logger.debug("Curriculum plans file does not exist, skipping migration");
-    markMigrationComplete(migrationName);
+    await markMigrationComplete(migrationName);
     return;
   }
 
   try {
-    const content = fs.readFileSync(curriculumPath, "utf-8");
+    const content = await fsPromises.readFile(curriculumPath, "utf-8");
     type CurriculumParagraph = {
       id: string;
       studyGoals?: string;
@@ -299,18 +303,24 @@ async function migrateParagraphStudyGoals(): Promise<void> {
 
         // For each paragraph, find studyGoals that reference it
         for (const paragraph of plan.paragraphs) {
-          const paragraphGoals = plan.studyGoals.filter(
-            (goal) =>
-              goal.paragraphIds &&
-              goal.paragraphIds.includes(paragraph.id) &&
-              (!goal.title || goal.title.trim() === ""),
+          const paragraphGoals: CurriculumStudyGoal[] = plan.studyGoals.filter(
+            (goal: CurriculumStudyGoal): boolean => {
+              const paragraphIds = goal.paragraphIds;
+              return (
+                Array.isArray(paragraphIds) &&
+                paragraphIds.includes(paragraph.id) &&
+                (!goal.title || goal.title.trim() === "")
+              );
+            },
           );
 
           if (paragraphGoals.length > 0) {
             // Combine all paragraph goals into one rich text field
             const combinedGoals = paragraphGoals
-              .map((goal) => goal.description || "")
-              .filter((desc) => desc.trim() !== "")
+              .map(
+                (goal: CurriculumStudyGoal): string => goal.description || "",
+              )
+              .filter((desc: string): boolean => desc.trim() !== "")
               .join("<br><br>");
 
             if (combinedGoals) {
@@ -319,20 +329,24 @@ async function migrateParagraphStudyGoals(): Promise<void> {
             }
 
             // Remove these goals from the studyGoals array
+            const paragraphGoalSet = new Set<CurriculumStudyGoal>(
+              paragraphGoals,
+            );
             plan.studyGoals = plan.studyGoals.filter(
-              (goal) => !paragraphGoals.includes(goal),
+              (goal: CurriculumStudyGoal): boolean =>
+                !paragraphGoalSet.has(goal),
             );
           }
         }
       }
 
-      fs.writeFileSync(curriculumPath, JSON.stringify(data, null, 2));
+      await fsPromises.writeFile(curriculumPath, JSON.stringify(data, null, 2));
       logger.log(
         `Migrated ${migrated} paragraph study goals to paragraph.studyGoals field`,
       );
     }
 
-    markMigrationComplete(migrationName);
+    await markMigrationComplete(migrationName);
   } catch (error) {
     logger.error("Failed to migrate paragraph study goals:", error);
   }

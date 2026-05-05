@@ -1,7 +1,8 @@
-import { app } from "electron";
 import path from "path";
 import fs from "fs";
+import { promises as fsPromises } from "fs";
 import { logger } from "../utils/logger";
+import { resolveUserDataFilePath } from "./user-data-path";
 import {
   clampWeekNumber,
   DEFAULT_WEEK_END,
@@ -114,17 +115,21 @@ class CurriculumDatabase {
     this.dbPath = "";
   }
 
+  private async pathExists(filePath: string): Promise<boolean> {
+    try {
+      await fsPromises.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private getDbPath(): string {
     if (!this.dbPath) {
-      try {
-        const userDataPath = app.getPath("userData");
-        this.dbPath = path.join(userDataPath, "curriculum_plans.json");
-        logger.debug("Curriculum database will be stored at:", this.dbPath);
-      } catch (error) {
-        logger.error("Failed to get user data path:", error);
-        this.dbPath = path.join(process.cwd(), "curriculum_plans.json");
-        logger.debug("Using fallback curriculum path:", this.dbPath);
-      }
+      this.dbPath = resolveUserDataFilePath(
+        "curriculum_plans.json",
+        "Curriculum database",
+      );
     }
     return this.dbPath;
   }
@@ -137,16 +142,17 @@ class CurriculumDatabase {
       logger.debug("Initializing curriculum database at:", dbPath);
 
       const dbDir = path.dirname(dbPath);
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-      }
+      await fsPromises.mkdir(dbDir, { recursive: true });
 
-      if (!fs.existsSync(dbPath)) {
+      if (!(await this.pathExists(dbPath))) {
         const initialData: CurriculumData = {
           plans: [],
           metadata: null,
         };
-        fs.writeFileSync(dbPath, JSON.stringify(initialData, null, 2));
+        await fsPromises.writeFile(
+          dbPath,
+          JSON.stringify(initialData, null, 2),
+        );
         logger.debug("Created initial curriculum database file");
       }
 

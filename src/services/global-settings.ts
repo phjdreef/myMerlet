@@ -1,9 +1,9 @@
-import { app } from "electron";
 import path from "path";
 import fs from "fs";
 import { logger } from "../utils/logger";
 import { getCurrentSchoolYear, type SchoolYear } from "../utils/school-year";
 import type { BlockedWeek } from "./curriculum-database";
+import { resolveUserDataFilePath } from "./user-data-path";
 
 export type GlobalSettings = {
   theme?: "system" | "twitter" | "graphite" | "nord" | "dracula" | "solarized";
@@ -21,15 +21,10 @@ class GlobalSettingsManager {
 
   private getSettingsPath(): string {
     if (!this.settingsPath) {
-      try {
-        const userDataPath = app.getPath("userData");
-        this.settingsPath = path.join(userDataPath, "global_settings.json");
-        logger.debug("Global settings will be stored at:", this.settingsPath);
-      } catch (error) {
-        logger.error("Failed to get user data path:", error);
-        this.settingsPath = path.join(process.cwd(), "global_settings.json");
-        logger.debug("Using fallback global settings path:", this.settingsPath);
-      }
+      this.settingsPath = resolveUserDataFilePath(
+        "global_settings.json",
+        "Global settings",
+      );
     }
     return this.settingsPath;
   }
