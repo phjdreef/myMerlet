@@ -15,6 +15,7 @@ import type { SortDirection } from "./types";
 interface StudentTableHeaderProps {
   recentTests: Test[];
   propertyDefinitions: StudentPropertyDefinition[];
+  showActiveColumn: boolean;
   sortColumn: string | null;
   sortDirection: SortDirection;
   filters: Map<string, string>;
@@ -26,6 +27,7 @@ interface StudentTableHeaderProps {
 export function StudentTableHeader({
   recentTests,
   propertyDefinitions,
+  showActiveColumn,
   sortColumn,
   sortDirection,
   filters,
@@ -38,6 +40,7 @@ export function StudentTableHeader({
   return (
     <TableHeader>
       <TableRow>
+        {showActiveColumn && <TableHead className="w-9 px-1" />}
         <TableHead className="w-16">{t("photo")}</TableHead>
         <TableHead className="min-w-[150px]">
           <div className="space-y-1">
@@ -107,7 +110,7 @@ export function StudentTableHeader({
             </Select>
           </div>
         </TableHead>
-        {recentTests.length > 0 ? (
+        {recentTests.length > 0 && (
           <>
             {recentTests.map((test) => (
               <TableHead key={test.id} className="w-24 text-center">
@@ -128,18 +131,6 @@ export function StudentTableHeader({
               </button>
             </TableHead>
           </>
-        ) : (
-          <>
-            <TableHead className="w-24 text-center">
-              {t("lastGrade1")}
-            </TableHead>
-            <TableHead className="w-24 text-center">
-              {t("lastGrade2")}
-            </TableHead>
-            <TableHead className="w-24 text-center">
-              {t("studentAverage")}
-            </TableHead>
-          </>
         )}
         {propertyDefinitions.map((prop) => (
           <TableHead
@@ -147,17 +138,23 @@ export function StudentTableHeader({
             className={prop.type === "boolean" ? "w-16" : "min-w-[120px]"}
           >
             <div className="space-y-1">
-              <button
-                onClick={() => onSort(`prop_${prop.id}`)}
-                className="hover:text-foreground flex items-center gap-1"
-              >
-                {prop.name}
-                {sortColumn === `prop_${prop.id}` && (
-                  <span className="text-xs">
-                    {sortDirection === "asc" ? "↑" : "↓"}
-                  </span>
-                )}
-              </button>
+              {(() => {
+                const headerLabel =
+                  prop.name.trim().toLowerCase() === "value" ? "" : prop.name;
+                return (
+                  <button
+                    onClick={() => onSort(`prop_${prop.id}`)}
+                    className="hover:text-foreground flex items-center gap-1"
+                  >
+                    {headerLabel}
+                    {sortColumn === `prop_${prop.id}` && (
+                      <span className="text-xs">
+                        {sortDirection === "asc" ? "↑" : "↓"}
+                      </span>
+                    )}
+                  </button>
+                );
+              })()}
               {prop.type !== "boolean" && (
                 <Input
                   placeholder={t("filter")}

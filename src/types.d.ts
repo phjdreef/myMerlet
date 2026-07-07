@@ -45,6 +45,10 @@ interface SettingsAPI {
   setGlobalBlockedWeeks: (
     blockedWeeks: import("./services/curriculum-database").BlockedWeek[],
   ) => Promise<void>;
+  getDataDirectory: () => Promise<string | undefined>;
+  getDefaultDataDirectory: () => Promise<string>;
+  chooseDataDirectory: () => Promise<string | null>;
+  setDataDirectory: (directory?: string) => Promise<void>;
 }
 
 interface MagisterAPI {
@@ -112,6 +116,9 @@ interface StudentDBAPI {
   savePropertyValue: (
     value: import("./services/student-database").StudentPropertyValue,
   ) => Promise<APIResult>;
+  savePropertyValuesBulk: (
+    values: import("./services/student-database").StudentPropertyValue[],
+  ) => Promise<APIResult>;
   // Notes
   getNote: (
     studentId: number,
@@ -122,6 +129,12 @@ interface StudentDBAPI {
   >;
   saveNote: (
     note: import("./services/student-database").StudentNote,
+  ) => Promise<APIResult>;
+  getClassroomLayoutData: () => Promise<
+    APIResponse<import("./services/student-database").ClassroomLayoutData>
+  >;
+  saveClassroomLayoutData: (
+    layoutData: import("./services/student-database").ClassroomLayoutData,
   ) => Promise<APIResult>;
 }
 

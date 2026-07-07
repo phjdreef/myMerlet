@@ -15,6 +15,14 @@ export function exposeSettingsAPI() {
         SETTINGS_CHANNELS.SET_GLOBAL_BLOCKED_WEEKS,
         blockedWeeks,
       ),
+    getDataDirectory: (): Promise<string | undefined> =>
+      ipcRenderer.invoke(SETTINGS_CHANNELS.GET_DATA_DIRECTORY),
+    getDefaultDataDirectory: (): Promise<string> =>
+      ipcRenderer.invoke(SETTINGS_CHANNELS.GET_DEFAULT_DATA_DIRECTORY),
+    chooseDataDirectory: (): Promise<string | null> =>
+      ipcRenderer.invoke(SETTINGS_CHANNELS.CHOOSE_DATA_DIRECTORY),
+    setDataDirectory: (directory?: string) =>
+      ipcRenderer.invoke(SETTINGS_CHANNELS.SET_DATA_DIRECTORY, directory),
   };
 
   contextBridge.exposeInMainWorld("settingsAPI", settingsAPI);

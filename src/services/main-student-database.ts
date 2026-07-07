@@ -45,6 +45,29 @@ interface StudentNote {
   updatedAt: string;
 }
 
+interface Classroom {
+  id: string;
+  name: string;
+}
+
+type TeacherPosition = "left" | "center" | "right";
+
+interface ClassroomLayoutData {
+  seatingPositions: Record<
+    string,
+    Array<{
+      studentId: number;
+      row: number;
+      col: number;
+      className: string;
+      schoolYear: string;
+    }>
+  >;
+  classroomsByClass: Record<string, Classroom[]>;
+  selectedClassroomByClass: Record<string, string>;
+  teacherPositionByClass: Record<string, TeacherPosition>;
+}
+
 interface DatabaseData {
   students: Student[];
   metadata: {
@@ -67,6 +90,7 @@ class MainStudentDatabase {
   private propertyDefinitionsPath: string;
   private propertyValuesPath: string;
   private notesPath: string;
+  private classroomLayoutPath: string;
   private initialized = false;
 
   constructor() {
@@ -76,6 +100,7 @@ class MainStudentDatabase {
     this.propertyDefinitionsPath = "";
     this.propertyValuesPath = "";
     this.notesPath = "";
+    this.classroomLayoutPath = "";
   }
 
   private async pathExists(filePath: string): Promise<boolean> {
@@ -102,6 +127,10 @@ class MainStudentDatabase {
 
   private writeJsonFile(filePath: string, data: unknown): void {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  }
+
+  private propertyValueKey(value: StudentPropertyValue): string {
+    return `${value.studentId}::${value.className}::${value.schoolYear}::${value.propertyId}`;
   }
 
   private getDbPath(): string {
@@ -152,6 +181,25 @@ class MainStudentDatabase {
       );
     }
     return this.notesPath;
+  }
+
+  private getClassroomLayoutPath(): string {
+    if (!this.classroomLayoutPath) {
+      this.classroomLayoutPath = resolveUserDataFilePath(
+        "classroom_layouts.json",
+        "Classroom layouts",
+      );
+    }
+    return this.classroomLayoutPath;
+  }
+
+  private getDefaultClassroomLayoutData(): ClassroomLayoutData {
+    return {
+      seatingPositions: {},
+      classroomsByClass: {},
+      selectedClassroomByClass: {},
+      teacherPositionByClass: {},
+    };
   }
 
   async init(): Promise<void> {
@@ -224,6 +272,16 @@ class MainStudentDatabase {
           JSON.stringify(initialData, null, 2),
         );
         logger.debug("Created initial notes file");
+      }
+
+      // Initialize classroom layout file if it doesn't exist
+      const classroomLayoutPath = this.getClassroomLayoutPath();
+      if (!(await this.pathExists(classroomLayoutPath))) {
+        await fsPromises.writeFile(
+          classroomLayoutPath,
+          JSON.stringify(this.getDefaultClassroomLayoutData(), null, 2),
+        );
+        logger.debug("Created initial classroom layout file");
       }
 
       logger.debug("JSON database initialized successfully");
@@ -600,11 +658,7 @@ class MainStudentDatabase {
 
       // Update or add (unique by studentId + className + schoolYear + propertyId)
       const existingIndex = all.findIndex(
-        (v) =>
-          v.studentId === value.studentId &&
-          v.className === value.className &&
-          v.schoolYear === value.schoolYear &&
-          v.propertyId === value.propertyId,
+        (v) => this.propertyValueKey(v) === this.propertyValueKey(value),
       );
 
       if (existingIndex >= 0) {
@@ -617,6 +671,38 @@ class MainStudentDatabase {
     } catch (error) {
       logger.error("Failed to save property value:", error);
       throw new Error("Failed to save property value");
+    }
+  }
+
+  async savePropertyValuesBulk(values: StudentPropertyValue[]): Promise<void> {
+    if (!this.initialized) await this.init();
+    if (values.length === 0) return;
+
+    try {
+      const path = this.getPropertyValuesPath();
+      const all = this.readJsonFileIfExists<StudentPropertyValue[]>(path, []);
+
+      const indexByKey = new Map<string, number>();
+      all.forEach((value, index) => {
+        indexByKey.set(this.propertyValueKey(value), index);
+      });
+
+      for (const value of values) {
+        const key = this.propertyValueKey(value);
+        const existingIndex = indexByKey.get(key);
+        if (existingIndex !== undefined) {
+          all[existingIndex] = value;
+          continue;
+        }
+
+        indexByKey.set(key, all.length);
+        all.push(value);
+      }
+
+      this.writeJsonFile(path, all);
+    } catch (error) {
+      logger.error("Failed to save property values in bulk:", error);
+      throw new Error("Failed to save property values in bulk");
     }
   }
 
@@ -673,6 +759,35 @@ class MainStudentDatabase {
     }
   }
 
+  async getClassroomLayoutData(): Promise<ClassroomLayoutData> {
+    if (!this.initialized) await this.init();
+
+    try {
+      const layoutPath = this.getClassroomLayoutPath();
+      return this.readJsonFileIfExists<ClassroomLayoutData>(
+        layoutPath,
+        this.getDefaultClassroomLayoutData(),
+      );
+    } catch (error) {
+      logger.error("Failed to get classroom layout data:", error);
+      return this.getDefaultClassroomLayoutData();
+    }
+  }
+
+  async saveClassroomLayoutData(
+    layoutData: ClassroomLayoutData,
+  ): Promise<void> {
+    if (!this.initialized) await this.init();
+
+    try {
+      const layoutPath = this.getClassroomLayoutPath();
+      this.writeJsonFile(layoutPath, layoutData);
+    } catch (error) {
+      logger.error("Failed to save classroom layout data:", error);
+      throw new Error("Failed to save classroom layout data");
+    }
+  }
+
   close(): void {
     // No-op for JSON database, but keeping for compatibility
     logger.debug("Database connection closed");
@@ -687,4 +802,5 @@ export type {
   StudentPropertyDefinition,
   StudentPropertyValue,
   StudentNote,
+  ClassroomLayoutData,
 };

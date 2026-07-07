@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { ClassroomLayoutData } from "@/services/student-database";
 
 type TeacherPosition = "left" | "center" | "right";
 
@@ -45,6 +46,10 @@ interface ClassroomGridProps {
   selectedClass: string | null;
   students: Student[];
   seatingPositions: Map<string, SeatingPosition[]>;
+  classroomLayoutData: ClassroomLayoutData;
+  onClassroomLayoutDataChange: (
+    updater: (previous: ClassroomLayoutData) => ClassroomLayoutData,
+  ) => void;
   onDragStart: (e: React.DragEvent, student: Student) => void;
   onDragEnd: () => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -60,6 +65,8 @@ export function ClassroomGrid({
   selectedClass,
   students,
   seatingPositions,
+  classroomLayoutData,
+  onClassroomLayoutDataChange,
   onDragStart,
   onDragEnd,
   onDragOver,
@@ -72,43 +79,11 @@ export function ClassroomGrid({
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
   // Classroom management
-  const [classrooms, setClassrooms] = useState<Classroom[]>(() => {
-    if (!selectedClass) return [{ id: "default", name: "Lokaal 1" }];
-    const saved = localStorage.getItem(`classrooms_${selectedClass}`);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Migrate old format (string array) to new format (object array)
-        if (
-          Array.isArray(parsed) &&
-          parsed.length > 0 &&
-          typeof parsed[0] === "string"
-        ) {
-          return parsed.map((name: string, index: number) => ({
-            id: `migrated_${index}_${Date.now()}`,
-            name,
-          }));
-        }
-        return parsed;
-      } catch {
-        return [{ id: "default", name: "Lokaal 1" }];
-      }
-    }
-    return [{ id: "default", name: "Lokaal 1" }];
-  });
-
-  const [selectedClassroomId, setSelectedClassroomId] = useState<string>(() => {
-    if (!selectedClass) return "default";
-    const saved = localStorage.getItem(`selected_classroom_${selectedClass}`);
-    // Try to find matching classroom by ID or by name (for migration)
-    if (saved) {
-      const classroom = classrooms.find(
-        (c) => c.id === saved || c.name === saved,
-      );
-      return classroom?.id || classrooms[0]?.id || "default";
-    }
-    return classrooms[0]?.id || "default";
-  });
+  const [classrooms, setClassrooms] = useState<Classroom[]>([
+    { id: "default", name: "Lokaal 1" },
+  ]);
+  const [selectedClassroomId, setSelectedClassroomId] =
+    useState<string>("default");
 
   const [editingClassroomId, setEditingClassroomId] = useState<string | null>(
     null,
@@ -117,72 +92,66 @@ export function ClassroomGrid({
   const [showClassroomSelector, setShowClassroomSelector] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Memoize extra rows/cols based on selected class
-  const currentExtraRows = useMemo(() => {
-    if (!selectedClass) return 0;
-    const saved = localStorage.getItem(`classroom_extra_rows_${selectedClass}`);
-    return saved ? parseInt(saved, 10) : 0;
-  }, [selectedClass]);
+  const [teacherPosition, setTeacherPositionState] =
+    useState<TeacherPosition>("center");
+  const extraRows = useMemo(() => 0, []);
+  const extraCols = useMemo(() => 0, []);
 
-  const currentExtraCols = useMemo(() => {
-    if (!selectedClass) return 0;
-    const saved = localStorage.getItem(`classroom_extra_cols_${selectedClass}`);
-    return saved ? parseInt(saved, 10) : 0;
-  }, [selectedClass]);
-
-  const [extraRows, setExtraRowsState] = useState(currentExtraRows);
-  const [extraCols, setExtraColsState] = useState(currentExtraCols);
-
-  // Update extra rows/cols when class changes
-  useEffect(() => {
-    setExtraRowsState(currentExtraRows);
-    setExtraColsState(currentExtraCols);
-  }, [currentExtraRows, currentExtraCols]);
-
-  // One-time cleanup: remove any saved extra columns/rows on mount
-  useEffect(() => {
-    if (selectedClass) {
-      localStorage.removeItem(`classroom_extra_cols_${selectedClass}`);
-      localStorage.removeItem(`classroom_extra_rows_${selectedClass}`);
-      setExtraRowsState(0);
-      setExtraColsState(0);
-    }
-  }, [selectedClass]);
-
-  // Memoize position based on selected class
-  const currentTeacherPosition = useMemo<TeacherPosition>(() => {
-    if (!selectedClass) return "center";
-    const saved = localStorage.getItem(
-      `classroom_teacher_position_${selectedClass}`,
-    );
-    if (
-      saved &&
-      (saved === "left" || saved === "center" || saved === "right")
-    ) {
-      return saved as TeacherPosition;
-    }
-    return "center";
-  }, [selectedClass]);
-
-  const [teacherPosition, setTeacherPositionState] = useState<TeacherPosition>(
-    currentTeacherPosition,
-  );
-
-  // Update state when class changes using useEffect
-  useEffect(() => {
-    setTeacherPositionState(currentTeacherPosition);
-  }, [currentTeacherPosition]);
-
-  // Save teacher position to localStorage
+  // Persist teacher position in classroom layout JSON data
   const handleTeacherPositionChange = (position: string) => {
     if (!selectedClass || !position) return;
     const validPosition = position as TeacherPosition;
     setTeacherPositionState(validPosition);
-    localStorage.setItem(
-      `classroom_teacher_position_${selectedClass}`,
-      validPosition,
-    );
+    onClassroomLayoutDataChange((previous) => ({
+      ...previous,
+      teacherPositionByClass: {
+        ...previous.teacherPositionByClass,
+        [selectedClass]: validPosition,
+      },
+    }));
   };
+
+  useEffect(() => {
+    if (!selectedClass) {
+      setClassrooms([{ id: "default", name: "Lokaal 1" }]);
+      setSelectedClassroomId("default");
+      setTeacherPositionState("center");
+      return;
+    }
+
+    const storedClassrooms =
+      classroomLayoutData.classroomsByClass[selectedClass];
+    const resolvedClassrooms =
+      storedClassrooms && storedClassrooms.length > 0
+        ? storedClassrooms
+        : [{ id: "default", name: "Lokaal 1" }];
+
+    setClassrooms(resolvedClassrooms);
+
+    const storedSelectedId =
+      classroomLayoutData.selectedClassroomByClass[selectedClass];
+    const resolvedSelectedId = resolvedClassrooms.some(
+      (classroom) => classroom.id === storedSelectedId,
+    )
+      ? storedSelectedId
+      : resolvedClassrooms[0].id;
+
+    setSelectedClassroomId(resolvedSelectedId);
+
+    if (storedSelectedId !== resolvedSelectedId) {
+      onClassroomLayoutDataChange((previous) => ({
+        ...previous,
+        selectedClassroomByClass: {
+          ...previous.selectedClassroomByClass,
+          [selectedClass]: resolvedSelectedId,
+        },
+      }));
+    }
+
+    setTeacherPositionState(
+      classroomLayoutData.teacherPositionByClass[selectedClass] || "center",
+    );
+  }, [selectedClass, classroomLayoutData, onClassroomLayoutDataChange]);
 
   // Handle print mode
   const handlePrint = () => {
@@ -231,66 +200,16 @@ export function ClassroomGrid({
     }
   };
 
-  // Load classrooms when class changes
-  useEffect(() => {
-    if (selectedClass) {
-      const saved = localStorage.getItem(`classrooms_${selectedClass}`);
-      let loadedClassrooms: Classroom[];
-
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          // Migrate old format (string array) to new format
-          if (
-            Array.isArray(parsed) &&
-            parsed.length > 0 &&
-            typeof parsed[0] === "string"
-          ) {
-            loadedClassrooms = parsed.map((name: string, index: number) => ({
-              id: `migrated_${index}_${Date.now()}`,
-              name,
-            }));
-            // Save migrated format
-            localStorage.setItem(
-              `classrooms_${selectedClass}`,
-              JSON.stringify(loadedClassrooms),
-            );
-          } else {
-            loadedClassrooms = parsed;
-          }
-        } catch {
-          loadedClassrooms = [{ id: "default", name: "Lokaal 1" }];
-        }
-      } else {
-        loadedClassrooms = [{ id: "default", name: "Lokaal 1" }];
-      }
-
-      setClassrooms(loadedClassrooms);
-
-      const savedSelectedId = localStorage.getItem(
-        `selected_classroom_${selectedClass}`,
-      );
-      // Try to find by ID first, fallback to name for migration
-      const classroom = loadedClassrooms.find(
-        (c) => c.id === savedSelectedId || c.name === savedSelectedId,
-      );
-      const selectedId = classroom?.id || loadedClassrooms[0]?.id;
-      setSelectedClassroomId(selectedId);
-
-      // Save the ID if we migrated from name
-      if (selectedId && savedSelectedId !== selectedId) {
-        localStorage.setItem(`selected_classroom_${selectedClass}`, selectedId);
-      }
-    }
-  }, [selectedClass]);
-
-  // Save classrooms to localStorage
+  // Save classrooms to classroom layout JSON data
   const saveClassrooms = (newClassrooms: Classroom[]) => {
     if (selectedClass) {
-      localStorage.setItem(
-        `classrooms_${selectedClass}`,
-        JSON.stringify(newClassrooms),
-      );
+      onClassroomLayoutDataChange((previous) => ({
+        ...previous,
+        classroomsByClass: {
+          ...previous.classroomsByClass,
+          [selectedClass]: newClassrooms,
+        },
+      }));
       setClassrooms(newClassrooms);
     }
   };
@@ -303,7 +222,13 @@ export function ClassroomGrid({
     saveClassrooms(updated);
     setSelectedClassroomId(newId);
     if (selectedClass) {
-      localStorage.setItem(`selected_classroom_${selectedClass}`, newId);
+      onClassroomLayoutDataChange((previous) => ({
+        ...previous,
+        selectedClassroomByClass: {
+          ...previous.selectedClassroomByClass,
+          [selectedClass]: newId,
+        },
+      }));
     }
   };
 
@@ -323,10 +248,13 @@ export function ClassroomGrid({
       const newSelectedId = updated[0]?.id;
       setSelectedClassroomId(newSelectedId);
       if (selectedClass && newSelectedId) {
-        localStorage.setItem(
-          `selected_classroom_${selectedClass}`,
-          newSelectedId,
-        );
+        onClassroomLayoutDataChange((previous) => ({
+          ...previous,
+          selectedClassroomByClass: {
+            ...previous.selectedClassroomByClass,
+            [selectedClass]: newSelectedId,
+          },
+        }));
       }
     }
   };
@@ -349,7 +277,13 @@ export function ClassroomGrid({
   const handleSelectClassroom = (classroomId: string) => {
     setSelectedClassroomId(classroomId);
     if (selectedClass) {
-      localStorage.setItem(`selected_classroom_${selectedClass}`, classroomId);
+      onClassroomLayoutDataChange((previous) => ({
+        ...previous,
+        selectedClassroomByClass: {
+          ...previous.selectedClassroomByClass,
+          [selectedClass]: classroomId,
+        },
+      }));
     }
   };
 
@@ -566,10 +500,8 @@ export function ClassroomGrid({
                       onDrop={(e) => {
                         const classroomKey = getClassroomKey(selectedClass);
                         onDrop(e, row, col, classroomKey);
-                        // Reset drag state and extra columns/rows after drop
+                        // Reset drag state after drop
                         setIsDragging(false);
-                        setExtraRowsState(0);
-                        setExtraColsState(0);
                         // Force reset drag state after drop
                         setTimeout(() => setDraggedStudentId(null), 0);
                       }}

@@ -42,6 +42,29 @@ interface StudentNote {
   updatedAt: string; // ISO date string
 }
 
+type TeacherPosition = "left" | "center" | "right";
+
+interface Classroom {
+  id: string;
+  name: string;
+}
+
+interface ClassroomLayoutData {
+  seatingPositions: Record<
+    string,
+    Array<{
+      studentId: number;
+      row: number;
+      col: number;
+      className: string;
+      schoolYear: string;
+    }>
+  >;
+  classroomsByClass: Record<string, Classroom[]>;
+  selectedClassroomByClass: Record<string, string>;
+  teacherPositionByClass: Record<string, TeacherPosition>;
+}
+
 class StudentDatabase {
   private unwrapResponse<T>(
     response: { success: boolean; data?: unknown; error?: string },
@@ -156,6 +179,14 @@ class StudentDatabase {
     this.unwrapResponse<void>(response, "Failed to save property value");
   }
 
+  async savePropertyValuesBulk(values: StudentPropertyValue[]): Promise<void> {
+    const response = await window.studentDBAPI.savePropertyValuesBulk(values);
+    this.unwrapResponse<void>(
+      response,
+      "Failed to save property values in bulk",
+    );
+  }
+
   // Notes
   async getNote(
     studentId: number,
@@ -177,6 +208,22 @@ class StudentDatabase {
     const response = await window.studentDBAPI.saveNote(note);
     this.unwrapResponse<void>(response, "Failed to save note");
   }
+
+  async getClassroomLayoutData(): Promise<ClassroomLayoutData> {
+    const response = await window.studentDBAPI.getClassroomLayoutData();
+    return this.unwrapResponse<ClassroomLayoutData>(
+      response,
+      "Failed to get classroom layout data",
+    );
+  }
+
+  async saveClassroomLayoutData(
+    layoutData: ClassroomLayoutData,
+  ): Promise<void> {
+    const response =
+      await window.studentDBAPI.saveClassroomLayoutData(layoutData);
+    this.unwrapResponse<void>(response, "Failed to save classroom layout data");
+  }
 }
 
 // Export singleton instance
@@ -186,4 +233,7 @@ export type {
   StudentPropertyDefinition,
   StudentPropertyValue,
   StudentNote,
+  ClassroomLayoutData,
+  Classroom,
+  TeacherPosition,
 };

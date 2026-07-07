@@ -14,7 +14,11 @@ export const STUDENT_DB_CHANNELS = {
   GET_PROPERTY_VALUES: "studentDB:getPropertyValues",
   GET_PROPERTY_VALUES_BATCH: "studentDB:getPropertyValuesBatch",
   SAVE_PROPERTY_VALUE: "studentDB:savePropertyValue",
+  SAVE_PROPERTY_VALUES_BULK: "studentDB:savePropertyValuesBulk",
   // Notes
   GET_NOTE: "studentDB:getNote",
   SAVE_NOTE: "studentDB:saveNote",
+  // Classroom layout storage
+  GET_CLASSROOM_LAYOUT_DATA: "studentDB:getClassroomLayoutData",
+  SAVE_CLASSROOM_LAYOUT_DATA: "studentDB:saveClassroomLayoutData",
 } as const;

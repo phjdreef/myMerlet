@@ -53,6 +53,8 @@ export const studentDBAPI = {
     ),
   savePropertyValue: (value: unknown) =>
     ipcRenderer.invoke(STUDENT_DB_CHANNELS.SAVE_PROPERTY_VALUE, value),
+  savePropertyValuesBulk: (values: unknown[]) =>
+    ipcRenderer.invoke(STUDENT_DB_CHANNELS.SAVE_PROPERTY_VALUES_BULK, values),
   // Notes
   getNote: (studentId: number, className: string, schoolYear: string) =>
     ipcRenderer.invoke(
@@ -63,6 +65,14 @@ export const studentDBAPI = {
     ),
   saveNote: (note: unknown) =>
     ipcRenderer.invoke(STUDENT_DB_CHANNELS.SAVE_NOTE, note),
+  // Classroom layout storage
+  getClassroomLayoutData: () =>
+    ipcRenderer.invoke(STUDENT_DB_CHANNELS.GET_CLASSROOM_LAYOUT_DATA),
+  saveClassroomLayoutData: (layoutData: unknown) =>
+    ipcRenderer.invoke(
+      STUDENT_DB_CHANNELS.SAVE_CLASSROOM_LAYOUT_DATA,
+      layoutData,
+    ),
 };
 
 contextBridge.exposeInMainWorld("studentDBAPI", studentDBAPI);

@@ -1,4 +1,5 @@
 import type { ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import type { StudentPropertyDefinition } from "@/services/student-database";
 import type { Test } from "@/services/test-database";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -14,6 +15,7 @@ import {
 import { StudentPhoto } from "../StudentPhoto";
 import {
   LEVEL_OVERRIDE_OPTIONS,
+  INACTIVE_STUDENT_PROPERTY_ID,
   LEVEL_OVERRIDE_PROPERTY_ID,
 } from "@/helpers/student_helpers";
 import type { StudentWithExtras } from "./types";
@@ -25,6 +27,8 @@ interface StudentTableRowProps {
   getFullName: (student: StudentWithExtras) => string;
   getDefaultNiveau: (student: StudentWithExtras) => string;
   getDefaultNiveauCode: (student: StudentWithExtras) => string | null;
+  showActiveColumn: boolean;
+  onActiveChange: (student: StudentWithExtras, isActive: boolean) => void;
   onPropertyValueChange: (
     student: StudentWithExtras,
     propertyId: string,
@@ -36,6 +40,10 @@ interface StudentTableRowProps {
     propertyId: string,
   ) => void;
   getGradeColor: (grade: number) => string;
+  selected?: boolean;
+  onRowMouseDown?: (event: React.MouseEvent<HTMLTableRowElement>) => void;
+  onRowClick?: (event: React.MouseEvent<HTMLTableRowElement>) => void;
+  onRowContextMenu?: (event: React.MouseEvent<HTMLTableRowElement>) => void;
 }
 
 export function StudentTableRow({
@@ -45,12 +53,41 @@ export function StudentTableRow({
   getFullName,
   getDefaultNiveau,
   getDefaultNiveauCode,
+  showActiveColumn,
+  onActiveChange,
   onPropertyValueChange,
   onTextareaChange,
   getGradeColor,
+  selected = false,
+  onRowMouseDown,
+  onRowClick,
+  onRowContextMenu,
 }: StudentTableRowProps) {
+  const { t } = useTranslation();
+  const isInactive =
+    (student.propertyValues.get(INACTIVE_STUDENT_PROPERTY_ID) as boolean) ===
+    true;
+
   return (
-    <TableRow key={student.id} className="group/row">
+    <TableRow
+      key={student.id}
+      className={`group/row ${selected ? "bg-muted/80 hover:bg-muted/80" : ""} select-none`}
+      onMouseDown={onRowMouseDown}
+      onClick={onRowClick}
+      onContextMenu={onRowContextMenu}
+    >
+      {showActiveColumn && (
+        <TableCell className="w-9 px-1 text-center">
+          <Checkbox
+            checked={!isInactive}
+            onCheckedChange={(checked: boolean) =>
+              onActiveChange(student, checked === true)
+            }
+            className="relative z-10"
+          />
+        </TableCell>
+      )}
+
       <TableCell className="relative">
         <div className="h-10 w-10">
           <StudentPhoto student={student} size="small" />
@@ -96,7 +133,11 @@ export function StudentTableRow({
                     <SelectValue placeholder={getDefaultNiveau(student)} />
                   </SelectTrigger>
                   <SelectContent>
-                    {!defaultCode && <SelectItem value="unknown">-</SelectItem>}
+                    {!defaultCode && (
+                      <SelectItem value="unknown">
+                        {t("unknownLevelOption")}
+                      </SelectItem>
+                    )}
                     {LEVEL_OVERRIDE_OPTIONS.map((option) => (
                       <SelectItem key={option.code} value={option.code}>
                         {option.label}
@@ -110,7 +151,7 @@ export function StudentTableRow({
         </div>
       </TableCell>
 
-      {recentTests.length > 0 ? (
+      {recentTests.length > 0 && (
         <>
           {student.recentGrades.map((gradeInfo, idx) => (
             <TableCell key={idx} className="text-center">
@@ -139,18 +180,6 @@ export function StudentTableRow({
             ) : (
               <span className="text-muted-foreground">-</span>
             )}
-          </TableCell>
-        </>
-      ) : (
-        <>
-          <TableCell className="text-muted-foreground text-center text-sm">
-            -
-          </TableCell>
-          <TableCell className="text-muted-foreground text-center text-sm">
-            -
-          </TableCell>
-          <TableCell className="text-muted-foreground text-center text-sm">
-            -
           </TableCell>
         </>
       )}

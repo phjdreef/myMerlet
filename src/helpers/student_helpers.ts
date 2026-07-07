@@ -1,6 +1,7 @@
 import type { Student } from "@/services/student-database";
 
 export const LEVEL_OVERRIDE_PROPERTY_ID = "level_override";
+export const INACTIVE_STUDENT_PROPERTY_ID = "student_inactive";
 
 export const LEVEL_OVERRIDE_OPTIONS = [
   { code: "B", label: "B - Basis" },

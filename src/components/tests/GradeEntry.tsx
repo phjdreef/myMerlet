@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { CvTEChart } from "./CvTEChart";
-import { ChartBarIcon, FloppyDiskIcon } from "@phosphor-icons/react";
+import { ChartBarIcon } from "@phosphor-icons/react";
 import {
   calculateCvTEGrade,
   type Test,
@@ -60,7 +60,9 @@ export function GradeEntry({
   );
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState("");
+  const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"achternaam" | "roepnaam" | "number">(
     "achternaam",
@@ -115,6 +117,27 @@ export function GradeEntry({
   const [entries, setEntries] = useState<Map<number, GradeEntryFormEntry>>(
     new Map(),
   );
+
+  const serializeEntriesForSave = (
+    entriesMap: Map<number, GradeEntryFormEntry>,
+  ) => {
+    const payload = Array.from(entriesMap.entries())
+      .map(([studentId, entry]) => ({
+        studentId,
+        pointsEarned: entry.pointsEarned ?? null,
+        manualOverride: entry.manualOverride ?? null,
+        elementGrades: (entry.elementGrades ?? [])
+          .slice()
+          .sort((a, b) => a.elementId.localeCompare(b.elementId))
+          .map((grade) => ({
+            elementId: grade.elementId,
+            pointsEarned: grade.pointsEarned,
+          })),
+      }))
+      .sort((a, b) => a.studentId - b.studentId);
+
+    return JSON.stringify(payload);
+  };
 
   // Calculate live statistics from current entries
   const liveStatistics = (() => {
@@ -211,6 +234,7 @@ export function GradeEntry({
         });
 
         setEntries(entriesMap);
+        setLastSavedSnapshot(serializeEntriesForSave(entriesMap));
       }
     } catch (error) {
       logger.error("Failed to load grades:", error);
@@ -398,11 +422,22 @@ export function GradeEntry({
     );
   };
 
-  const handleSaveAll = async () => {
-    setSaving(true);
+  const saveEntries = async (
+    entriesToSave: Map<number, GradeEntryFormEntry>,
+    options?: { showToast?: boolean },
+  ) => {
+    const showToast = options?.showToast ?? false;
+    const snapshot = serializeEntriesForSave(entriesToSave);
+
+    if (snapshot === lastSavedSnapshot) {
+      return;
+    }
+
+    setAutoSaving(true);
+
     try {
       // Save all entries based on test type
-      for (const [studentId, entry] of entries.entries()) {
+      for (const [studentId, entry] of entriesToSave.entries()) {
         if (test.testType === "cvte") {
           // CvTE test - save points earned
           if (
@@ -431,20 +466,51 @@ export function GradeEntry({
           }
         }
       }
-      onSave?.();
-      toast({
-        title: t("gradesSavedSuccess"),
-      });
+      setLastSavedSnapshot(snapshot);
+      if (showToast) {
+        onSave?.();
+        toast({
+          title: t("gradesSavedSuccess"),
+        });
+      }
     } catch (error) {
       logger.error("Failed to save grades:", error);
-      toast({
-        title: t("gradesSaveFailed"),
-        variant: "destructive",
-      });
+      if (showToast) {
+        toast({
+          title: t("gradesSaveFailed"),
+          variant: "destructive",
+        });
+      }
     } finally {
-      setSaving(false);
+      setAutoSaving(false);
     }
   };
+
+  useEffect(() => {
+    if (readOnly || loading) {
+      return;
+    }
+
+    const snapshot = serializeEntriesForSave(entries);
+    if (snapshot === lastSavedSnapshot) {
+      return;
+    }
+
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+
+    autosaveTimeoutRef.current = setTimeout(() => {
+      void saveEntries(new Map(entries), { showToast: false });
+    }, 900);
+
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+        autosaveTimeoutRef.current = null;
+      }
+    };
+  }, [entries, lastSavedSnapshot, loading, readOnly]);
 
   if (loading) {
     return <div className="p-4">{t("loading")}</div>;
@@ -617,12 +683,11 @@ export function GradeEntry({
       {/* Actions - Sticky at bottom */}
       {!readOnly && (
         <div className="sticky bottom-0 z-10 flex justify-end gap-2 border-t bg-white pt-4 pb-2 dark:bg-gray-900">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
+          <span className="text-muted-foreground mr-auto flex items-center text-xs">
+            {autoSaving ? t("saving") : t("autoSaveEnabled", "Autosave aan")}
+          </span>
+          <Button variant="outline" onClick={onClose} disabled={autoSaving}>
             {t("cancel")}
-          </Button>
-          <Button onClick={handleSaveAll} disabled={saving}>
-            <FloppyDiskIcon className="mr-2 h-4 w-4" />
-            {saving ? t("saving") : t("saveAllGrades")}
           </Button>
         </div>
       )}

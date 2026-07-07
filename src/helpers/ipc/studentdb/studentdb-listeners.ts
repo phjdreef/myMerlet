@@ -6,6 +6,7 @@ import {
   type StudentPropertyDefinition,
   type StudentPropertyValue,
   type StudentNote,
+  type ClassroomLayoutData,
 } from "../../../services/main-student-database";
 import { withIpcData, withIpcVoid } from "../ipc-handler-utils";
 
@@ -114,6 +115,15 @@ export function addStudentDBEventListeners() {
       ),
   );
 
+  ipcMain.handle(
+    STUDENT_DB_CHANNELS.SAVE_PROPERTY_VALUES_BULK,
+    async (_, values: StudentPropertyValue[]) =>
+      withIpcVoid(
+        () => mainStudentDB.savePropertyValuesBulk(values),
+        "Failed to save property values in bulk",
+      ),
+  );
+
   // Notes
   ipcMain.handle(
     STUDENT_DB_CHANNELS.GET_NOTE,
@@ -126,5 +136,22 @@ export function addStudentDBEventListeners() {
 
   ipcMain.handle(STUDENT_DB_CHANNELS.SAVE_NOTE, async (_, note: StudentNote) =>
     withIpcVoid(() => mainStudentDB.saveNote(note), "Failed to save note"),
+  );
+
+  // Classroom layout storage
+  ipcMain.handle(STUDENT_DB_CHANNELS.GET_CLASSROOM_LAYOUT_DATA, async () =>
+    withIpcData(
+      () => mainStudentDB.getClassroomLayoutData(),
+      "Failed to get classroom layout data",
+    ),
+  );
+
+  ipcMain.handle(
+    STUDENT_DB_CHANNELS.SAVE_CLASSROOM_LAYOUT_DATA,
+    async (_, layoutData: ClassroomLayoutData) =>
+      withIpcVoid(
+        () => mainStudentDB.saveClassroomLayoutData(layoutData),
+        "Failed to save classroom layout data",
+      ),
   );
 }

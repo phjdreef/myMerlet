@@ -9,6 +9,7 @@ import { studentDB } from "@/services/student-database";
 import {
   extractShortLevel,
   isValidNiveau,
+  LEVEL_OVERRIDE_OPTIONS,
   LEVEL_OVERRIDE_PROPERTY_ID,
 } from "@/helpers/student_helpers";
 import { useSchoolYear } from "@/contexts/SchoolYearContext";
@@ -40,6 +41,48 @@ export function TestForm({
   const formulaInputRef = useRef<HTMLInputElement>(null);
   const [showDescription, setShowDescription] = useState(false);
   const [availableLevels, setAvailableLevels] = useState<string[]>([]);
+
+  const resolveStudentLevelForNormering = (
+    student: Awaited<ReturnType<typeof studentDB.getAllStudents>>[number],
+    overrideValue?: unknown,
+  ): string | null => {
+    if (typeof overrideValue === "string" && overrideValue.trim().length > 0) {
+      return overrideValue.trim().toUpperCase();
+    }
+
+    const magisterCandidates = new Set<string>();
+
+    if (student.profiel1 && isValidNiveau(student.profiel1)) {
+      magisterCandidates.add(extractShortLevel(student.profiel1));
+    }
+
+    if (student.studies && student.studies.length > 0) {
+      student.studies
+        .filter(isValidNiveau)
+        .forEach((study) => magisterCandidates.add(extractShortLevel(study)));
+    }
+
+    // Ambiguous levels like M/K should not generate a separate normering button.
+    if (magisterCandidates.size !== 1) return null;
+
+    const normalized = Array.from(magisterCandidates)[0].toUpperCase().trim();
+    if (!normalized || normalized === "-" || normalized.includes("/")) {
+      return null;
+    }
+
+    if (LEVEL_OVERRIDE_OPTIONS.some((option) => option.code === normalized)) {
+      return normalized;
+    }
+
+    if (normalized.includes("BASIS")) return "B";
+    if (normalized.includes("KADER")) return "K";
+    if (normalized.includes("MAVO")) return "M";
+    if (normalized.includes("HAVO")) return "H";
+    if (normalized.includes("ATHENEUM")) return "A";
+    if (normalized.includes("GYMNASIUM")) return "G";
+
+    return normalized;
+  };
 
   // Load available levels from selected class groups
   useEffect(() => {
@@ -85,30 +128,23 @@ export function TestForm({
               }),
             );
 
-            overrideValues.forEach((value) => {
-              if (typeof value === "string" && value.trim().length > 0) {
-                allLevels.add(value.trim().toUpperCase());
+            studentsInClass.forEach((student, index) => {
+              const resolvedLevel = resolveStudentLevelForNormering(
+                student,
+                overrideValues[index],
+              );
+              if (resolvedLevel) {
+                allLevels.add(resolvedLevel);
+              }
+            });
+          } else {
+            studentsInClass.forEach((student) => {
+              const resolvedLevel = resolveStudentLevelForNormering(student);
+              if (resolvedLevel) {
+                allLevels.add(resolvedLevel);
               }
             });
           }
-
-          // Extract levels from students
-          studentsInClass.forEach((student) => {
-            if (student.profiel1 && isValidNiveau(student.profiel1)) {
-              const level = extractShortLevel(student.profiel1);
-              console.log("Found profiel1:", level);
-              allLevels.add(level);
-            }
-            if (student.studies && student.studies.length > 0) {
-              student.studies.forEach((study) => {
-                if (isValidNiveau(study)) {
-                  const level = extractShortLevel(study);
-                  console.log("Found study:", level);
-                  allLevels.add(level);
-                }
-              });
-            }
-          });
         }
 
         // Only use class name detection if no levels found from students

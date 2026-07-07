@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { createPortal } from "react-dom";
 import { useSchoolYear } from "@/contexts/SchoolYearContext";
 import type {
   Student,
@@ -9,12 +10,30 @@ import { studentDB } from "@/services/student-database";
 import type { Test, StudentGrade } from "@/services/test-database";
 import { Table, TableBody } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Settings2 } from "lucide-react";
 import { logger } from "@/utils/logger";
 import { PropertyManager } from "./PropertyManager";
 import { formatClassName } from "@/utils/class-utils";
 import {
   extractShortLevel,
+  INACTIVE_STUDENT_PROPERTY_ID,
   isValidNiveau,
   LEVEL_OVERRIDE_OPTIONS,
   LEVEL_OVERRIDE_PROPERTY_ID,
@@ -23,11 +42,18 @@ import { StudentTableHeader } from "./student-table/StudentTableHeader";
 import { StudentTableRow } from "./student-table/StudentTableRow";
 import type { StudentWithExtras } from "./student-table/types";
 
+type ContextMenuState = {
+  x: number;
+  y: number;
+  visible: boolean;
+};
+
 interface StudentTableViewProps {
   students: Student[];
   selectedClass: string | null;
   loading: boolean;
   totalStudents: number;
+  onStudentActiveChange?: (studentId: number, isActive: boolean) => void;
 }
 
 export function StudentTableView({
@@ -35,6 +61,7 @@ export function StudentTableView({
   selectedClass,
   loading,
   totalStudents,
+  onStudentActiveChange,
 }: StudentTableViewProps) {
   const { t } = useTranslation();
   const { currentSchoolYear } = useSchoolYear();
@@ -49,6 +76,27 @@ export function StudentTableView({
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filters, setFilters] = useState<Map<string, string>>(new Map());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [selectionAnchorId, setSelectionAnchorId] = useState<number | null>(
+    null,
+  );
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    x: 0,
+    y: 0,
+    visible: false,
+  });
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const [showBulkPropertyDialog, setShowBulkPropertyDialog] = useState(false);
+  const [bulkPropertyId, setBulkPropertyId] = useState<string>("");
+  const [bulkPropertyTextValue, setBulkPropertyTextValue] =
+    useState<string>("");
+  const [bulkPropertyNumberValue, setBulkPropertyNumberValue] =
+    useState<string>("0");
+  const [bulkPropertyBooleanValue, setBulkPropertyBooleanValue] =
+    useState<boolean>(false);
 
   // Load property definitions when class changes
   useEffect(() => {
@@ -178,23 +226,39 @@ export function StudentTableView({
   };
 
   const getDefaultNiveauCode = (student: Student): string | null => {
-    const defaultNiveau = getDefaultNiveau(student).toUpperCase().trim();
+    const magisterCandidates = new Set<string>();
 
-    if (!defaultNiveau || defaultNiveau === "-") return null;
+    if (student.profiel1 && isValidNiveau(student.profiel1)) {
+      magisterCandidates.add(extractShortLevel(student.profiel1));
+    }
+
+    if (student.studies && student.studies.length > 0) {
+      student.studies
+        .filter(isValidNiveau)
+        .forEach((study) => magisterCandidates.add(extractShortLevel(study)));
+    }
+
+    // Ambiguous or missing Magister level should remain unknown.
+    if (magisterCandidates.size !== 1) return null;
+
+    const defaultNiveau = Array.from(magisterCandidates)[0]
+      .toUpperCase()
+      .trim();
+    if (
+      !defaultNiveau ||
+      defaultNiveau === "-" ||
+      defaultNiveau.includes("/")
+    ) {
+      return null;
+    }
 
     const directMatch = LEVEL_OVERRIDE_OPTIONS.find(
       (option) => option.code === defaultNiveau,
     );
     if (directMatch) return directMatch.code;
 
-    const firstToken = defaultNiveau.split(/[/,\s-]+/).find(Boolean);
-    if (firstToken) {
-      const tokenMatch = LEVEL_OVERRIDE_OPTIONS.find(
-        (option) => option.code === firstToken,
-      );
-      if (tokenMatch) return tokenMatch.code;
-    }
-
+    if (defaultNiveau.includes("BASIS")) return "B";
+    if (defaultNiveau.includes("KADER")) return "K";
     if (defaultNiveau.includes("MAVO")) return "M";
     if (defaultNiveau.includes("HAVO")) return "H";
     if (defaultNiveau.includes("ATHENEUM")) return "A";
@@ -217,59 +281,360 @@ export function StudentTableView({
   };
 
   // Apply filters and sorting
-  const filteredAndSortedStudents = studentsWithExtras
-    .filter((student) => {
-      for (const [column, filterValue] of filters.entries()) {
-        const lowerFilter = filterValue.toLowerCase();
+  const filteredAndSortedStudents = useMemo(() => {
+    return studentsWithExtras
+      .filter((student) => {
+        for (const [column, filterValue] of filters.entries()) {
+          const lowerFilter = filterValue.toLowerCase();
 
-        if (column === "name") {
-          const fullName = getFullName(student).toLowerCase();
-          if (!fullName.includes(lowerFilter)) return false;
-        } else if (column === "level") {
-          const niveau = getNiveau(student).toLowerCase();
-          if (!niveau.includes(lowerFilter)) return false;
-        } else if (column.startsWith("prop_")) {
-          const propId = column.substring(5);
-          const value = student.propertyValues.get(propId);
-          const valueStr = value?.toString().toLowerCase() || "";
-          if (!valueStr.includes(lowerFilter)) return false;
+          if (column === "name") {
+            const fullName = getFullName(student).toLowerCase();
+            if (!fullName.includes(lowerFilter)) return false;
+          } else if (column === "level") {
+            const niveau = getNiveau(student).toLowerCase();
+            if (!niveau.includes(lowerFilter)) return false;
+          } else if (column.startsWith("prop_")) {
+            const propId = column.substring(5);
+            const value = student.propertyValues.get(propId);
+            const valueStr = value?.toString().toLowerCase() || "";
+            if (!valueStr.includes(lowerFilter)) return false;
+          }
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (!sortColumn) return 0;
+
+        let aValue: string | number;
+        let bValue: string | number;
+
+        if (sortColumn === "name") {
+          aValue = getFullName(a);
+          bValue = getFullName(b);
+        } else if (sortColumn === "lastName") {
+          aValue = a.achternaam || "";
+          bValue = b.achternaam || "";
+        } else if (sortColumn === "level") {
+          aValue = getNiveau(a);
+          bValue = getNiveau(b);
+        } else if (sortColumn === "average") {
+          aValue = a.average ?? -1;
+          bValue = b.average ?? -1;
+        } else if (sortColumn.startsWith("prop_")) {
+          const propId = sortColumn.substring(5);
+          const aProp = a.propertyValues.get(propId);
+          const bProp = b.propertyValues.get(propId);
+          // Convert boolean to string for comparison
+          aValue = typeof aProp === "boolean" ? String(aProp) : (aProp ?? "");
+          bValue = typeof bProp === "boolean" ? String(bProp) : (bProp ?? "");
+        } else {
+          return 0;
+        }
+
+        if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+  }, [studentsWithExtras, filters, sortColumn, sortDirection]);
+
+  useEffect(() => {
+    const visibleIds = new Set(
+      filteredAndSortedStudents.map((student) => student.id),
+    );
+    setSelectedStudentIds((previous) => {
+      const next = new Set<number>();
+      previous.forEach((id) => {
+        if (visibleIds.has(id)) {
+          next.add(id);
+        }
+      });
+
+      if (next.size === previous.size) {
+        let changed = false;
+        for (const id of next) {
+          if (!previous.has(id)) {
+            changed = true;
+            break;
+          }
+        }
+        if (!changed) {
+          return previous;
         }
       }
-      return true;
-    })
-    .sort((a, b) => {
-      if (!sortColumn) return 0;
 
-      let aValue: string | number;
-      let bValue: string | number;
+      return next;
+    });
+  }, [filteredAndSortedStudents]);
 
-      if (sortColumn === "name") {
-        aValue = getFullName(a);
-        bValue = getFullName(b);
-      } else if (sortColumn === "lastName") {
-        aValue = a.achternaam || "";
-        bValue = b.achternaam || "";
-      } else if (sortColumn === "level") {
-        aValue = getNiveau(a);
-        bValue = getNiveau(b);
-      } else if (sortColumn === "average") {
-        aValue = a.average ?? -1;
-        bValue = b.average ?? -1;
-      } else if (sortColumn.startsWith("prop_")) {
-        const propId = sortColumn.substring(5);
-        const aProp = a.propertyValues.get(propId);
-        const bProp = b.propertyValues.get(propId);
-        // Convert boolean to string for comparison
-        aValue = typeof aProp === "boolean" ? String(aProp) : (aProp ?? "");
-        bValue = typeof bProp === "boolean" ? String(bProp) : (bProp ?? "");
-      } else {
-        return 0;
+  useEffect(() => {
+    if (selectionAnchorId === null) {
+      return;
+    }
+
+    const stillVisible = filteredAndSortedStudents.some(
+      (student) => student.id === selectionAnchorId,
+    );
+    if (!stillVisible) {
+      setSelectionAnchorId(null);
+    }
+  }, [filteredAndSortedStudents, selectionAnchorId]);
+
+  useEffect(() => {
+    const hideContextMenu = () => {
+      setContextMenu((previous) => ({ ...previous, visible: false }));
+    };
+
+    window.addEventListener("click", hideContextMenu);
+    window.addEventListener("scroll", hideContextMenu, true);
+
+    return () => {
+      window.removeEventListener("click", hideContextMenu);
+      window.removeEventListener("scroll", hideContextMenu, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!contextMenu.visible || !contextMenuRef.current) {
+      return;
+    }
+
+    const menuRect = contextMenuRef.current.getBoundingClientRect();
+    const margin = 8;
+
+    const nextX = Math.max(
+      margin,
+      Math.min(contextMenu.x, window.innerWidth - menuRect.width - margin),
+    );
+    const nextY = Math.max(
+      margin,
+      Math.min(contextMenu.y, window.innerHeight - menuRect.height - margin),
+    );
+
+    if (nextX !== contextMenu.x || nextY !== contextMenu.y) {
+      setContextMenu((previous) => ({
+        ...previous,
+        x: nextX,
+        y: nextY,
+      }));
+    }
+  }, [contextMenu.visible, contextMenu.x, contextMenu.y]);
+
+  const applyLevelToSelected = async (levelCode: string) => {
+    if (!selectedClass || selectedStudentIds.size === 0 || bulkUpdating) {
+      return;
+    }
+
+    const levelValue = levelCode === "magister" ? "" : levelCode;
+    const selectedIds = new Set(selectedStudentIds);
+    const selectedStudents = filteredAndSortedStudents.filter((student) =>
+      selectedIds.has(student.id),
+    );
+    if (selectedStudents.length === 0) {
+      return;
+    }
+
+    setBulkUpdating(true);
+    try {
+      await studentDB.savePropertyValuesBulk(
+        selectedStudents.map((student) => ({
+          studentId: student.id,
+          className: selectedClass,
+          schoolYear: currentSchoolYear,
+          propertyId: LEVEL_OVERRIDE_PROPERTY_ID,
+          value: levelValue,
+        })),
+      );
+
+      setStudentsWithExtras((previous) =>
+        previous.map((student) => {
+          if (!selectedIds.has(student.id)) {
+            return student;
+          }
+
+          const nextPropertyValues = new Map(student.propertyValues);
+          nextPropertyValues.set(LEVEL_OVERRIDE_PROPERTY_ID, levelValue);
+
+          return {
+            ...student,
+            propertyValues: nextPropertyValues,
+          };
+        }),
+      );
+    } catch (error) {
+      logger.error("Failed to apply bulk level update:", error);
+    } finally {
+      setBulkUpdating(false);
+      setContextMenu((previous) => ({ ...previous, visible: false }));
+    }
+  };
+
+  const selectedBulkPropertyDefinition = propertyDefinitions.find(
+    (property) => property.id === bulkPropertyId,
+  );
+
+  const applyPropertyValueToSelected = async () => {
+    if (
+      !selectedClass ||
+      selectedStudentIds.size === 0 ||
+      bulkUpdating ||
+      !selectedBulkPropertyDefinition
+    ) {
+      return;
+    }
+
+    let propertyValue: string | number | boolean;
+    if (selectedBulkPropertyDefinition.type === "boolean") {
+      propertyValue = bulkPropertyBooleanValue;
+    } else if (selectedBulkPropertyDefinition.type === "number") {
+      propertyValue = Number(bulkPropertyNumberValue || "0");
+    } else {
+      propertyValue = bulkPropertyTextValue;
+    }
+
+    const selectedIds = new Set(selectedStudentIds);
+    const selectedStudents = filteredAndSortedStudents.filter((student) =>
+      selectedIds.has(student.id),
+    );
+    if (selectedStudents.length === 0) {
+      return;
+    }
+
+    setBulkUpdating(true);
+    try {
+      await studentDB.savePropertyValuesBulk(
+        selectedStudents.map((student) => ({
+          studentId: student.id,
+          className: selectedClass,
+          schoolYear: currentSchoolYear,
+          propertyId: selectedBulkPropertyDefinition.id,
+          value: propertyValue,
+        })),
+      );
+
+      setStudentsWithExtras((previous) =>
+        previous.map((student) => {
+          if (!selectedIds.has(student.id)) {
+            return student;
+          }
+
+          const nextPropertyValues = new Map(student.propertyValues);
+          nextPropertyValues.set(
+            selectedBulkPropertyDefinition.id,
+            propertyValue,
+          );
+
+          return {
+            ...student,
+            propertyValues: nextPropertyValues,
+          };
+        }),
+      );
+
+      setShowBulkPropertyDialog(false);
+    } catch (error) {
+      logger.error("Failed to apply bulk property value update:", error);
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const isInteractiveTarget = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return false;
+    return Boolean(
+      target.closest(
+        "button, input, textarea, select, [role='button'], [role='checkbox'], [data-slot='select-trigger']",
+      ),
+    );
+  };
+
+  const handleRowClick = (
+    event: React.MouseEvent<HTMLTableRowElement>,
+    studentId: number,
+  ) => {
+    if (isInteractiveTarget(event.target)) {
+      return;
+    }
+
+    setContextMenu((previous) => ({ ...previous, visible: false }));
+
+    if (event.shiftKey && selectionAnchorId !== null) {
+      const currentIndex = filteredAndSortedStudents.findIndex(
+        (student) => student.id === studentId,
+      );
+      const anchorIndex = filteredAndSortedStudents.findIndex(
+        (student) => student.id === selectionAnchorId,
+      );
+
+      if (currentIndex !== -1 && anchorIndex !== -1) {
+        const start = Math.min(anchorIndex, currentIndex);
+        const end = Math.max(anchorIndex, currentIndex);
+        const rangeIds = filteredAndSortedStudents
+          .slice(start, end + 1)
+          .map((student) => student.id);
+
+        setSelectedStudentIds((previous) => {
+          if (event.metaKey || event.ctrlKey) {
+            const next = new Set(previous);
+            rangeIds.forEach((id) => next.add(id));
+            return next;
+          }
+
+          return new Set(rangeIds);
+        });
+        setSelectionAnchorId(studentId);
+        return;
+      }
+    }
+
+    setSelectedStudentIds((previous) => {
+      if (event.metaKey || event.ctrlKey) {
+        const next = new Set(previous);
+        if (next.has(studentId)) {
+          next.delete(studentId);
+        } else {
+          next.add(studentId);
+        }
+        return next;
       }
 
-      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-      return 0;
+      return new Set([studentId]);
     });
+    setSelectionAnchorId(studentId);
+  };
+
+  const handleRowMouseDown = (event: React.MouseEvent<HTMLTableRowElement>) => {
+    if (isInteractiveTarget(event.target)) {
+      return;
+    }
+
+    // Prevent browser text selection while selecting rows.
+    event.preventDefault();
+  };
+
+  const handleRowContextMenu = (
+    event: React.MouseEvent<HTMLTableRowElement>,
+    studentId: number,
+  ) => {
+    if (isInteractiveTarget(event.target)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    setSelectedStudentIds((previous) => {
+      if (previous.has(studentId)) {
+        return previous;
+      }
+      return new Set([studentId]);
+    });
+    setSelectionAnchorId(studentId);
+
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      visible: true,
+    });
+  };
 
   // Load student extras (photos, property values, notes) when students change
   useEffect(() => {
@@ -450,6 +815,18 @@ export function StudentTableView({
     handlePropertyValueChange(student, propertyId, e.target.value);
   };
 
+  const handleActiveChange = (
+    student: StudentWithExtras,
+    isActive: boolean,
+  ) => {
+    handlePropertyValueChange(
+      student,
+      INACTIVE_STUDENT_PROPERTY_ID,
+      isActive ? false : true,
+    );
+    onStudentActiveChange?.(student.id, isActive);
+  };
+
   const getGradeColor = (grade: number) => {
     if (grade >= 5.5) {
       return "text-green-600 dark:text-green-400 font-semibold";
@@ -488,15 +865,26 @@ export function StudentTableView({
                 {t("class")}: {selectedClass}
               </span>
             )}
+            {selectedStudentIds.size > 0 && (
+              <span className="text-muted-foreground">
+                {t("selectedRowsCount", { count: selectedStudentIds.size })}
+              </span>
+            )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowPropertyManager(true)}
-          >
-            <Settings2 className="mr-2 h-4 w-4" />
-            {t("manageProperties")}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground text-xs">
+              {t("rightClickRowsHint")}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPropertyManager(true)}
+            >
+              <Settings2 className="mr-2 h-4 w-4" />
+              {t("manageProperties")}
+            </Button>
+          </div>
         </div>
 
         {/* Property Manager Modal */}
@@ -536,6 +924,7 @@ export function StudentTableView({
               <StudentTableHeader
                 recentTests={recentTests}
                 propertyDefinitions={propertyDefinitions}
+                showActiveColumn={Boolean(selectedClass)}
                 sortColumn={sortColumn}
                 sortDirection={sortDirection}
                 filters={filters}
@@ -553,15 +942,201 @@ export function StudentTableView({
                     getFullName={getFullName}
                     getDefaultNiveau={getDefaultNiveau}
                     getDefaultNiveauCode={getDefaultNiveauCode}
+                    showActiveColumn={Boolean(selectedClass)}
+                    onActiveChange={handleActiveChange}
                     onPropertyValueChange={handlePropertyValueChange}
                     onTextareaChange={handleTextareaChange}
                     getGradeColor={getGradeColor}
+                    selected={selectedStudentIds.has(student.id)}
+                    onRowMouseDown={handleRowMouseDown}
+                    onRowClick={(event) => handleRowClick(event, student.id)}
+                    onRowContextMenu={(event) =>
+                      handleRowContextMenu(event, student.id)
+                    }
                   />
                 ))}
               </TableBody>
             </Table>
           </div>
         </div>
+
+        {contextMenu.visible &&
+          selectedStudentIds.size > 0 &&
+          createPortal(
+            <div
+              ref={contextMenuRef}
+              className="bg-popover text-popover-foreground fixed z-60 min-w-[220px] rounded-md border p-1 shadow-md"
+              style={{ left: contextMenu.x, top: contextMenu.y }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                className="hover:bg-accent w-full rounded px-2 py-1.5 text-left text-sm"
+                onClick={() => {
+                  setShowBulkPropertyDialog(true);
+                  setContextMenu((previous) => ({
+                    ...previous,
+                    visible: false,
+                  }));
+                }}
+              >
+                {t("contextEditPropertyValues")}
+              </button>
+
+              <div className="bg-border my-1 h-px" />
+              <div className="text-muted-foreground px-2 py-1 text-xs font-medium">
+                {t("contextSetLevel")}
+              </div>
+              <button
+                className="hover:bg-accent w-full rounded px-2 py-1.5 text-left text-sm"
+                onClick={() => applyLevelToSelected("magister")}
+                disabled={bulkUpdating}
+              >
+                {t("followMagister")}
+              </button>
+              {LEVEL_OVERRIDE_OPTIONS.map((option) => (
+                <button
+                  key={option.code}
+                  className="hover:bg-accent w-full rounded px-2 py-1.5 text-left text-sm"
+                  onClick={() => applyLevelToSelected(option.code)}
+                  disabled={bulkUpdating}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>,
+            document.body,
+          )}
+
+        <Dialog
+          open={showBulkPropertyDialog}
+          onOpenChange={setShowBulkPropertyDialog}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("bulkEditPropertyValuesTitle")}</DialogTitle>
+              <DialogDescription>
+                {t("bulkEditPropertyValuesDescription", {
+                  count: selectedStudentIds.size,
+                })}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">{t("property")}</label>
+                <Select
+                  value={bulkPropertyId}
+                  onValueChange={(value) => {
+                    setBulkPropertyId(value);
+                    const definition = propertyDefinitions.find(
+                      (property) => property.id === value,
+                    );
+                    if (!definition) return;
+
+                    if (definition.type === "boolean") {
+                      setBulkPropertyBooleanValue(false);
+                    } else if (definition.type === "number") {
+                      setBulkPropertyNumberValue("0");
+                    } else {
+                      setBulkPropertyTextValue("");
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("selectProperty")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {propertyDefinitions
+                      .filter(
+                        (property) =>
+                          property.id !== LEVEL_OVERRIDE_PROPERTY_ID &&
+                          property.id !== INACTIVE_STUDENT_PROPERTY_ID,
+                      )
+                      .map((property) => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedBulkPropertyDefinition?.type === "boolean" && (
+                <div className="flex items-center gap-3 rounded-md border p-3">
+                  <Checkbox
+                    checked={bulkPropertyBooleanValue}
+                    onCheckedChange={(checked) =>
+                      setBulkPropertyBooleanValue(checked === true)
+                    }
+                    aria-label={selectedBulkPropertyDefinition.name}
+                  />
+                </div>
+              )}
+
+              {selectedBulkPropertyDefinition?.type === "number" && (
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">{t("value")}</label>
+                  <Input
+                    type="number"
+                    value={bulkPropertyNumberValue}
+                    onChange={(event) =>
+                      setBulkPropertyNumberValue(event.target.value)
+                    }
+                  />
+                </div>
+              )}
+
+              {selectedBulkPropertyDefinition &&
+                selectedBulkPropertyDefinition.type !== "boolean" &&
+                selectedBulkPropertyDefinition.type !== "number" && (
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">{t("value")}</label>
+                    {selectedBulkPropertyDefinition.type === "longtext" ? (
+                      <textarea
+                        value={bulkPropertyTextValue}
+                        onChange={(event) =>
+                          setBulkPropertyTextValue(event.target.value)
+                        }
+                        className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-20 w-full resize-y rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                      />
+                    ) : (
+                      <Input
+                        type="text"
+                        maxLength={
+                          selectedBulkPropertyDefinition.type === "letter"
+                            ? 1
+                            : undefined
+                        }
+                        value={bulkPropertyTextValue}
+                        onChange={(event) =>
+                          setBulkPropertyTextValue(event.target.value)
+                        }
+                      />
+                    )}
+                  </div>
+                )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkPropertyDialog(false)}
+              >
+                {t("cancel")}
+              </Button>
+              <Button
+                onClick={applyPropertyValueToSelected}
+                disabled={
+                  bulkUpdating ||
+                  !selectedBulkPropertyDefinition ||
+                  selectedStudentIds.size === 0
+                }
+              >
+                {t("apply")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

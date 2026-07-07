@@ -6,6 +6,7 @@ interface StudentListViewProps {
   selectedClass: string | null;
   loading: boolean;
   totalStudents: number;
+  onStudentActiveChange?: (studentId: number, isActive: boolean) => void;
 }
 
 export function StudentListView({
@@ -13,6 +14,7 @@ export function StudentListView({
   selectedClass,
   loading,
   totalStudents,
+  onStudentActiveChange,
 }: StudentListViewProps) {
   return (
     <StudentTableView
@@ -20,6 +22,7 @@ export function StudentListView({
       selectedClass={selectedClass}
       loading={loading}
       totalStudents={totalStudents}
+      onStudentActiveChange={onStudentActiveChange}
     />
   );
 }

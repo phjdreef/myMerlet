@@ -32,9 +32,6 @@ export function ClassGradesTab({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
-  const [selectedTestMode, setSelectedTestMode] = useState<"view" | "edit">(
-    "view",
-  );
 
   const classStudents = useMemo(() => {
     if (!selectedClass) return [];
@@ -111,18 +108,15 @@ export function ClassGradesTab({
       setTests([]);
       setStatistics(new Map());
       setSelectedTest(null);
-      setSelectedTestMode("view");
       return;
     }
 
     setSelectedTest(null);
-    setSelectedTestMode("view");
     void loadTests(selectedClass);
   }, [selectedClass, loadTests]);
 
   const handleGradesSaved = () => {
     if (!selectedClass) return;
-    setSelectedTestMode("view");
     void loadTests(selectedClass);
   };
 
@@ -135,7 +129,6 @@ export function ClassGradesTab({
   }
 
   if (selectedTest) {
-    const isReadOnly = selectedTestMode === "view";
     return (
       <div className="flex h-full flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -147,18 +140,6 @@ export function ClassGradesTab({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {isReadOnly ? (
-              <Button onClick={() => setSelectedTestMode("edit")}>
-                {t("enterGrades")}
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => setSelectedTestMode("view")}
-              >
-                {t("viewResults")}
-              </Button>
-            )}
             <Button
               variant="outline"
               size="icon"
@@ -183,7 +164,6 @@ export function ClassGradesTab({
               title={t("backToTests")}
               onClick={() => {
                 setSelectedTest(null);
-                setSelectedTestMode("view");
               }}
             >
               <ArrowLeftIcon className="h-4 w-4" />
@@ -192,17 +172,16 @@ export function ClassGradesTab({
         </div>
         <div className="flex-1 overflow-hidden">
           <GradeEntry
-            key={`${selectedTest.id}-${selectedTestMode}`}
+            key={selectedTest.id}
             test={selectedTest}
             students={classStudents}
             className={selectedClass}
             schoolYear={currentSchoolYear}
             onClose={() => {
               setSelectedTest(null);
-              setSelectedTestMode("view");
             }}
             onSave={handleGradesSaved}
-            readOnly={isReadOnly}
+            readOnly={false}
           />
         </div>
       </div>
@@ -252,13 +231,11 @@ export function ClassGradesTab({
                   className="hover:bg-accent/50 cursor-pointer rounded-lg border p-4 transition-colors focus:ring focus:outline-none"
                   onClick={() => {
                     setSelectedTest(test);
-                    setSelectedTestMode("view");
                   }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
                       setSelectedTest(test);
-                      setSelectedTestMode("view");
                     }
                   }}
                 >
@@ -374,7 +351,6 @@ export function ClassGradesTab({
                         onClick={(event) => {
                           event.stopPropagation();
                           setSelectedTest(test);
-                          setSelectedTestMode("edit");
                         }}
                       >
                         {t("enterGrades")}

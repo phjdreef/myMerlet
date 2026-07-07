@@ -5,6 +5,7 @@ import LangToggle from "@/components/LangToggle";
 import ToggleTheme from "@/components/ToggleTheme";
 import { ThemeSelector } from "@/components/ui/ThemeSelector";
 import { SchoolYearSelector } from "@/components/settings/SchoolYearSelector";
+import { DataDirectorySetting } from "@/components/settings/DataDirectorySetting";
 import MagisterDashboard from "@/components/MagisterDashboard";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -62,6 +63,18 @@ function SettingsPage() {
                   </p>
                 </div>
                 <LangToggle />
+              </section>
+
+              <section className="border-border/60 bg-card/80 flex flex-col gap-4 rounded-2xl border p-6 shadow-sm backdrop-blur md:col-span-2">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    {t("dataDirectory")}
+                  </h2>
+                  <p className="text-muted-foreground text-sm">
+                    {t("dataDirectoryDescription")}
+                  </p>
+                </div>
+                <DataDirectorySetting />
               </section>
 
               <section className="border-border/60 bg-card/80 flex flex-col gap-5 rounded-2xl border p-6 shadow-sm backdrop-blur md:col-span-2">

@@ -9,6 +9,7 @@ export type GlobalSettings = {
   theme?: "system" | "twitter" | "graphite" | "nord" | "dracula" | "solarized";
   currentSchoolYear?: SchoolYear;
   globalBlockedWeeks?: BlockedWeek[];
+  dataDirectory?: string;
 };
 
 class GlobalSettingsManager {
@@ -120,6 +121,26 @@ class GlobalSettingsManager {
     if (!this.initialized) await this.init();
     const settings = this.readSettings();
     settings.globalBlockedWeeks = blockedWeeks;
+    this.writeSettings(settings);
+  }
+
+  async getDataDirectory(): Promise<string | undefined> {
+    if (!this.initialized) await this.init();
+    const settings = this.readSettings();
+    return settings.dataDirectory;
+  }
+
+  async setDataDirectory(directory?: string): Promise<void> {
+    if (!this.initialized) await this.init();
+    const settings = this.readSettings();
+
+    const normalizedDirectory = directory?.trim();
+    if (normalizedDirectory) {
+      settings.dataDirectory = normalizedDirectory;
+    } else {
+      delete settings.dataDirectory;
+    }
+
     this.writeSettings(settings);
   }
 }
