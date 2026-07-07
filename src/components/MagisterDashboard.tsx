@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useSchoolYear } from "../contexts/SchoolYearContext";
 import { logger } from "../utils/logger";
 import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
 import { ErrorBanner } from "./ui/error-banner";
 import LoadingSpinner from "./LoadingSpinner";
 
@@ -18,11 +19,28 @@ export default function MagisterDashboard({
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [cancelRequested, setCancelRequested] = useState(false);
+  const [progressPercent, setProgressPercent] = useState<number | null>(null);
+  const [progressStatus, setProgressStatus] = useState("");
+  const [autoDownloadPhotos, setAutoDownloadPhotos] = useState(() => {
+    const saved = localStorage.getItem("magister_auto_download_photos");
+    return saved !== "false";
+  });
+
+  const setProgress = (status: string, percent: number | null) => {
+    setProgressStatus(status);
+    if (percent === null) {
+      setProgressPercent(null);
+      return;
+    }
+
+    setProgressPercent(Math.max(0, Math.min(100, percent)));
+  };
 
   const handleCancel = () => {
     setCancelRequested(true);
     setLoading(false);
     setIsAuthenticating(false);
+    setProgress("Geannuleerd", null);
     setError(t("operationCancelled"));
     setTimeout(() => {
       setError(null);
@@ -34,12 +52,18 @@ export default function MagisterDashboard({
     setCancelRequested(false);
     try {
       setLoading(true);
+      setData(null);
       setError(null);
+      setProgress("Bezig met leerlingen ophalen uit Magister...", null);
 
       const response = await window.magisterAPI.getAllStudents();
 
       if (response.success && response.data) {
         const items = response.data.items || [];
+        setProgress(
+          `Bezig met opslaan van ${items.length} leerlingen...`,
+          null,
+        );
 
         // Add current school year to all students
         const studentsWithSchoolYear = items.map((student) => ({
@@ -51,6 +75,7 @@ export default function MagisterDashboard({
         try {
           await window.studentDBAPI.saveStudents(studentsWithSchoolYear);
           logger.debug(`Saved ${items.length} students to database`);
+          setProgress("Leerlingen opgeslagen. Bezig met afronden...", null);
         } catch (err) {
           logger.error("Failed to save students to database:", err);
           setError(t("magisterSaveStudentsFailed"));
@@ -62,10 +87,12 @@ export default function MagisterDashboard({
         });
 
         // Automatically download photos after loading students
-        if (items.length > 0 && !cancelRequested) {
+        if (autoDownloadPhotos && items.length > 0 && !cancelRequested) {
           setError(t("downloadingPhotos"));
+          setProgress("Bezig met foto's downloaden...", 0);
           let successCount = 0;
           let failCount = 0;
+          const photoFailureDetails: string[] = [];
 
           for (const student of items) {
             if (cancelRequested) {
@@ -74,6 +101,7 @@ export default function MagisterDashboard({
             try {
               const photoResponse = await window.magisterAPI.fetchStudentPhoto(
                 student.id,
+                student.links?.foto?.href,
               );
               if (photoResponse.success && photoResponse.data) {
                 // Use student.id for storing photos
@@ -82,6 +110,11 @@ export default function MagisterDashboard({
                   photoResponse.data,
                 );
                 successCount++;
+                const processedCount = successCount + failCount;
+                setProgress(
+                  `Bezig met foto's downloaden... (${processedCount}/${items.length})`,
+                  Math.round((processedCount / items.length) * 100),
+                );
                 setError(
                   t("downloadedPhotos", {
                     count: successCount,
@@ -90,6 +123,16 @@ export default function MagisterDashboard({
                 );
               } else {
                 failCount++;
+                const processedCount = successCount + failCount;
+                setProgress(
+                  `Bezig met foto's downloaden... (${processedCount}/${items.length})`,
+                  Math.round((processedCount / items.length) * 100),
+                );
+                if (photoResponse.error && photoFailureDetails.length < 5) {
+                  photoFailureDetails.push(
+                    `${student.roepnaam} ${student.achternaam}: ${photoResponse.error}`,
+                  );
+                }
               }
             } catch (err) {
               logger.error(
@@ -97,16 +140,49 @@ export default function MagisterDashboard({
                 err,
               );
               failCount++;
+              const processedCount = successCount + failCount;
+              setProgress(
+                `Bezig met foto's downloaden... (${processedCount}/${items.length})`,
+                Math.round((processedCount / items.length) * 100),
+              );
+              if (photoFailureDetails.length < 5) {
+                photoFailureDetails.push(
+                  `${student.roepnaam} ${student.achternaam}: ${err instanceof Error ? err.message : "Unknown error"}`,
+                );
+              }
             }
           }
 
-          setError(
-            t("photoDownloadComplete", {
+          setData((previous) => ({
+            ...(previous ?? {}),
+            photoSync: {
               success: successCount,
               failed: failCount,
-            }),
+              sampleFailures: photoFailureDetails,
+            },
+          }));
+
+          const completionMessage = t("photoDownloadComplete", {
+            success: successCount,
+            failed: failCount,
+          });
+          setError(
+            photoFailureDetails.length > 0
+              ? `${completionMessage} Eerste fouten: ${photoFailureDetails.join(" | ")}`
+              : completionMessage,
           );
           setTimeout(() => setError(null), 5000);
+          setProgress("Synchronisatie afgerond", 100);
+        } else if (!autoDownloadPhotos) {
+          setData((previous) => ({
+            ...(previous ?? {}),
+            photoSync: {
+              skipped: true,
+            },
+          }));
+          setProgress("Synchronisatie afgerond", 100);
+        } else {
+          setProgress("Synchronisatie afgerond", 100);
         }
 
         setLoading(false);
@@ -121,10 +197,12 @@ export default function MagisterDashboard({
             errorMsg.includes("token expired"))
         ) {
           setIsAuthenticating(true);
+          setProgress("Bezig met inloggen bij Magister...", null);
           setError(`${errorMsg} - ${t("magisterOpeningLogin")}`);
           try {
             const authResult = await window.magisterAPI.authenticate();
             if (authResult.success) {
+              setProgress("Inloggen gelukt, opnieuw synchroniseren...", null);
               setError(t("magisterAuthSuccessLoading"));
               setIsAuthenticating(false);
               // Wait a moment for token to be fully stored, then retry
@@ -140,6 +218,7 @@ export default function MagisterDashboard({
               );
               setIsAuthenticating(false);
               setLoading(false);
+              setProgress("Synchronisatie mislukt", null);
             }
           } catch (authErr) {
             const authErrorMsg =
@@ -155,15 +234,18 @@ export default function MagisterDashboard({
             }
             setIsAuthenticating(false);
             setLoading(false);
+            setProgress("Synchronisatie mislukt", null);
           }
         } else {
           setError(errorMsg);
           setLoading(false);
+          setProgress("Synchronisatie mislukt", null);
         }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t("magisterLoadFailed"));
       setLoading(false);
+      setProgress("Synchronisatie mislukt", null);
     }
   };
 
@@ -199,6 +281,20 @@ export default function MagisterDashboard({
             {t("refreshFromAPI")}
           </Button>
 
+          <label className="ml-2 flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={autoDownloadPhotos}
+              onCheckedChange={(checked) => {
+                setAutoDownloadPhotos(checked);
+                localStorage.setItem(
+                  "magister_auto_download_photos",
+                  String(checked),
+                );
+              }}
+            />
+            <span>{t("autoDownloadPhotos")}</span>
+          </label>
+
           <Button
             onClick={handleLogout}
             variant="outline"
@@ -223,7 +319,27 @@ export default function MagisterDashboard({
 
       {loading && (
         <div className="flex flex-col items-center justify-center gap-4 py-8">
-          <LoadingSpinner text={t("loading")} />
+          <LoadingSpinner />
+          <div className="w-full max-w-md space-y-2">
+            <div className="text-muted-foreground text-center text-sm">
+              {progressStatus || "Bezig met synchroniseren..."}
+            </div>
+            <div className="bg-muted relative h-2 w-full overflow-hidden rounded-full border">
+              {progressPercent === null ? (
+                <div className="magister-progress-indeterminate bg-primary/70 absolute top-0 h-full w-1/3" />
+              ) : (
+                <div
+                  className="bg-primary h-full transition-all duration-300 ease-out"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              )}
+            </div>
+            {progressPercent !== null && (
+              <div className="text-muted-foreground text-center text-xs">
+                {progressPercent}%
+              </div>
+            )}
+          </div>
           <Button onClick={handleCancel} variant="outline" size="sm">
             {t("cancel")}
           </Button>

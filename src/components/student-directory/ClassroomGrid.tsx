@@ -373,7 +373,11 @@ export function ClassroomGrid({
   const getUnpositionedStudents = (className: string): Student[] => {
     if (!className) return [];
     const classStudents = students.filter(
-      (student) => student.klassen && student.klassen.includes(className),
+      (student) =>
+        (Array.isArray(student.klassen) &&
+          student.klassen.includes(className)) ||
+        (Array.isArray(student.lesgroepen) &&
+          student.lesgroepen.includes(className)),
     );
     const key = getClassroomKey(className);
     const classPositions = seatingPositions.get(key) || [];

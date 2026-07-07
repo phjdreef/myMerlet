@@ -37,8 +37,10 @@ export function ClassGradesTab({
     if (!selectedClass) return [];
     return students.filter(
       (student) =>
-        Array.isArray(student.klassen) &&
-        student.klassen.includes(selectedClass),
+        (Array.isArray(student.klassen) &&
+          student.klassen.includes(selectedClass)) ||
+        (Array.isArray(student.lesgroepen) &&
+          student.lesgroepen.includes(selectedClass)),
     );
   }, [students, selectedClass]);
 

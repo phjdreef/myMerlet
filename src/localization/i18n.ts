@@ -58,6 +58,7 @@ i18n.use(initReactI18next).init({
         dragToMove: "Sleep om plaats te verplaatsen",
         selectClass: "Selecteer een klas om de klasindeling te bekijken.",
         downloadingPhotos: "📸 Foto's downloaden...",
+        autoDownloadPhotos: "Ook foto's downloaden",
         downloadedPhotos: "📸 Gedownload {{count}}/{{total}} foto's...",
         photoDownloadComplete:
           "✅ Foto's downloaden voltooid! Gelukt: {{success}}, Mislukt: {{failed}}",
@@ -541,6 +542,7 @@ i18n.use(initReactI18next).init({
         dragToMove: "Drag to move seat",
         selectClass: "Please select a class to view the classroom layout.",
         downloadingPhotos: "📸 Downloading photos...",
+        autoDownloadPhotos: "Automatically download photos",
         downloadedPhotos: "📸 Downloaded {{count}}/{{total}} photos...",
         photoDownloadComplete:
           "✅ Photo download complete! Success: {{success}}, Failed: {{failed}}",

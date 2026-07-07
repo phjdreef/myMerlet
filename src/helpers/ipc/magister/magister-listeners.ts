@@ -80,20 +80,24 @@ export function addMagisterEventListeners() {
     }
   });
 
-  ipcMain.handle(MAGISTER_CHANNELS.GET_ALL_STUDENTS, async () => {
-    try {
-      const studentsResult = await magisterAPI.instance.getAllStudents();
-      return studentsResult;
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to fetch all students",
-      };
-    }
-  });
+  ipcMain.handle(
+    MAGISTER_CHANNELS.GET_ALL_STUDENTS,
+    async (_, teacherNameFilter?: string) => {
+      try {
+        const studentsResult =
+          await magisterAPI.instance.getAllStudents(teacherNameFilter);
+        return studentsResult;
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to fetch all students",
+        };
+      }
+    },
+  );
 
   ipcMain.handle(MAGISTER_CHANNELS.CLEAR_TOKEN, async () => {
     try {
@@ -109,9 +113,12 @@ export function addMagisterEventListeners() {
 
   ipcMain.handle(
     MAGISTER_CHANNELS.FETCH_STUDENT_PHOTO,
-    async (_, studentId: number) => {
+    async (_, studentId: number, photoHref?: string) => {
       try {
-        const result = await magisterAPI.instance.fetchStudentPhoto(studentId);
+        const result = await magisterAPI.instance.fetchStudentPhoto(
+          studentId,
+          photoHref,
+        );
         return result;
       } catch (error) {
         return {

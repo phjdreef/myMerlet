@@ -258,6 +258,19 @@ select::placeholder {
   @apply rounded bg-gray-100 px-1 py-0.5 text-sm dark:bg-gray-800;
 }
 
+@keyframes magister-progress-loop {
+  0% {
+    left: -33%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.magister-progress-indeterminate {
+  animation: magister-progress-loop 1.2s linear infinite;
+}
+
 .ProseMirror pre {
   @apply my-2 rounded bg-gray-100 p-3 dark:bg-gray-800;
 }

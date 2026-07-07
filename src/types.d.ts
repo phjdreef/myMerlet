@@ -58,11 +58,16 @@ interface MagisterAPI {
   logout: () => Promise<APIResult>;
   isAuthenticated: () => Promise<APIResponse<boolean>>;
   testAPI: () => Promise<APIResponse>;
-  getAllStudents: () => Promise<
+  getAllStudents: (
+    teacherNameFilter?: string,
+  ) => Promise<
     APIResponse<{ items: import("./services/student-database").Student[] }>
   >;
   clearToken: () => Promise<APIResult>;
-  fetchStudentPhoto: (studentId: number) => Promise<APIResponse<string>>;
+  fetchStudentPhoto: (
+    studentId: number,
+    photoHref?: string,
+  ) => Promise<APIResponse<string>>;
 }
 
 interface StudentDBAPI {

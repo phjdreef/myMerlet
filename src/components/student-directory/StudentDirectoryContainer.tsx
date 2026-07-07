@@ -39,7 +39,9 @@ export function StudentDirectoryContainer() {
   const {
     students,
     filteredStudents,
+    allClasses,
     availableClasses,
+    inactiveClasses,
     selectedClass,
     visibleCount,
     loading,
@@ -47,6 +49,8 @@ export function StudentDirectoryContainer() {
     classPlans,
     selectedPlanTab,
     onSelectClass,
+    setClassActive,
+    setClassOrder,
     setSelectedPlanTab,
     clearError,
     refresh,
@@ -86,8 +90,10 @@ export function StudentDirectoryContainer() {
 
     const classStudents = students.filter(
       (student) =>
-        Array.isArray(student.klassen) &&
-        student.klassen.includes(selectedClass),
+        (Array.isArray(student.klassen) &&
+          student.klassen.includes(selectedClass)) ||
+        (Array.isArray(student.lesgroepen) &&
+          student.lesgroepen.includes(selectedClass)),
     );
     if (classStudents.length === 0) {
       setInactiveStudentIds(new Set());
@@ -593,9 +599,13 @@ export function StudentDirectoryContainer() {
     <div className="flex h-full">
       <ClassFilter
         students={students}
+        allClasses={allClasses}
         availableClasses={availableClasses}
+        inactiveClasses={inactiveClasses}
         selectedClass={selectedClass}
         onClassSelect={onSelectClass}
+        onClassActiveChange={setClassActive}
+        onClassOrderChange={setClassOrder}
       />
 
       <div className="flex flex-1 flex-col p-4">

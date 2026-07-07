@@ -12,6 +12,16 @@ interface Student {
   studies: string[];
   schoolYear: string; // e.g., "2024-2025"
   profiel1?: string;
+  links?: {
+    self?: { href: string };
+    foto?: { href: string };
+  };
+  vakken?: Array<{
+    group: string;
+    teacherNames: string[];
+    subjectName?: string;
+    registrationId?: string;
+  }>;
 }
 
 // Custom properties that can be defined per class

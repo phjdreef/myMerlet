@@ -8,10 +8,15 @@ export const magisterAPI = {
   logout: () => ipcRenderer.invoke(MAGISTER_CHANNELS.LOGOUT),
   isAuthenticated: () => ipcRenderer.invoke(MAGISTER_CHANNELS.IS_AUTHENTICATED),
   testAPI: () => ipcRenderer.invoke(MAGISTER_CHANNELS.TEST_API),
-  getAllStudents: () => ipcRenderer.invoke(MAGISTER_CHANNELS.GET_ALL_STUDENTS),
+  getAllStudents: (teacherNameFilter?: string) =>
+    ipcRenderer.invoke(MAGISTER_CHANNELS.GET_ALL_STUDENTS, teacherNameFilter),
   clearToken: () => ipcRenderer.invoke(MAGISTER_CHANNELS.CLEAR_TOKEN),
-  fetchStudentPhoto: (studentId: number) =>
-    ipcRenderer.invoke(MAGISTER_CHANNELS.FETCH_STUDENT_PHOTO, studentId),
+  fetchStudentPhoto: (studentId: number, photoHref?: string) =>
+    ipcRenderer.invoke(
+      MAGISTER_CHANNELS.FETCH_STUDENT_PHOTO,
+      studentId,
+      photoHref,
+    ),
 };
 
 contextBridge.exposeInMainWorld("magisterAPI", magisterAPI);

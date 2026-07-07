@@ -18,6 +18,16 @@ interface Student {
   studies: string[];
   externeId: string;
   schoolYear: string;
+  links?: {
+    self?: { href: string };
+    foto?: { href: string };
+  };
+  vakken?: Array<{
+    group: string;
+    teacherNames: string[];
+    subjectName?: string;
+    registrationId?: string;
+  }>;
 }
 
 interface StudentPropertyDefinition {
@@ -329,6 +339,60 @@ class MainStudentDatabase {
     }
   }
 
+  private getStudentMergeKey(student: Student): string | null {
+    const externeId =
+      typeof student.externeId === "string" ? student.externeId.trim() : "";
+    if (externeId.length > 0) {
+      return `ext:${externeId}`;
+    }
+
+    if (Number.isFinite(student.id)) {
+      return `id:${student.id}`;
+    }
+
+    const code = typeof student.code === "string" ? student.code.trim() : "";
+    if (code.length > 0) {
+      return `code:${code}`;
+    }
+
+    return null;
+  }
+
+  private sanitizeLesgroepen(groups: string[] | undefined): string[] {
+    if (!Array.isArray(groups)) {
+      return [];
+    }
+
+    return groups.filter(
+      (group) =>
+        typeof group === "string" &&
+        group.trim().length > 0 &&
+        !group.toLowerCase().startsWith("vak:"),
+    );
+  }
+
+  private sanitizeVakken(student: Student): Student["vakken"] {
+    if (!Array.isArray(student.vakken)) {
+      return undefined;
+    }
+
+    const sanitized = student.vakken.filter((record) => {
+      if (!record || typeof record.group !== "string") {
+        return false;
+      }
+
+      if (record.group.trim().toLowerCase().startsWith("vak:")) {
+        return false;
+      }
+
+      return (
+        Array.isArray(record.teacherNames) && record.teacherNames.length > 0
+      );
+    });
+
+    return sanitized.length > 0 ? sanitized : undefined;
+  }
+
   async saveStudents(students: Student[]): Promise<void> {
     logger.debug(`Attempting to save ${students.length} students to database`);
 
@@ -344,17 +408,61 @@ class MainStudentDatabase {
       const existingData = this.readDatabase();
       const existingStudentsMap = new Map<string, Student>();
 
-      // Create a map of existing students by externeId
+      // Create a map of existing students by stable key.
       for (const student of existingData.students) {
-        if (student.externeId) {
-          existingStudentsMap.set(student.externeId, student);
+        const mergeKey = this.getStudentMergeKey(student);
+        if (mergeKey) {
+          existingStudentsMap.set(mergeKey, student);
+        } else {
+          existingStudentsMap.set(
+            `legacy:${student.id}:${student.roepnaam}:${student.achternaam}`,
+            student,
+          );
         }
       }
 
-      // Merge new students with existing ones (update if externeId exists, add if new)
+      // Merge new students with existing ones (update by externeId/id/code).
       for (const student of students) {
-        if (student.externeId) {
-          existingStudentsMap.set(student.externeId, student);
+        const mergeKey = this.getStudentMergeKey(student);
+        const existingStudent = mergeKey
+          ? existingStudentsMap.get(mergeKey)
+          : undefined;
+
+        const incomingLesgroepen = this.sanitizeLesgroepen(student.lesgroepen);
+        const existingLesgroepen = this.sanitizeLesgroepen(
+          existingStudent?.lesgroepen,
+        );
+        const incomingVakken = this.sanitizeVakken(student);
+        const existingVakken = existingStudent
+          ? this.sanitizeVakken(existingStudent)
+          : undefined;
+
+        const mergedStudent: Student = existingStudent
+          ? {
+              ...existingStudent,
+              ...student,
+              lesgroepen:
+                incomingLesgroepen.length > 0
+                  ? incomingLesgroepen
+                  : existingLesgroepen,
+              vakken:
+                incomingVakken && incomingVakken.length > 0
+                  ? incomingVakken
+                  : existingVakken,
+            }
+          : {
+              ...student,
+              lesgroepen: incomingLesgroepen,
+              vakken: incomingVakken,
+            };
+
+        if (mergeKey) {
+          existingStudentsMap.set(mergeKey, mergedStudent);
+        } else {
+          existingStudentsMap.set(
+            `incoming:${student.id}:${student.roepnaam}:${student.achternaam}`,
+            mergedStudent,
+          );
         }
       }
 
