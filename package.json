@@ -83,7 +83,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@floating-ui/dom": "^1.7.4",
+    "@floating-ui/dom": "^1.8.0",
     "@icons-pack/react-simple-icons": "^13.8.0",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-dialog": "^1.1.15",
